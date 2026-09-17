@@ -1,0 +1,31 @@
+﻿# ── Dependencias ────────────────────────────────
+node_modules/
+
+# ── Variables de entorno (NUNCA subir al repo) ──
+.env
+.env.local
+.env.*.local
+
+# ── Builds ──────────────────────────────────────
+dist/
+build/
+.next/
+
+# ── Logs ────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Sistema operativo ────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ──────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+
+# ── Figma Make cache ─────────────────────────────
+.figma/make/deploy-preview/
+
