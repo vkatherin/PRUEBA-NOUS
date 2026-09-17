@@ -63,7 +63,7 @@ function PresupuestoTab() {
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#9BAD9F" }} tickFormatter={(v) => `$${v}M`} />
               <Tooltip
                 contentStyle={{ borderRadius: 10, border: "1px solid #DDE4DF", fontSize: 12, fontFamily: "Poppins" }}
-                formatter={(v: any) => [`$${v}M`]}
+                formatter={(v: number) => [`$${v}M`]}
               />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="aprobado" name="Aprobado" fill="#DDE4DF" radius={[4, 4, 0, 0]} />
