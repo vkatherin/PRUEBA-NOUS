@@ -20,11 +20,7 @@ timeout /t 3 /nobreak >nul
 
 REM --- 2. FRONTEND (puerto 8443) ---
 echo  [2/2] Iniciando Frontend ^(puerto 8443^)...
-<<<<<<< HEAD
-start "NOUS - Frontend" cmd /k "cd /d \"d:\Practica\NOUS\nous_project\Frontend\Proyecto nous\" && color 0E && echo. && echo  *** NOUS Frontend corriendo en http://localhost:8443 *** && echo. && npm.cmd run dev"
-=======
 start "NOUS - Frontend" cmd /k "cd /d "%~dp0frontend\Proyecto nous" && color 0E && echo. && echo  *** NOUS Frontend corriendo en http://localhost:8443 *** && echo. && npm run dev"
->>>>>>> main
 
 REM Esperar 5 segundos para que el frontend compile
 timeout /t 5 /nobreak >nul

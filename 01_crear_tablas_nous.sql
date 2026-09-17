@@ -598,8 +598,55 @@ CREATE TABLE lean_canvas (
     FOREIGN KEY (protocolo_id) REFERENCES protocolos_emprendimiento(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS inscripcion_semillero_externo (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    inscripcion_id INT NOT NULL UNIQUE,
+    tipo_institucion VARCHAR(100) NOT NULL,
+    procedencia VARCHAR(100) NOT NULL DEFAULT 'Semillero externo',
+    institucion_procedencia VARCHAR(200) NOT NULL,
+    semillero_nombre VARCHAR(200) NOT NULL,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (inscripcion_id) REFERENCES convocatoria_inscripciones(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS inscripcion_semillero_integrantes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    inscripcion_id INT NOT NULL,
+    nombre_completo VARCHAR(200) NOT NULL,
+    tipo_documento VARCHAR(30) NOT NULL,
+    numero_documento VARCHAR(30) NOT NULL,
+    rol VARCHAR(80) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    telefono VARCHAR(30) NULL,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (inscripcion_id) REFERENCES convocatoria_inscripciones(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS inscripcion_semillero_info_general (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    inscripcion_id INT NOT NULL UNIQUE,
+    titulo_trabajo VARCHAR(300) NOT NULL,
+    linea_investigacion VARCHAR(150) NULL,
+    palabras_clave VARCHAR(300) NOT NULL,
+    resumen TEXT NOT NULL,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (inscripcion_id) REFERENCES convocatoria_inscripciones(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS inscripcion_semillero_contenido (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    inscripcion_id INT NOT NULL UNIQUE,
+    planteamiento_problema TEXT NOT NULL,
+    objetivo_general TEXT NOT NULL,
+    objetivos_especificos TEXT NOT NULL,
+    metodologia TEXT NOT NULL,
+    resultados_esperados TEXT NOT NULL,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (inscripcion_id) REFERENCES convocatoria_inscripciones(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
--- Fin del script — 46 tablas creadas
+-- Fin del script
 -- ============================================================

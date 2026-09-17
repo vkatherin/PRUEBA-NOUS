@@ -150,14 +150,38 @@ const convocatoriasController = {
         }
       }
 
-      // 3. Validar dirigida_a (únicamente Docente, Estudiante, Administrativo)
+      // 3. Validar dirigida_a (Docente, Estudiante, Administrativo - hasta 2 opciones)
       const DIRIGIDA_PERMITIDOS = ["Docente", "Estudiante", "Administrativo"];
-      if (!dirigida_a || !DIRIGIDA_PERMITIDOS.includes(dirigida_a.trim())) {
+      let listaDirigida = [];
+      if (Array.isArray(dirigida_a)) {
+        listaDirigida = dirigida_a.map((v) => String(v).trim()).filter(Boolean);
+      } else if (typeof dirigida_a === "string") {
+        listaDirigida = dirigida_a.split(",").map((v) => v.trim()).filter(Boolean);
+      }
+
+      if (listaDirigida.length === 0) {
         return res.status(400).json({
-          error: "Selecciona una opción válida para 'Dirigida a' (Docente, Estudiante, Administrativo)",
+          error: "Selecciona a quién va dirigida la convocatoria (Docente, Estudiante, Administrativo).",
           campo: "dirigida_a",
         });
       }
+
+      if (listaDirigida.length > 2) {
+        return res.status(400).json({
+          error: "Puedes seleccionar máximo dos opciones para 'Dirigida a'.",
+          campo: "dirigida_a",
+        });
+      }
+
+      for (const item of listaDirigida) {
+        if (!DIRIGIDA_PERMITIDOS.includes(item)) {
+          return res.status(400).json({
+            error: `La opción '${item}' no es válida (permitidas: Docente, Estudiante, Administrativo).`,
+            campo: "dirigida_a",
+          });
+        }
+      }
+      const dirigidaFinal = listaDirigida.join(", ");
 
       // 4. Validar descripción (no vacía tras trim)
       if (!descripcion || !descripcion.trim()) {
@@ -196,7 +220,7 @@ const convocatoriasController = {
         titulo: titulo.trim(),
         tipo: tipo.trim(),
         tipo_investigacion: tipo_investigacion ? tipo_investigacion.trim() : null,
-        dirigida_a: dirigida_a.trim(),
+        dirigida_a: dirigidaFinal,
         descripcion: descripcion.trim(),
         fecha_apertura,
         fecha_cierre,
@@ -238,13 +262,36 @@ const convocatoriasController = {
 
       if (data.dirigida_a !== undefined) {
         const DIRIGIDA_PERMITIDOS = ["Docente", "Estudiante", "Administrativo"];
-        if (!data.dirigida_a || !DIRIGIDA_PERMITIDOS.includes(data.dirigida_a.trim())) {
+        let listaDirigida = [];
+        if (Array.isArray(data.dirigida_a)) {
+          listaDirigida = data.dirigida_a.map((v) => String(v).trim()).filter(Boolean);
+        } else if (typeof data.dirigida_a === "string") {
+          listaDirigida = data.dirigida_a.split(",").map((v) => v.trim()).filter(Boolean);
+        }
+
+        if (listaDirigida.length === 0) {
           return res.status(400).json({
-            error: "Selecciona una opción válida para 'Dirigida a' (Docente, Estudiante, Administrativo)",
+            error: "Selecciona a quién va dirigida la convocatoria (Docente, Estudiante, Administrativo).",
             campo: "dirigida_a",
           });
         }
-        data.dirigida_a = data.dirigida_a.trim();
+
+        if (listaDirigida.length > 2) {
+          return res.status(400).json({
+            error: "Puedes seleccionar máximo dos opciones para 'Dirigida a'.",
+            campo: "dirigida_a",
+          });
+        }
+
+        for (const item of listaDirigida) {
+          if (!DIRIGIDA_PERMITIDOS.includes(item)) {
+            return res.status(400).json({
+              error: `La opción '${item}' no es válida (permitidas: Docente, Estudiante, Administrativo).`,
+              campo: "dirigida_a",
+            });
+          }
+        }
+        data.dirigida_a = listaDirigida.join(", ");
       }
 
       if (data.descripcion !== undefined) {

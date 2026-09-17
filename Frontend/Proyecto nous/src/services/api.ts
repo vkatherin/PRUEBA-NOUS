@@ -448,3 +448,212 @@ export async function getInscripcionesConvocatoria(convocatoriaId: number): Prom
 
 
 
+// ─── Semillero Externo ────────────────────────────────────────────────────────
+
+export interface SemilleroExterno {
+  id: number;
+  inscripcion_id: number;
+  tipo_institucion: string;
+  procedencia: string;
+  institucion_procedencia: string;
+  semillero_nombre: string;
+  fecha_creacion: string;
+}
+
+export interface SemilleroExternoData {
+  tipos_institucion: string[];
+  procedencia_fija: string;
+  inscripcion: Inscripcion | null;
+  semillero: SemilleroExterno | null;
+}
+
+export function getUsuarioActual(): { id: number; nombre: string; email: string; rol: string } | null {
+  const token = getToken();
+  if (!token) return { id: 1, nombre: "Usuario", email: "", rol: "Docente" };
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return {
+      id: payload.id || 1,
+      nombre: payload.nombre_completo || payload.nombre || "Usuario",
+      email: payload.correo_institucional || payload.email || "",
+      rol: (payload.roles && payload.roles[0]) || payload.rol || "Docente",
+    };
+  } catch (_) {
+    return { id: 1, nombre: "Usuario", email: "", rol: "Docente" };
+  }
+}
+
+export async function getSemilleroExterno(
+  convocatoriaId: number,
+  usuarioId?: number
+): Promise<SemilleroExternoData> {
+  const query = usuarioId ? `?usuario_id=${usuarioId}` : "";
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-externo${query}`);
+}
+
+export async function guardarSemilleroExterno(
+  convocatoriaId: number,
+  data: {
+    usuario_id: number;
+    tipo_institucion: string;
+    institucion_procedencia: string;
+    semillero_nombre: string;
+  }
+): Promise<{ ok: boolean; mensaje: string; inscripcion: Inscripcion; semillero: SemilleroExterno }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-externo`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Catálogos ────────────────────────────────────────────────────────────────
+export interface CatalogosSemillero {
+  tipos_documento: string[];
+  roles_integrante: string[];
+  lineas_investigacion: { id: number; nombre: string }[];
+}
+
+export async function getCatalogosSemillero(convocatoriaId: number): Promise<CatalogosSemillero> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-catalogos`);
+}
+
+// ─── Paso 2: Integrantes ──────────────────────────────────────────────────────
+export interface IntegranteSemillero {
+  id: number;
+  inscripcion_id: number;
+  nombre_completo: string;
+  tipo_documento: string;
+  numero_documento: string;
+  rol: string;
+  email: string;
+  telefono?: string;
+  fecha_creacion: string;
+}
+
+export async function getIntegrantesSemillero(
+  convocatoriaId: number, usuarioId: number
+): Promise<{ ok: boolean; integrantes: IntegranteSemillero[] }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-integrantes?usuario_id=${usuarioId}`);
+}
+
+export async function addIntegranteSemillero(
+  convocatoriaId: number,
+  data: { usuario_id: number; nombre_completo: string; tipo_documento: string; numero_documento: string; rol: string; email: string; telefono?: string }
+): Promise<{ ok: boolean; mensaje: string; integrante: IntegranteSemillero }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-integrantes`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateIntegranteSemillero(
+  convocatoriaId: number, integranteId: number,
+  data: { usuario_id: number; nombre_completo: string; tipo_documento: string; numero_documento: string; rol: string; email: string; telefono?: string }
+): Promise<{ ok: boolean; mensaje: string; integrante: IntegranteSemillero }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-integrantes/${integranteId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteIntegranteSemillero(
+  convocatoriaId: number, integranteId: number, usuarioId: number
+): Promise<{ ok: boolean; mensaje: string }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-integrantes/${integranteId}?usuario_id=${usuarioId}`, {
+    method: "DELETE",
+  });
+}
+
+// ─── Paso 3: Información general ─────────────────────────────────────────────
+export interface InfoGeneralSemillero {
+  id: number;
+  inscripcion_id: number;
+  titulo_trabajo: string;
+  linea_investigacion?: string;
+  palabras_clave: string;
+  resumen: string;
+  fecha_creacion: string;
+}
+
+export async function getInfoGeneralSemillero(
+  convocatoriaId: number, usuarioId: number
+): Promise<{ ok: boolean; info_general: InfoGeneralSemillero | null }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-info-general?usuario_id=${usuarioId}`);
+}
+
+export async function saveInfoGeneralSemillero(
+  convocatoriaId: number,
+  data: { usuario_id: number; titulo_trabajo: string; linea_investigacion?: string; palabras_clave: string; resumen: string }
+): Promise<{ ok: boolean; mensaje: string; info_general: InfoGeneralSemillero }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-info-general`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Paso 4: Contenido del trabajo ────────────────────────────────────────────
+export interface ContenidoSemillero {
+  id: number;
+  inscripcion_id: number;
+  planteamiento_problema: string;
+  objetivo_general: string;
+  objetivos_especificos: string;
+  metodologia: string;
+  resultados_esperados: string;
+  fecha_creacion: string;
+}
+
+export async function getContenidoSemillero(
+  convocatoriaId: number, usuarioId: number
+): Promise<{ ok: boolean; contenido: ContenidoSemillero | null }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-contenido?usuario_id=${usuarioId}`);
+}
+
+export async function saveContenidoSemillero(
+  convocatoriaId: number,
+  data: { usuario_id: number; planteamiento_problema: string; objetivo_general: string; objetivos_especificos: string; metodologia: string; resultados_esperados: string }
+): Promise<{ ok: boolean; mensaje: string; contenido: ContenidoSemillero }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-contenido`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Paso 5: Resumen y envío final ────────────────────────────────────────────
+export interface ResumenInscripcionExterna {
+  ok: boolean;
+  inscripcion: Inscripcion;
+  semillero: SemilleroExterno | null;
+  integrantes: IntegranteSemillero[];
+  info_general: InfoGeneralSemillero | null;
+  contenido: ContenidoSemillero | null;
+}
+
+export async function getResumenSemillero(
+  convocatoriaId: number, usuarioId: number
+): Promise<ResumenInscripcionExterna> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/semillero-resumen?usuario_id=${usuarioId}`);
+}
+
+export async function enviarInscripcionExterna(
+  convocatoriaId: number,
+  formData: FormData
+): Promise<{ ok: boolean; mensaje: string; inscripcion: Inscripcion }> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}/convocatorias/${convocatoriaId}/semillero-enviar`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.error || "Error al enviar la inscripción");
+    (err as any).faltantes = data.faltantes;
+    throw err;
+  }
+  return data;
+}
+
