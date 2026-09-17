@@ -194,13 +194,13 @@ export interface ConvocatoriaResumen {
 }
 
 export const dashboardApi = {
-  getKpis:               () => apiFetch<DashboardKpis>('/dashboard/kpis'),
+  getKpis: () => apiFetch<DashboardKpis>('/dashboard/kpis'),
   getEvolucionProyectos: () => apiFetch<EvolucionItem[]>('/dashboard/evolucion-proyectos'),
-  getEjecucionFinanciera:() => apiFetch<EjecucionItem[]>('/dashboard/ejecucion-financiera'),
-  getProductosTipo:      () => apiFetch<ProductoTipo[]>('/dashboard/productos-tipo'),
-  getActividadReciente:  () => apiFetch<ActividadItem[]>('/dashboard/actividad-reciente'),
-  getTopProyectos:       () => apiFetch<TopProyecto[]>('/dashboard/top-proyectos'),
-  getConvocatoriasActivas:()=> apiFetch<ConvocatoriaResumen[]>('/dashboard/convocatorias-activas'),
+  getEjecucionFinanciera: () => apiFetch<EjecucionItem[]>('/dashboard/ejecucion-financiera'),
+  getProductosTipo: () => apiFetch<ProductoTipo[]>('/dashboard/productos-tipo'),
+  getActividadReciente: () => apiFetch<ActividadItem[]>('/dashboard/actividad-reciente'),
+  getTopProyectos: () => apiFetch<TopProyecto[]>('/dashboard/top-proyectos'),
+  getConvocatoriasActivas: () => apiFetch<ConvocatoriaResumen[]>('/dashboard/convocatorias-activas'),
 };
 
 // ── Proyectos ────────────────────────────────────────────────────────────────
@@ -233,33 +233,11 @@ export interface ProyectoDetalle extends Proyecto {
 }
 
 export const proyectosApi = {
-  getAll:  (params?: { estado?: string; grupo?: string; q?: string }) => {
+  getAll: (params?: { estado?: string; grupo?: string; q?: string }) => {
     const qs = new URLSearchParams(params as Record<string, string> ?? {}).toString();
     return apiFetch<Proyecto[]>(`/proyectos${qs ? '?' + qs : ''}`);
   },
   getById: (id: number) => apiFetch<ProyectoDetalle>(`/proyectos/${id}`),
-};
-
-// ── Convocatorias ─────────────────────────────────────────────────────────────
-export interface Convocatoria {
-  id: number;
-  nombre: string;
-  tipo: string;
-  estado: string;
-  descripcion: string;
-  apertura: string;
-  cierre: string;
-  presupuesto: string;
-  inscritos: number;
-  evaluadores: number;
-}
-
-export const convocatoriasApi = {
-  getAll:  (params?: { estado?: string }) => {
-    const qs = new URLSearchParams(params as Record<string, string> ?? {}).toString();
-    return apiFetch<Convocatoria[]>(`/convocatorias${qs ? '?' + qs : ''}`);
-  },
-  getById: (id: number) => apiFetch<Convocatoria & { proyectos: any[] }>(`/convocatorias/${id}`),
 };
 
 // ── Semilleros ────────────────────────────────────────────────────────────────
@@ -287,7 +265,7 @@ export interface SemilleroDetalle extends Semillero {
 }
 
 export const semillerosApi = {
-  getAll:  () => apiFetch<Semillero[]>('/semilleros'),
+  getAll: () => apiFetch<Semillero[]>('/semilleros'),
   getById: (id: number) => apiFetch<SemilleroDetalle>(`/semilleros/${id}`),
 };
 
@@ -319,3 +297,154 @@ export const usuariosApi = {
     method: 'DELETE',
   }),
 };
+
+// ─── Tipos de Investigación ─────────────────────────────────────────────────
+export const TIPOS_INVESTIGACION = [
+  { label: "Investigación de creación", codigo: "IC" },
+  { label: "Investigación formal", codigo: "IPD" },
+  { label: "Investigación formativa", codigo: "IF" },
+  { label: "Emprendimiento", codigo: "UE" },
+  { label: "Semilleros", codigo: "SEM" },
+] as const;
+
+export const MAPA_TIPO_INVESTIGACION: Record<string, string> = {
+  "Investigación de creación": "IC",
+  "Investigación formal": "IPD",
+  "Investigación formativa": "IF",
+  "Emprendimiento": "UE",
+  "Semilleros": "SEM",
+};
+
+export interface Convocatoria {
+  id: number;
+  codigo?: string;
+  codigo_con?: string;
+  tipo_investigacion?: string;
+  titulo: string;
+  tipo: string;
+  dirigida_a?: string;
+  descripcion?: string;
+  fecha_apertura: string;
+  fecha_cierre: string;
+  fecha_resultados?: string;
+  rubro_disponible?: number;
+  estado: string;
+  aprobada_comite: number;
+  creado_por_nombre: string;
+  dias_restantes?: number;
+  requisitos?: string;
+  observaciones_comite?: string;
+}
+
+export interface ConvocatoriaExterna {
+  id: number;
+  codigo?: string;
+  codigo_ext?: string;
+  tipo_investigacion?: string;
+  titulo: string;
+  entidad_externa: string;
+  fecha_apertura: string;
+  fecha_cierre: string;
+  descripcion: string;
+  dias_restantes?: number;
+  estado_vigencia?: "vigente" | "cerrada" | "indefinida";
+}
+
+export interface AlertasConvocatorias {
+  resumen: {
+    proximas_a_cerrar_total: number;
+    criticas_3_dias: number;
+    proximas_a_abrir_total: number;
+    vencidas_pendientes_cierre: number;
+  };
+  proximas_a_cerrar: Array<Convocatoria & { nivel_alerta: string; mensaje: string }>;
+  proximas_a_abrir: Convocatoria[];
+  vencidas_pendientes_cierre: Convocatoria[];
+}
+
+export async function getConvocatorias(params?: { estado?: string; tipo?: string; q?: string }): Promise<Convocatoria[]> {
+  const query = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
+  return apiFetch(`/convocatorias${query}`);
+}
+
+export async function getConvocatoriasAlertas(): Promise<AlertasConvocatorias> {
+  return apiFetch("/convocatorias/alertas");
+}
+
+export async function crearConvocatoria(data: Partial<Convocatoria>): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
+  return apiFetch("/convocatorias", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function actualizarConvocatoria(id: number, data: Partial<Convocatoria>): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
+  return apiFetch(`/convocatorias/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function publicarConvocatoria(id: number): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
+  return apiFetch(`/convocatorias/${id}/publicar`, { method: "PATCH" });
+}
+
+export async function getConvocatoriasExternas(q?: string): Promise<ConvocatoriaExterna[]> {
+  const query = q ? `?q=${encodeURIComponent(q)}` : "";
+  return apiFetch(`/convocatorias/externas${query}`);
+}
+
+export async function crearConvocatoriaExterna(data: Partial<ConvocatoriaExterna>): Promise<{ ok: boolean; convocatoria: ConvocatoriaExterna }> {
+  return apiFetch("/convocatorias/externas", { method: "POST", body: JSON.stringify(data) });
+}
+
+// ─── Inscripciones a Convocatorias ──────────────────────────────────────────
+export interface InscripcionDocumento {
+  id: number;
+  inscripcion_id: number;
+  requisito_nombre: string;
+  documento_nombre_original: string;
+  documento_ruta: string;
+  documento_mime: string;
+  documento_peso_bytes: number;
+  fecha_creacion: string;
+}
+
+export interface Inscripcion {
+  id: number;
+  convocatoria_id: number;
+  usuario_id: number;
+  tipo_investigacion?: string;
+  resumen_proyecto: string;
+  justificacion: string;
+  documento_nombre_original: string;
+  documento_ruta: string;
+  documento_mime: string;
+  documento_peso_bytes: number;
+  fecha_inscripcion: string;
+  estado: string;
+  usuario_nombre?: string;
+  usuario_correo?: string;
+  convocatoria_titulo?: string;
+  documentos_adjuntos?: InscripcionDocumento[];
+}
+
+export async function inscribirseConvocatoria(
+  convocatoriaId: number,
+  formData: FormData
+): Promise<{ ok: boolean; mensaje: string; inscripcion: Inscripcion }> {
+  const res = await fetch(`/api/convocatorias/${convocatoriaId}/inscribirse`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.error || "Error al procesar la inscripción");
+    (err as any).campo = data.campo;
+    (err as any).status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function getInscripcionesConvocatoria(convocatoriaId: number): Promise<Inscripcion[]> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/inscripciones`);
+}
+
+
+
