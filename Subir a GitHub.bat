@@ -39,25 +39,25 @@ if not exist ".git" (
     echo.
 )
 
+REM Cambiar a la rama de trabajo ANTES de commitear nada
+echo  [2/6] Configurando rama...
+git checkout -b feature/proyectos 2>nul || git checkout feature/proyectos
+echo.
+
 REM Agregar todos los archivos
-echo  [2/6] Agregando archivos al repositorio...
+echo  [3/6] Agregando archivos al repositorio...
 git add .
 echo.
 
 REM Verificar si ya hay commits
 git log --oneline -1 >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo  [3/6] Creando primer commit...
+    echo  [4/6] Creando primer commit...
     git commit -m "feat: proyecto NOUS - commit inicial"
 ) else (
-    echo  [3/6] Creando commit con cambios...
+    echo  [4/6] Creando commit con cambios...
     git commit -m "feat: actualizacion del proyecto NOUS"
 )
-echo.
-
-REM Renombrar rama a main
-echo  [4/6] Configurando rama main...
-git branch -M main
 echo.
 
 REM Conectar con GitHub (si no esta conectado)
@@ -75,7 +75,8 @@ REM Subir codigo
 echo  [6/6] Subiendo codigo a GitHub...
 echo  (Se pedira tu usuario y token de GitHub)
 echo.
-git push -u origin main
+git pull origin feature/proyectos --rebase 2>nul
+git push -u origin feature/proyectos
 
 echo.
 if %ERRORLEVEL% EQU 0 (

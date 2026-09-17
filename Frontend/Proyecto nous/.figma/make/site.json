@@ -1,7 +1,11 @@
 {
+  "title": "NOUS",
   "description": "Streamline research management with a comprehensive platform for project administration, financial tracking, and activity monitoring tailored for academic institutions.",
   "robots": {
     "index": false
+  },
+  "icons": {
+    "icon": "/favicon.jpg"
   },
   "accessibility": {
     "addBypassLinks": false,

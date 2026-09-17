@@ -1,366 +1,321 @@
-const BASE = "/api";
+// Central API service — all fetch calls go through here
+const BASE = '/api';
 
-async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${url}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Error del servidor");
-  return data as T;
+// ── Token storage helpers ────────────────────────────────────────────────────
+export const TOKEN_KEY = 'nous_token';
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-export interface Usuario {
-  id: number;
-  nombre: string;
-  correo: string;
-  roles: string[];
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
 }
 
-export async function login(correo: string, password: string): Promise<{ ok: boolean; usuario: Usuario }> {
-  return fetchJSON("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ correo, password }),
-  });
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
 }
 
-export interface DashboardStats {
-  proyectos: number;
-  convocatorias: number;
-  semilleros: number;
-  investigadores: number;
-  evaluaciones: number;
-  convocatoriasActivas: number;
-  proyectosPorEstado: { estado: string; total: number }[];
-  convocatoriasRecientes?: { id: number; nombre: string; estado: string; cierre: string }[];
-  topProyectos?: { id: number; nombre: string; estado: string; lider: string; facultad: string; grupo: string }[];
-  recentActivity?: { project: string; user: string; action: string; time: string }[];
-}
-
-export async function getDashboardStats(): Promise<DashboardStats> {
-  return fetchJSON("/dashboard/stats");
-}
-
-export interface Proyecto {
-  id: number;
-  titulo: string;
-  codigo_unico?: string;
-  tipo_proyecto: string;
-  estado: string;
-  fecha_inicio: string;
-  duracion_meses?: number;
-  valor_total?: number;
-  investigador_principal?: string;
-  investigador_principal_id?: number;
-  convocatoria?: string;
-  convocatoria_id?: number;
-  linea_investigacion?: string;
-  facultad?: string;
-  descripcion?: string;
-  objetivos?: string;
-  metodologia?: string;
-  avance?: number;
-  fecha_creacion?: string;
-}
-
-export async function getProyectos(params?: { estado?: string; tipo?: string; q?: string }): Promise<Proyecto[]> {
-  const query = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
-  return fetchJSON(`/proyectos${query}`);
-}
-
-export async function crearProyecto(data: Partial<Proyecto>): Promise<{ ok: boolean; proyecto: Proyecto }> {
-  return fetchJSON("/proyectos", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-// ─── Tipos de Investigación Centralizados ─────────────────────────────────────
-export const TIPOS_INVESTIGACION = [
-  { label: "Investigación de creación", codigo: "IC" },
-  { label: "Investigación formal", codigo: "IPD" },
-  { label: "Investigación formativa", codigo: "IF" },
-  { label: "Emprendimiento", codigo: "UE" },
-  { label: "Semilleros", codigo: "SEM" },
-] as const;
-
-export const MAPA_TIPO_INVESTIGACION: Record<string, string> = {
-  "Investigación de creación": "IC",
-  "Investigación formal": "IPD",
-  "Investigación formativa": "IF",
-  "Emprendimiento": "UE",
-  "Semilleros": "SEM",
-};
-
-export interface Convocatoria {
-  id: number;
-  codigo?: string;
-  codigo_con?: string;
-  tipo_investigacion?: string;
-  titulo: string;
-  tipo: string;
-  dirigida_a?: string;
-  descripcion?: string;
-  fecha_apertura: string;
-  fecha_cierre: string;
-  fecha_resultados?: string;
-  rubro_disponible?: number;
-  estado: string;
-  aprobada_comite: number;
-  creado_por_nombre: string;
-  dias_restantes?: number;
-  requisitos?: string;
-  observaciones_comite?: string;
-}
-
-export interface ConvocatoriaExterna {
-  id: number;
-  codigo?: string;
-  codigo_ext?: string;
-  tipo_investigacion?: string;
-  titulo: string;
-  entidad_externa: string;
-  fecha_apertura: string;
-  fecha_cierre: string;
-  descripcion: string;
-  dias_restantes?: number;
-  estado_vigencia?: "vigente" | "cerrada" | "indefinida";
-}
-
-export interface AlertasConvocatorias {
-  resumen: {
-    proximas_a_cerrar_total: number;
-    criticas_3_dias: number;
-    proximas_a_abrir_total: number;
-    vencidas_pendientes_cierre: number;
+// ── Core fetch wrapper — injects JWT automatically ───────────────────────────
+async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
   };
-  proximas_a_cerrar: Array<Convocatoria & { nivel_alerta: string; mensaje: string }>;
-  proximas_a_abrir: Convocatoria[];
-  vencidas_pendientes_cierre: Convocatoria[];
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${BASE}${endpoint}`, { ...options, headers });
+
+  if (res.status === 401) {
+    // Token expirado o inválido — limpiar y recargar
+    clearToken();
+    window.dispatchEvent(new Event('nous:session-expired'));
+    throw new Error('Sesión expirada');
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
 }
 
-export async function getConvocatorias(params?: { estado?: string; tipo?: string; q?: string }): Promise<Convocatoria[]> {
-  const query = params ? "?" + new URLSearchParams(params as any).toString() : "";
-  return fetchJSON(`/convocatorias${query}`);
-}
-
-export async function getConvocatoriasVigentes(): Promise<Convocatoria[]> {
-  return fetchJSON("/convocatorias/vigentes");
-}
-
-export async function getConvocatoriasAlertas(): Promise<AlertasConvocatorias> {
-  return fetchJSON("/convocatorias/alertas");
-}
-
-export async function crearConvocatoria(data: Partial<Convocatoria>): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
-  return fetchJSON("/convocatorias", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-export async function actualizarConvocatoria(id: number, data: Partial<Convocatoria>): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
-  return fetchJSON(`/convocatorias/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-}
-
-export async function publicarConvocatoria(id: number): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
-  return fetchJSON(`/convocatorias/${id}/publicar`, { method: "PATCH" });
-}
-
-export async function getConvocatoriasExternas(q?: string): Promise<ConvocatoriaExterna[]> {
-  const query = q ? `?q=${encodeURIComponent(q)}` : "";
-  return fetchJSON(`/convocatorias/externas${query}`);
-}
-
-export async function crearConvocatoriaExterna(data: Partial<ConvocatoriaExterna>): Promise<{ ok: boolean; convocatoria: ConvocatoriaExterna }> {
-  return fetchJSON("/convocatorias/externas", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-export async function aprobarConvocatoriaComite(id: number): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
-  return fetchJSON(`/convocatorias/${id}/comite/aprobar`, { method: "PATCH" });
-}
-
-export async function objetarConvocatoriaComite(id: number, observaciones: string): Promise<{ ok: boolean; convocatoria: Convocatoria }> {
-  return fetchJSON(`/convocatorias/${id}/comite/objetar`, {
-    method: "PATCH",
-    body: JSON.stringify({ observaciones }),
-  });
-}
-
-export interface Semillero {
-  id: number;
-  nombre: string;
-  codigo: string;
-  vobo_programa: number;
-  vobo_vicerrectoria: number;
-  fecha_creacion: string;
-  lider_estudiante_nombre: string;
-  horas_asignadas: number;
-  lider_profesor: string;
-  programa: string;
-  integrantes?: number;
-  tema_interes?: string;
-}
-
-export async function getSemilleros(): Promise<Semillero[]> {
-  return fetchJSON("/semilleros");
-}
-
-export async function crearSemillero(data: { nombre: string; programa_id?: number; tema_interes?: string; mision?: string; vision?: string }): Promise<{ ok: boolean; semillero: Semillero }> {
-  return fetchJSON("/semilleros", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-export interface CriterioEvaluacion {
-  id: number;
-  evaluacion_id: number;
-  criterio: string;
-  puntaje_maximo: number | string;
-  puntaje_obtenido: number | string;
-}
-
-export interface Evaluacion {
-  id: number;
-  proyecto_id: number;
-  evaluador_id: number;
-  tipo: string;
-  fecha_asignacion: string;
-  fecha_limite: string;
-  estado: string;
-  puntaje_total: number | string;
-  observaciones?: string;
-  proyecto: string;
-  convocatoria: string;
-  evaluador_nombre: string;
-  criterios?: CriterioEvaluacion[];
-}
-
-export async function getEvaluaciones(): Promise<Evaluacion[]> {
-  return fetchJSON("/evaluaciones");
-}
-
-export async function getEvaluacion(id: number): Promise<Evaluacion> {
-  return fetchJSON(`/evaluaciones/${id}`);
-}
-
-export async function calificarEvaluacion(id: number, data: { puntaje_total: number; observaciones: string; criterios: { id?: number; criterio?: string; puntaje_obtenido: number }[] }): Promise<{ ok: boolean }> {
-  return fetchJSON(`/evaluaciones/${id}/calificar`, {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-export interface UsuarioAdmin {
+// ── Auth ──────────────────────────────────────────────────────────────────────
+export interface UsuarioMe {
   id: number;
   nombre_completo: string;
   correo_institucional: string;
-  cedula: string;
-  activo: number;
-  fecha_creacion: string;
-  rol: string;
-  rol_ids?: string;
+  mfa_habilitado: boolean;
+  activo: boolean;
+  roles: string[];
 }
 
-export interface RolAdmin {
+export interface LoginLocalResponse {
+  token?: string;
+  mfaRequired?: boolean;
+  tempToken?: string;
+  usuario?: { id: number; nombre: string; correo: string };
+}
+
+export interface MfaSetupResponse {
+  qrCode: string; // data URL del QR
+  secret: string; // para ingreso manual
+}
+
+export const authApi = {
+  /** Redirige al backend para iniciar el flujo OAuth con Google Workspace */
+  loginWithGoogle(): void {
+    window.location.href = 'http://localhost:4200/api/auth/google';
+  },
+
+  /** Login local con email y contraseña */
+  loginLocal(correo: string, password: string): Promise<LoginLocalResponse> {
+    return apiFetch<LoginLocalResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ correo, password }),
+    });
+  },
+
+  /** Datos del usuario autenticado actual */
+  getMe(): Promise<UsuarioMe> {
+    return apiFetch<UsuarioMe>('/auth/me');
+  },
+
+  /** Cierra la sesión (registra auditoría en servidor) */
+  logout(): Promise<{ mensaje: string }> {
+    return apiFetch<{ mensaje: string }>('/auth/logout', { method: 'POST' });
+  },
+
+  /** Obtiene el QR para configurar MFA */
+  setupMfa(): Promise<MfaSetupResponse> {
+    return apiFetch<MfaSetupResponse>('/auth/mfa/setup', { method: 'POST' });
+  },
+
+  /** Verifica el código TOTP y activa MFA */
+  verifyMfa(token: string): Promise<{ token: string; mensaje: string }> {
+    return apiFetch<{ token: string; mensaje: string }>('/auth/mfa/verify', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+
+  /** Solicita el flujo de recuperación de contraseña */
+  solicitarReset(correo: string): Promise<{ mensaje: string }> {
+    return apiFetch<{ mensaje: string }>('/auth/recuperar-password', {
+      method: 'POST',
+      body: JSON.stringify({ correo }),
+    });
+  },
+
+  /** Aplica el nuevo password usando el token de reset */
+  resetPassword(token: string, nuevaPassword: string): Promise<{ mensaje: string }> {
+    return apiFetch<{ mensaje: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, nuevaPassword }),
+    });
+  },
+
+  /** Registra una cuenta nueva con correo institucional y contraseña */
+  registro(data: {
+    nombre_completo: string;
+    correo: string;
+    password: string;
+    cedula?: string;
+  }): Promise<LoginLocalResponse> {
+    return apiFetch<LoginLocalResponse>('/auth/registro', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+export interface DashboardKpis {
+  proyectosActivos: number;
+  proyectosTotal: number;
+  convocatoriasAbiertas: number;
+  postulacionesTotales: number;
+  productos: number;
+  articulos: number;
+  ponencias: number;
+  presupuestoAprobado: number;
+  presupuestoEjecutado: number;
+  ejecucionPct: number;
+}
+
+export interface EvolucionItem {
+  mes: string;
+  activos: number;
+  cerrados: number;
+  nuevos: number;
+}
+
+export interface EjecucionItem {
+  mes: string;
+  aprobado: number;
+  ejecutado: number;
+}
+
+export interface ProductoTipo {
+  name: string;
+  value: number;
+}
+
+export interface ActividadItem {
+  user: string;
+  accion: string;
+  description: string;
+  time: string;
+}
+
+export interface TopProyecto {
+  id: number;
+  nombre: string;
+  lider: string;
+  grupo: string;
+  estado: string;
+  avance: number;
+}
+
+export interface ConvocatoriaResumen {
+  id: number;
+  nombre: string;
+  estado: string;
+  cierre: string;
+  inscritos: number;
+}
+
+export const dashboardApi = {
+  getKpis:               () => apiFetch<DashboardKpis>('/dashboard/kpis'),
+  getEvolucionProyectos: () => apiFetch<EvolucionItem[]>('/dashboard/evolucion-proyectos'),
+  getEjecucionFinanciera:() => apiFetch<EjecucionItem[]>('/dashboard/ejecucion-financiera'),
+  getProductosTipo:      () => apiFetch<ProductoTipo[]>('/dashboard/productos-tipo'),
+  getActividadReciente:  () => apiFetch<ActividadItem[]>('/dashboard/actividad-reciente'),
+  getTopProyectos:       () => apiFetch<TopProyecto[]>('/dashboard/top-proyectos'),
+  getConvocatoriasActivas:()=> apiFetch<ConvocatoriaResumen[]>('/dashboard/convocatorias-activas'),
+};
+
+// ── Proyectos ────────────────────────────────────────────────────────────────
+export interface Proyecto {
+  id: number;
+  id_display: string;
+  nombre: string;
+  tipo: string;
+  estado: string;
+  inicio: string;
+  fin: string;
+  presupuesto: string;
+  lider: string;
+  grupo: string;
+  facultad: string;
+  avance: number;
+}
+
+export interface ProyectoDetalle extends Proyecto {
+  lugar_ejecucion: string;
+  duracion_meses: number;
+  resumen?: string;
+  objetivos?: string;
+  metodologia_resumen?: string;
+  equipo: { nombre: string; rol: string; dedicacion: string; vinculacion: string }[];
+  cronograma: { nombre: string; responsable: string; inicio: string; fin: string; avance: number; estado: string }[];
+  productos: { tipo: string; titulo: string; estado: string; fecha: string }[];
+  rubros: { rubro: string; aprobado: number; ejecutado: number; saldo: number }[];
+  riesgos: { descripcion: string; probabilidad: string; impacto: string; mitigacion: string }[];
+}
+
+export const proyectosApi = {
+  getAll:  (params?: { estado?: string; grupo?: string; q?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string> ?? {}).toString();
+    return apiFetch<Proyecto[]>(`/proyectos${qs ? '?' + qs : ''}`);
+  },
+  getById: (id: number) => apiFetch<ProyectoDetalle>(`/proyectos/${id}`),
+};
+
+// ── Convocatorias ─────────────────────────────────────────────────────────────
+export interface Convocatoria {
+  id: number;
+  nombre: string;
+  tipo: string;
+  estado: string;
+  descripcion: string;
+  apertura: string;
+  cierre: string;
+  presupuesto: string;
+  inscritos: number;
+  evaluadores: number;
+}
+
+export const convocatoriasApi = {
+  getAll:  (params?: { estado?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string> ?? {}).toString();
+    return apiFetch<Convocatoria[]>(`/convocatorias${qs ? '?' + qs : ''}`);
+  },
+  getById: (id: number) => apiFetch<Convocatoria & { proyectos: any[] }>(`/convocatorias/${id}`),
+};
+
+// ── Semilleros ────────────────────────────────────────────────────────────────
+export interface Semillero {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  lider: string;
+  grupo: string;
+  estado: string;
+  integrantes: number;
+  proyectos: number;
+}
+
+export interface SemilleroDetalle extends Semillero {
+  vision?: string;
+  mision?: string;
+  estado_arte?: string;
+  lider_estudiante?: string;
+  cvlac_url?: string;
+  ingreso: string;
+  integrantes_lista: { nombre: string; programa: string; ingreso: string }[];
+  proyectos_lista: { codigo: string; titulo: string; estado: string }[];
+}
+
+export const semillerosApi = {
+  getAll:  () => apiFetch<Semillero[]>('/semilleros'),
+  getById: (id: number) => apiFetch<SemilleroDetalle>(`/semilleros/${id}`),
+};
+
+// ── Usuarios y Roles ──────────────────────────────────────────────────────────
+export interface UsuarioRol {
+  id: number;
+  nombre: string;
+  email: string;
+  cedula: string;
+  estado: string;
+  fecha_registro: string;
+  roles: string[];
+}
+
+export interface RolDisponible {
   id: number;
   nombre: string;
   descripcion: string;
-  usuarios_count: number;
-  permisos_count: number;
 }
 
-export async function getUsuariosAdmin(): Promise<UsuarioAdmin[]> {
-  return fetchJSON("/usuarios");
-}
-
-export async function getRolesAdmin(): Promise<RolAdmin[]> {
-  return fetchJSON("/roles");
-}
-
-export async function crearUsuarioAdmin(data: { nombre_completo: string; correo_institucional: string; cedula?: string; rol_id?: number }): Promise<{ ok: boolean; usuario: UsuarioAdmin }> {
-  return fetchJSON("/usuarios", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-// ─── Inscripciones a Convocatorias ──────────────────────────────────────────
-
-export interface InscripcionDocumento {
-  id: number;
-  inscripcion_id: number;
-  requisito_nombre: string;
-  documento_nombre_original: string;
-  documento_ruta: string;
-  documento_mime: string;
-  documento_peso_bytes: number;
-  fecha_creacion: string;
-}
-
-export interface Inscripcion {
-  id: number;
-  convocatoria_id: number;
-  usuario_id: number;
-  tipo_investigacion?: string;
-  resumen_proyecto: string;
-  justificacion: string;
-  documento_nombre_original: string;
-  documento_ruta: string;
-  documento_mime: string;
-  documento_peso_bytes: number;
-  fecha_inscripcion: string;
-  estado: string;
-  usuario_nombre?: string;
-  usuario_correo?: string;
-  convocatoria_titulo?: string;
-  documentos_adjuntos?: InscripcionDocumento[];
-}
-
-export function getUsuarioActual(): Usuario | null {
-  try {
-    const raw = sessionStorage.getItem("nous_user");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function inscribirseConvocatoria(
-  convocatoriaId: number,
-  formData: FormData
-): Promise<{ ok: boolean; mensaje: string; inscripcion: Inscripcion }> {
-  const res = await fetch(`${BASE}/convocatorias/${convocatoriaId}/inscribirse`, {
-    method: "POST",
-    body: formData,
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    const err = new Error(data.error || "Error al procesar la inscripción");
-    (err as any).campo = data.campo;
-    (err as any).status = res.status;
-    throw err;
-  }
-  return data;
-}
-
-export async function consultarMiInscripcion(
-  convocatoriaId: number,
-  usuarioId: number
-): Promise<{ inscrito: boolean; inscripcion: Inscripcion | null }> {
-  return fetchJSON(`/convocatorias/${convocatoriaId}/mi-inscripcion?usuario_id=${usuarioId}`);
-}
-
-export async function getInscripcionesConvocatoria(
-  convocatoriaId: number
-): Promise<Inscripcion[]> {
-  return fetchJSON(`/convocatorias/${convocatoriaId}/inscripciones`);
-}
-
+export const usuariosApi = {
+  getAll: () => apiFetch<UsuarioRol[]>('/usuarios'),
+  getRoles: () => apiFetch<RolDisponible[]>('/usuarios/roles'),
+  asignarRol: (id: number, rol: string) => apiFetch<{ message: string }>(`/usuarios/${id}/roles`, {
+    method: 'POST',
+    body: JSON.stringify({ rol }),
+  }),
+  removerRol: (id: number, rol: string) => apiFetch<{ message: string }>(`/usuarios/${id}/roles/${rol}`, {
+    method: 'DELETE',
+  }),
+};
