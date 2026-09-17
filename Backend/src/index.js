@@ -15,6 +15,7 @@ const dashboardRoutes    = require('./modules/dashboard/dashboard.routes');
 const proyectosRoutes    = require('./modules/proyectos/proyectos.routes');
 const convocatoriasRoutes= require('./modules/convocatorias/convocatorias.routes');
 const semillerosRoutes   = require('./modules/semilleros/semilleros.routes');
+const usuariosRoutes     = require('./modules/usuarios/usuarios.routes');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +61,7 @@ app.use('/api/dashboard',    dashboardRoutes);
 app.use('/api/proyectos',    proyectosRoutes);
 app.use('/api/convocatorias',convocatoriasRoutes);
 app.use('/api/semilleros',   semillerosRoutes);
+app.use('/api/usuarios',     usuariosRoutes);
 
 // Ruta de prueba básica
 app.get('/api/health', async (req, res) => {

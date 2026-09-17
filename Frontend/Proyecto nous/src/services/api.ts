@@ -290,3 +290,32 @@ export const semillerosApi = {
   getAll:  () => apiFetch<Semillero[]>('/semilleros'),
   getById: (id: number) => apiFetch<SemilleroDetalle>(`/semilleros/${id}`),
 };
+
+// ── Usuarios y Roles ──────────────────────────────────────────────────────────
+export interface UsuarioRol {
+  id: number;
+  nombre: string;
+  email: string;
+  cedula: string;
+  estado: string;
+  fecha_registro: string;
+  roles: string[];
+}
+
+export interface RolDisponible {
+  id: number;
+  nombre: string;
+  descripcion: string;
+}
+
+export const usuariosApi = {
+  getAll: () => apiFetch<UsuarioRol[]>('/usuarios'),
+  getRoles: () => apiFetch<RolDisponible[]>('/usuarios/roles'),
+  asignarRol: (id: number, rol: string) => apiFetch<{ message: string }>(`/usuarios/${id}/roles`, {
+    method: 'POST',
+    body: JSON.stringify({ rol }),
+  }),
+  removerRol: (id: number, rol: string) => apiFetch<{ message: string }>(`/usuarios/${id}/roles/${rol}`, {
+    method: 'DELETE',
+  }),
+};

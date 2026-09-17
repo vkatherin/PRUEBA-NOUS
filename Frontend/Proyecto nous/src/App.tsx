@@ -15,11 +15,12 @@ import { Semilleros } from "./pages/Semilleros";
 import { Administracion } from "./pages/Administracion";
 import { Documentos, Productos, Grupos, Movilidad, Integraciones } from "./pages/OtrasPages";
 
-import { authApi, setToken, clearToken } from "./services/api";
+import { authApi, setToken, clearToken, type UsuarioMe } from "./services/api";
 
 export default function App() {
   // null = verificando, true = autenticado, false = no autenticado
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [user, setUser] = useState<UsuarioMe | null>(null);
   const [activePage, setActivePage] = useState<Page>("dashboard");
 
   // ── Manejo de logout ──────────────────────────────────────────────────────
@@ -65,9 +66,13 @@ export default function App() {
     // 2. Verificar sesión existente llamando a /api/auth/me
     authApi
       .getMe()
-      .then(() => setIsLoggedIn(true))
+      .then((u) => {
+        setUser(u);
+        setIsLoggedIn(true);
+      })
       .catch(() => {
         clearToken();
+        setUser(null);
         setIsLoggedIn(false);
       });
   }, []);
@@ -153,7 +158,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#F2F5F3" }}>
-      <Sidebar activePage={activePage} onNavigate={setActivePage} />
+      <Sidebar activePage={activePage} onNavigate={setActivePage} user={user} />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Header activePage={activePage} onLogout={handleLogout} />
         <main

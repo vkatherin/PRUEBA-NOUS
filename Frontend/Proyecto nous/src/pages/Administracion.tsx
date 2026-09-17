@@ -1,18 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Badge, Button, Card, PageHeader, SearchBar, Avatar, Tabs, Modal, Field, Input, Select } from "@/components/ui";
-
-const USUARIOS = [
-  { nombre: "Administrador NOUS", email: "admin@cusur.edu.co", rol: "Super Administrador", facultad: "VRI", estado: "active" as const, ultimo: "Hoy, 09:15 am" },
-  { nombre: "Carlos Mejía Hernández", email: "cmejia@cusur.edu.co", rol: "Investigador", facultad: "Ingeniería", estado: "active" as const, ultimo: "Ayer, 4:22 pm" },
-  { nombre: "María Torres Duarte", email: "mtorres@cusur.edu.co", rol: "Investigador", facultad: "Ciencias Sociales", estado: "active" as const, ultimo: "Hace 2 días" },
-  { nombre: "Jorge Peña Alarcón", email: "jpena@cusur.edu.co", rol: "Investigador", facultad: "Ciencias Económicas", estado: "active" as const, ultimo: "Hace 3 días" },
-  { nombre: "Laura Ríos Castillo", email: "lrios@cusur.edu.co", rol: "Evaluador", facultad: "Externa", estado: "active" as const, ultimo: "Hace 1 semana" },
-  { nombre: "Roberto Díaz Morales", email: "rdiaz@cusur.edu.co", rol: "Coordinador VRI", facultad: "VRI", estado: "active" as const, ultimo: "Hace 2 días" },
-  { nombre: "Claudia Herrera Soto", email: "cherrera@cusur.edu.co", rol: "Investigador", facultad: "Ciencias de la Salud", estado: "active" as const, ultimo: "Hace 5 días" },
-  { nombre: "Sebastián Ortiz H.", email: "sortiz@cusur.edu.co", rol: "Estudiante-Investigador", facultad: "Ingeniería", estado: "active" as const, ultimo: "Hace 1 día" },
-  { nombre: "Pedro Serna Quintero", email: "pserna@cusur.edu.co", rol: "Investigador", facultad: "Educación", estado: "inactive" as const, ultimo: "Hace 1 mes" },
-  { nombre: "Felipe Arango Mesa", email: "farango@cusur.edu.co", rol: "Investigador", facultad: "Derecho", estado: "inactive" as const, ultimo: "Hace 3 semanas" },
-];
+import { usuariosApi, type UsuarioRol, type RolDisponible } from "@/services/api";
 
 const ROLES = [
   { nombre: "Super Administrador", usuarios: 1, permisos: 45, desc: "Acceso total al sistema" },
@@ -96,14 +84,67 @@ function NuevoUsuarioModal({ open, onClose }: { open: boolean; onClose: () => vo
 
 export function Administracion() {
   const [tab, setTab] = useState("usuarios");
+  const [subTabUsuarios, setSubTabUsuarios] = useState("con-rol");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  
+  const [usuarios, setUsuarios] = useState<UsuarioRol[]>([]);
+  const [rolesDisponibles, setRolesDisponibles] = useState<RolDisponible[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredUsers = USUARIOS.filter((u) =>
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [usersData, rolesData] = await Promise.all([
+          usuariosApi.getAll(),
+          usuariosApi.getRoles()
+        ]);
+        setUsuarios(usersData);
+        setRolesDisponibles(rolesData);
+      } catch (error) {
+        console.error("Error fetching admin data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const handleAssignRole = async (userId: number, roleName: string) => {
+    try {
+      await usuariosApi.asignarRol(userId, roleName);
+      // Reload users to see changes
+      const updated = await usuariosApi.getAll();
+      setUsuarios(updated);
+    } catch (err) {
+      console.error(err);
+      alert("Error asignando rol");
+    }
+  };
+
+  const handleRemoveRole = async (userId: number, roleName: string) => {
+    if(!confirm(`¿Estás seguro de quitar el rol ${roleName}?`)) return;
+    try {
+      await usuariosApi.removerRol(userId, roleName);
+      // Reload users
+      const updated = await usuariosApi.getAll();
+      setUsuarios(updated);
+    } catch (err) {
+      console.error(err);
+      alert("Error removiendo rol");
+    }
+  };
+
+  const filteredUsers = usuarios.filter((u) =>
     u.nombre.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.rol.toLowerCase().includes(search.toLowerCase())
+    u.roles.join(", ").toLowerCase().includes(search.toLowerCase())
   );
+
+  const usuariosConRol = filteredUsers.filter(u => u.roles.length > 0);
+  const usuariosSinRol = filteredUsers.filter(u => u.roles.length === 0);
+
+  const displayedUsers = subTabUsuarios === "con-rol" ? usuariosConRol : usuariosSinRol;
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-5">
@@ -134,10 +175,10 @@ export function Administracion() {
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: "Total Usuarios", value: USUARIOS.length, color: "#1E6B3C" },
-              { label: "Activos", value: USUARIOS.filter((u) => u.estado === "active").length, color: "#1E6B3C" },
-              { label: "Investigadores", value: USUARIOS.filter((u) => u.rol === "Investigador").length, color: "#7C3AED" },
-              { label: "Inactivos", value: USUARIOS.filter((u) => u.estado === "inactive").length, color: "#9CA3AF" },
+              { label: "Total Usuarios", value: usuarios.length, color: "#1E6B3C" },
+              { label: "Con Rol", value: usuarios.filter(u => u.roles.length > 0).length, color: "#1E6B3C" },
+              { label: "Sin Rol", value: usuarios.filter(u => u.roles.length === 0).length, color: "#D97706" },
+              { label: "Inactivos", value: usuarios.filter(u => u.estado === "inactive").length, color: "#9CA3AF" },
             ].map((s) => (
               <div key={s.label} className="bg-white border border-[#DDE4DF] rounded-xl p-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: s.color + "15", color: s.color }}>
@@ -152,36 +193,71 @@ export function Administracion() {
             <SearchBar placeholder="Buscar usuario por nombre, email o rol..." value={search} onChange={setSearch} />
           </Card>
 
+          <Tabs
+            tabs={[
+              { id: "con-rol", label: `Usuarios con Rol (${usuarios.filter(u => u.roles.length > 0).length})` },
+              { id: "sin-rol", label: `Usuarios sin Rol (${usuarios.filter(u => u.roles.length === 0).length})` },
+            ]}
+            active={subTabUsuarios}
+            onChange={setSubTabUsuarios}
+          />
+
           <Card padding={false}>
-            <div className="divide-y divide-[#F2F5F3]">
-              {filteredUsers.map((u, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FAFFFE] group">
-                  <Avatar name={u.nombre} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#1A2B22]">{u.nombre}</p>
-                    <p className="text-xs text-[#637068]">{u.email}</p>
+            {loading ? (
+              <div className="p-8 text-center text-[#637068]">Cargando usuarios...</div>
+            ) : displayedUsers.length === 0 ? (
+              <div className="p-8 text-center text-[#637068]">No se encontraron usuarios.</div>
+            ) : (
+              <div className="divide-y divide-[#F2F5F3]">
+                {displayedUsers.map((u, i) => (
+                  <div key={u.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FAFFFE] group">
+                    <Avatar name={u.nombre} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#1A2B22]">{u.nombre}</p>
+                      <p className="text-xs text-[#637068]">{u.email}</p>
+                    </div>
+                    <div className="flex gap-1 flex-wrap w-48">
+                      {u.roles.length > 0 ? u.roles.map(r => (
+                        <span
+                          key={r}
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                          style={{ backgroundColor: (rolColors[r] ?? "#9CA3AF") + "15", color: rolColors[r] ?? "#9CA3AF" }}
+                          title="Click para remover rol"
+                          onClick={() => handleRemoveRole(u.id, r)}
+                        >
+                          {r} ✕
+                        </span>
+                      )) : (
+                        <span className="text-xs text-gray-400 italic">Sin rol</span>
+                      )}
+                    </div>
+                    <Badge variant={u.estado as any} />
+                    <span className="text-xs text-[#9BAD9F] hidden lg:block">{new Date(u.fecha_registro).toLocaleDateString()}</span>
+                    
+                    <div className="flex gap-2">
+                      <select 
+                        className="text-xs border border-gray-200 rounded px-2 py-1 outline-none"
+                        onChange={(e) => {
+                          if(e.target.value) {
+                            handleAssignRole(u.id, e.target.value);
+                            e.target.value = "";
+                          }
+                        }}
+                        defaultValue=""
+                      >
+                        <option value="" disabled>+ Asignar Rol</option>
+                        {rolesDisponibles
+                          .filter(r => !u.roles.includes(r.nombre))
+                          .map(r => (
+                            <option key={r.id} value={r.nombre}>{r.nombre}</option>
+                          ))
+                        }
+                      </select>
+                    </div>
                   </div>
-                  <span
-                    className="text-xs font-semibold px-2.5 py-1 rounded-full hidden sm:block"
-                    style={{
-                      backgroundColor: (rolColors[u.rol] ?? "#9CA3AF") + "15",
-                      color: rolColors[u.rol] ?? "#9CA3AF",
-                    }}
-                  >
-                    {u.rol}
-                  </span>
-                  <span className="text-xs text-[#637068] hidden md:block">{u.facultad}</span>
-                  <Badge variant={u.estado} />
-                  <span className="text-xs text-[#9BAD9F] hidden lg:block">{u.ultimo}</span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="outline" size="sm">Editar</Button>
-                    <Button variant="ghost" size="sm">
-                      {u.estado === "active" ? "Suspender" : "Activar"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       )}

@@ -107,17 +107,26 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+import type { UsuarioMe } from "../services/api";
+
 export function Sidebar({
   activePage,
   onNavigate,
+  user,
 }: {
   activePage: Page;
   onNavigate: (page: Page) => void;
+  user?: UsuarioMe | null;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const topItems = NAV_ITEMS.slice(0, 8);
-  const bottomItems = NAV_ITEMS.slice(8);
+  let bottomItems = NAV_ITEMS.slice(8);
+
+  const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador");
+  if (!isAdmin) {
+    bottomItems = bottomItems.filter(item => item.id !== "administracion");
+  }
 
   return (
     <aside
@@ -185,13 +194,13 @@ export function Sidebar({
             className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
             style={{ backgroundColor: "#F2A900", color: "#163D27" }}
           >
-            AD
+            {user ? user.nombre_completo.substring(0,2).toUpperCase() : "US"}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-white text-xs font-semibold truncate">Administrador</p>
+              <p className="text-white text-xs font-semibold truncate">{user ? user.nombre_completo : "Usuario"}</p>
               <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.45)" }}>
-                admin@cusur.edu.co
+                {user ? user.correo_institucional : ""}
               </p>
             </div>
           )}
