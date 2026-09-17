@@ -142,7 +142,7 @@ export function Reportes() {
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#637068" }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} />
                 <Radar name="VRI 2025" dataKey="A" stroke={GREEN} fill={GREEN} fillOpacity={0.25} strokeWidth={2} />
-                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #DDE4DF", fontSize: 12, fontFamily: "Poppins" }} formatter={(v: number) => [`${v}%`]} />
+                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #DDE4DF", fontSize: 12, fontFamily: "Poppins" }} formatter={(v: any) => [`${v}%`]} />
               </RadarChart>
             </ResponsiveContainer>
           </Card>
@@ -160,7 +160,7 @@ export function Reportes() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9BAD9F" }} tickFormatter={(v) => `$${v}M`} />
                 <Tooltip
                   contentStyle={{ borderRadius: 10, border: "1px solid #DDE4DF", fontSize: 12, fontFamily: "Poppins" }}
-                  formatter={(v: number) => [`$${v}M`]}
+                  formatter={(v: any) => [`$${v}M`]}
                 />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
                 <Line type="monotone" dataKey="asignado" name="Presupuesto Asignado" stroke="#DDE4DF" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 4, fill: "#DDE4DF" }} />
@@ -284,7 +284,7 @@ export function Reportes() {
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#F0F4F0" />
                 <XAxis dataKey="facultad" axisLine={false} tickLine={false} tick={{ fontSize:10, fill:"#9BAD9F" }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize:11, fill:"#9BAD9F" }} tickFormatter={(v)=>`$${v}M`} />
-                <Tooltip contentStyle={{ borderRadius:10, border:"1px solid #DDE4DF", fontSize:12, fontFamily:"Poppins" }} formatter={(v:number)=>[`$${v}M`]} cursor={{ fill:"#F2F5F3" }} />
+                <Tooltip contentStyle={{ borderRadius:10, border:"1px solid #DDE4DF", fontSize:12, fontFamily:"Poppins" }} formatter={(v: any)=>[`$${v}M`]} cursor={{ fill:"#F2F5F3" }} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize:11 }} />
                 <Bar dataKey="aprobado" name="Aprobado" fill="#DDE4DF" radius={[4,4,0,0]} />
                 <Bar dataKey="ejecutado" name="Ejecutado" fill={GREEN} radius={[4,4,0,0]} />

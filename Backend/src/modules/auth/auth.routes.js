@@ -1,71 +1,49 @@
-const express  = require('express');
-const passport = require('passport');
-const router   = express.Router();
-const ctrl     = require('./auth.controller');
-const { verificarAutenticacion } = require('./auth.middleware');
+const express = require("express");
+const router = express.Router();
+const pool = require("../../db/connection");
 
-// Guard: evitar crash cuando Google OAuth no está configurado
-const googleGuard = (req, res, next) => {
-  const id = process.env.GOOGLE_CLIENT_ID;
-  if (!id || id.startsWith('TU_')) {
-    return res.status(503).json({
-      error: 'Google OAuth no está configurado. Añade GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el .env del backend.'
+// POST /api/auth/login
+router.post("/login", async (req, res) => {
+  const { correo, password } = req.body;
+  if (!correo) return res.status(400).json({ error: "El correo es requerido" });
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT u.id, u.nombre_completo, u.correo_institucional, u.password_hash, u.activo,
+              GROUP_CONCAT(r.nombre) as roles
+       FROM usuarios u
+       LEFT JOIN usuario_rol ur ON ur.usuario_id = u.id
+       LEFT JOIN roles r ON r.id = ur.rol_id
+       WHERE u.correo_institucional = ?
+       GROUP BY u.id`,
+      [correo]
+    );
+
+    if (rows.length === 0) return res.status(401).json({ error: "Credenciales incorrectas" });
+    const user = rows[0];
+    if (!user.activo) return res.status(403).json({ error: "Usuario inactivo" });
+
+    // Si no tiene password configurado, acepta cualquier contraseña
+    if (user.password_hash !== null) {
+      const bcrypt = require("bcryptjs");
+      const isPlain = user.password_hash === password;
+      const isBcrypt = user.password_hash.startsWith("$2") ? await bcrypt.compare(password || "", user.password_hash) : false;
+      if (!isPlain && !isBcrypt) return res.status(401).json({ error: "Credenciales incorrectas" });
+    }
+
+    res.json({
+      ok: true,
+      usuario: {
+        id: user.id,
+        nombre: user.nombre_completo,
+        correo: user.correo_institucional,
+        roles: user.roles ? user.roles.split(",") : [],
+      },
     });
+  } catch (err) {
+    console.error("Error en login:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
-  next();
-};
-
-// ── RF-AU-01 — Google OAuth 2.0 ───────────────────────────────────────────────
-
-// Inicia el flujo OAuth — redirige a Google
-router.get('/google',
-  googleGuard,
-  passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    prompt: 'select_account',
-  })
-);
-
-// Callback de Google — Passport verifica el código y llama a googleCallback
-router.get('/google/callback',
-  googleGuard,
-  passport.authenticate('google', {
-    session: false,
-    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=auth_google`,
-  }),
-  ctrl.googleCallback
-);
-
-// ── Sesión ─────────────────────────────────────────────────────────────────────
-
-// GET /api/auth/me — datos del usuario autenticado
-router.get('/me', verificarAutenticacion, ctrl.getMe);
-
-// POST /api/auth/login — login local (email + contraseña)
-router.post('/login', ctrl.loginLocal);
-
-// POST /api/auth/logout
-router.post('/logout', verificarAutenticacion, ctrl.logout);
-
-// ── RF-AU-02 — MFA ────────────────────────────────────────────────────────────
-
-// POST /api/auth/mfa/setup — genera TOTP secret y QR
-router.post('/mfa/setup', verificarAutenticacion, ctrl.setupMfa);
-
-// POST /api/auth/mfa/verify — verifica código TOTP y activa MFA
-router.post('/mfa/verify', verificarAutenticacion, ctrl.verifyMfa);
-
-// ── RF-AU-04 — Recuperación de contraseña ─────────────────────────────────────
-
-// POST /api/auth/recuperar-password — solicita reset (genera token)
-router.post('/recuperar-password', ctrl.solicitarReset);
-
-// POST /api/auth/reset-password — aplica el nuevo password con el token
-router.post('/reset-password', ctrl.resetPassword);
-
-// ── RF-AU-03 — Registro local ─────────────────────────────────────────────────
-
-// POST /api/auth/registro — crea una nueva cuenta con correo institucional
-router.post('/registro', ctrl.registro);
+});
 
 module.exports = router;

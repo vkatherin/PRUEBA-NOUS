@@ -27,7 +27,7 @@ echo  Git encontrado. Continuando...
 echo.
 
 REM Ir a la carpeta del proyecto
-cd /d "d:\Practica\NOUS\nous_project"
+cd /d "%~dp0"
 
 REM Inicializar repo si no existe
 if not exist ".git" (
