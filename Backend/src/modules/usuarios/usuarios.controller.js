@@ -21,7 +21,6 @@ exports.getUsuarios = async (req, res) => {
       JOIN roles r ON r.id = ur.rol_id
     `);
 
-    // Mapear roles a los usuarios
     const usuariosConRoles = usuarios.map(u => {
       const userRoles = roles
         .filter(r => r.usuario_id === u.id)
@@ -40,7 +39,7 @@ exports.getUsuarios = async (req, res) => {
   }
 };
 
-// GET /api/usuarios/roles-disponibles — Retorna los roles que existen
+// GET /api/usuarios/roles — Retorna los roles que existen
 exports.getRolesDisponibles = async (req, res) => {
   try {
     const [roles] = await pool.query('SELECT id, nombre, descripcion FROM roles');
@@ -53,20 +52,18 @@ exports.getRolesDisponibles = async (req, res) => {
 // POST /api/usuarios/:id/roles — Asigna un rol a un usuario
 exports.asignarRol = async (req, res) => {
   const { id } = req.params;
-  const { rol } = req.body; // El nombre del rol, ej: "administrador", "investigador"
+  const { rol } = req.body;
 
   if (!rol) {
     return res.status(400).json({ error: 'El campo "rol" es requerido' });
   }
 
   try {
-    // 1. Obtener ID del rol
     const [[rolData]] = await pool.query('SELECT id FROM roles WHERE nombre = ?', [rol]);
     if (!rolData) {
       return res.status(404).json({ error: `El rol '${rol}' no existe` });
     }
 
-    // 2. Asignar rol
     await pool.query(
       'INSERT IGNORE INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
       [id, rolData.id]
@@ -81,7 +78,7 @@ exports.asignarRol = async (req, res) => {
 
 // DELETE /api/usuarios/:id/roles/:role — Quita un rol a un usuario
 exports.removerRol = async (req, res) => {
-  const { id, role } = req.params; // role es el nombre, ej: "investigador"
+  const { id, role } = req.params;
 
   try {
     const [[rolData]] = await pool.query('SELECT id FROM roles WHERE nombre = ?', [role]);
@@ -98,5 +95,40 @@ exports.removerRol = async (req, res) => {
   } catch (err) {
     console.error('Error al remover rol:', err);
     res.status(500).json({ error: 'Error al remover el rol' });
+  }
+};
+
+// POST /api/usuarios — Crea un usuario nuevo
+exports.crearUsuario = async (req, res) => {
+  const { nombre_completo, correo_institucional, cedula, rol_id } = req.body;
+  if (!nombre_completo || !correo_institucional) {
+    return res.status(400).json({ error: 'Nombre y correo institucional son obligatorios' });
+  }
+  try {
+    const genCedula = cedula || Date.now().toString().slice(-8);
+    const [result] = await pool.query(
+      `INSERT INTO usuarios (nombre_completo, correo_institucional, cedula, mfa_habilitado, activo, fecha_creacion)
+       VALUES (?, ?, ?, 0, 1, NOW())`,
+      [nombre_completo, correo_institucional, genCedula]
+    );
+    const newId = result.insertId;
+    if (rol_id) {
+      await pool.query('INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)', [newId, rol_id]);
+    }
+    res.status(201).json({ ok: true, id: newId });
+  } catch (err) {
+    console.error('Error al crear usuario:', err);
+    res.status(500).json({ error: 'Error al crear usuario: ' + err.message });
+  }
+};
+
+// PATCH /api/usuarios/:id/estado — Activa/desactiva un usuario
+exports.actualizarEstado = async (req, res) => {
+  try {
+    const { activo } = req.body;
+    await pool.query('UPDATE usuarios SET activo = ? WHERE id = ?', [activo ? 1 : 0, req.params.id]);
+    res.json({ ok: true, id: req.params.id, activo });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al actualizar estado de usuario' });
   }
 };
