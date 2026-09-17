@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Badge, Button, Card, PageHeader, ProgressBar, Tabs, Avatar, Field, Input, Modal, Select, Textarea } from "@/components/ui";
-import { semillerosApi, type Semillero, type SemilleroDetalle } from "@/services/api";
+import { getSemilleros, crearSemillero } from "@/services/api";
+
+export type EstadoSemillero = "active" | "inactive" | "pending" | "closed";
+
+export interface SemilleroItem {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  lider: string;
+  grupo: string;
+  estado: EstadoSemillero;
+  integrantes: number;
+  proyectos: number;
+}
 
 const ESTUDIANTE = {
   nombre: "Sebastián Ortiz Herrera",
@@ -9,17 +22,83 @@ const ESTUDIANTE = {
   lider: "Carlos Mejía",
   ingreso: "2023-02",
   trayectoria: [
-    { fecha: "Feb 2023", tipo: "ingreso", titulo: "Vinculación al Semillero HIDROSUR", desc: "Integración formal al semillero de investigación en recursos hídricos, período 2023-I.", estado: "closed" as const },
-    { fecha: "Mar 2023", tipo: "formacion", titulo: "Curso: Fundamentos de Investigación Científica", desc: "Capacitación de 40 horas. Metodología, escritura académica y gestión de referencias.", estado: "closed" as const },
-    { fecha: "May 2023", tipo: "participacion", titulo: "Auxiliar en Proyecto INV-2023-012", desc: "Proyecto: Calidad del Agua en Cuencas del Departamento de Córdoba. Rol: Auxiliar de campo.", estado: "closed" as const },
-    { fecha: "Sep 2023", tipo: "evento", titulo: "Ponencia — Encuentro Regional de Semilleros", desc: "Presentación oral en el XVII Encuentro de Semilleros de Investigación — Red RREDSI, Montería.", estado: "closed" as const },
-    { fecha: "Nov 2023", tipo: "certificado", titulo: "Certificado de Joven Investigador", desc: "Reconocimiento institucional por producción y participación en semillero activo durante 2023.", estado: "closed" as const },
-    { fecha: "Feb 2024", tipo: "formacion", titulo: "Diplomado: Análisis de Datos con Python", desc: "72 horas. Análisis estadístico, visualización y ciencia de datos aplicada a investigación.", estado: "closed" as const },
-    { fecha: "May 2024", tipo: "participacion", titulo: "Co-investigador en INV-2024-031", desc: "Proyecto: Modelación de Cuencas Córdoba. Desarrollo del modelo HEC-HMS y análisis de resultados.", estado: "closed" as const },
-    { fecha: "Ago 2024", tipo: "movilidad", titulo: "Movilidad — Congreso Internacional de Hidrología", desc: "Participación en congreso internacional en Bogotá. Presentación de poster científico.", estado: "closed" as const },
-    { fecha: "Dic 2024", tipo: "producto", titulo: "Co-autor — Artículo en Revista Ingeniería e Investigación", desc: "Artículo científico indexado en Scopus Q3. DOI: 10.xxxx/rii.v44.n3.112.", estado: "closed" as const },
-    { fecha: "Feb 2025", tipo: "participacion", titulo: "Investigador en INV-2025-047 (Actual)", desc: "Participación activa en modelación hídrica avanzada. Avance: 78%.", estado: "active" as const },
-    { fecha: "Oct 2025", tipo: "formacion", titulo: "Curso: Machine Learning para Ciencias Ambientales", desc: "Inscrito. Pendiente iniciar en octubre 2025.", estado: "pending" as const },
+    {
+      fecha: "Feb 2023",
+      tipo: "ingreso",
+      titulo: "Vinculación al Semillero HIDROSUR",
+      desc: "Integración formal al semillero de investigación en recursos hídricos, período 2023-I.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "Mar 2023",
+      tipo: "formacion",
+      titulo: "Curso: Fundamentos de Investigación Científica",
+      desc: "Capacitación de 40 horas. Metodología, escritura académica y gestión de referencias.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "May 2023",
+      tipo: "participacion",
+      titulo: "Auxiliar en Proyecto INV-2023-012",
+      desc: "Proyecto: Calidad del Agua en Cuencas del Departamento de Córdoba. Rol: Auxiliar de campo.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "Sep 2023",
+      tipo: "evento",
+      titulo: "Ponencia — Encuentro Regional de Semilleros",
+      desc: "Presentación oral en el XVII Encuentro de Semilleros de Investigación — Red RREDSI, Montería.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "Nov 2023",
+      tipo: "certificado",
+      titulo: "Certificado de Joven Investigador",
+      desc: "Reconocimiento institucional por producción y participación en semillero activo durante 2023.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "Feb 2024",
+      tipo: "formacion",
+      titulo: "Diplomado: Análisis de Datos con Python",
+      desc: "72 horas. Análisis estadístico, visualización y ciencia de datos aplicada a investigación.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "May 2024",
+      tipo: "participacion",
+      titulo: "Co-investigador en INV-2024-031",
+      desc: "Proyecto: Modelación de Cuencas Córdoba. Desarrollo del modelo HEC-HMS y análisis de resultados.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "Ago 2024",
+      tipo: "movilidad",
+      titulo: "Movilidad — Congreso Internacional de Hidrología",
+      desc: "Participación en congreso internacional en Bogotá. Presentación de poster científico.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "Dic 2024",
+      tipo: "producto",
+      titulo: "Co-autor — Artículo en Revista Ingeniería e Investigación",
+      desc: "Artículo científico indexado en Scopus Q3. DOI: 10.xxxx/rii.v44.n3.112.",
+      estado: "closed" as const,
+    },
+    {
+      fecha: "Feb 2025",
+      tipo: "participacion",
+      titulo: "Investigador en INV-2025-047 (Actual)",
+      desc: "Participación activa en modelación hídrica avanzada. Avance: 78%.",
+      estado: "active" as const,
+    },
+    {
+      fecha: "Oct 2025",
+      tipo: "formacion",
+      titulo: "Curso: Machine Learning para Ciencias Ambientales",
+      desc: "Inscrito. Pendiente iniciar en octubre 2025.",
+      estado: "pending" as const,
+    },
   ],
 };
 
@@ -37,42 +116,23 @@ const PLANES_INICIALES = [
   ] },
 ];
 
-function mapEstadoSem(estado: string): "active" | "inactive" | "pending" {
-  if (estado === 'activo') return 'active';
-  if (estado === 'inactivo') return 'inactive';
-  return 'pending';
-}
-
 function SemilleroModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (nombre: string) => void }) {
   const [nombre, setNombre] = useState("");
   return <Modal open={open} onClose={onClose} title="Crear semillero" size="md"><div className="space-y-4"><Field label="Nombre del semillero" required><Input value={nombre} onChange={setNombre} placeholder="Ej: BIOINNOVA" /></Field><Field label="Descripción"><Textarea placeholder="Área y propósito del semillero" rows={3} /></Field><Field label="Grupo de investigación"><Select options={[{ value: "gidema", label: "GIDEMA" }, { value: "gicade", label: "GICADE" }, { value: "bioagro", label: "BIOAGRO" }]} placeholder="Seleccionar grupo" /></Field><div className="flex justify-end gap-2 pt-3 border-t border-[#DDE4DF]"><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { if (nombre.trim()) { onCreate(nombre.trim()); setNombre(""); } }}>Crear semillero</Button></div></div></Modal>;
 }
 
-function PlanModal({ open, onClose, onCreate, semillerosList }: { open: boolean; onClose: () => void; onCreate: (semillero: string, periodo: string) => void; semillerosList: string[] }) {
+function PlanModal({ open, onClose, onCreate, semilleros = [] }: { open: boolean; onClose: () => void; onCreate: (semillero: string, periodo: string) => void; semilleros?: SemilleroItem[] }) {
   const [semillero, setSemillero] = useState("");
   const [periodo, setPeriodo] = useState("");
-  return <Modal open={open} onClose={onClose} title="Crear plan de formación" size="md"><div className="space-y-4"><Field label="Semillero" required><Select options={semillerosList.map(s => ({ value: s, label: s }))} value={semillero} onChange={setSemillero} placeholder="Seleccionar semillero" /></Field><Field label="Período académico" required><Input value={periodo} onChange={setPeriodo} placeholder="Ej: 2025-II" /></Field><Field label="Primera actividad"><Input placeholder="Nombre de la actividad" /></Field><div className="flex justify-end gap-2 pt-3 border-t border-[#DDE4DF]"><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { if (semillero && periodo.trim()) { onCreate(semillero, periodo.trim()); setSemillero(""); setPeriodo(""); } }}>Crear plan</Button></div></div></Modal>;
+  return <Modal open={open} onClose={onClose} title="Crear plan de formación" size="md"><div className="space-y-4"><Field label="Semillero" required><Select options={semilleros.map((item) => ({ value: item.nombre, label: item.nombre }))} value={semillero} onChange={setSemillero} placeholder="Seleccionar semillero" /></Field><Field label="Período académico" required><Input value={periodo} onChange={setPeriodo} placeholder="Ej: 2025-II" /></Field><Field label="Primera actividad"><Input placeholder="Nombre de la actividad" /></Field><div className="flex justify-end gap-2 pt-3 border-t border-[#DDE4DF]"><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { if (semillero && periodo.trim()) { onCreate(semillero, periodo.trim()); setSemillero(""); setPeriodo(""); } }}>Crear plan</Button></div></div></Modal>;
 }
 
-function DetalleSemillero({ id, onBack }: { id: number; onBack: () => void }) {
-  const [semillero, setSemillero] = useState<SemilleroDetalle | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    semillerosApi.getById(id)
-      .then(setSemillero)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  if (loading) return <div className="p-8 text-center">Cargando detalles...</div>;
-  if (!semillero) return <div className="p-8 text-center text-red-500">Error al cargar el semillero</div>;
-
+function DetalleSemillero({ semillero, onBack }: { semillero: SemilleroItem; onBack: () => void }) {
   return <div className="p-6 max-w-[1200px] mx-auto space-y-5">
     <button onClick={onBack} className="text-sm text-[#1E6B3C] font-medium">← Volver a semilleros</button>
     <PageHeader title={semillero.nombre} subtitle={semillero.descripcion} breadcrumb={["NOUS", "Semilleros", semillero.nombre]} actions={<Button variant="primary">Editar semillero</Button>} />
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3"><Card><p className="text-xs text-[#637068]">Líder</p><p className="text-sm font-bold text-[#1A2B22]">{semillero.lider}</p></Card><Card><p className="text-xs text-[#637068]">Integrantes</p><p className="text-2xl font-bold text-[#1E6B3C]">{semillero.integrantes}</p></Card><Card><p className="text-xs text-[#637068]">Proyectos formativos</p><p className="text-2xl font-bold text-[#1E6B3C]">{semillero.proyectos}</p></Card></div>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Card><h2 className="text-sm font-semibold text-[#1A2B22] mb-4">Integrantes</h2>{semillero.integrantes_lista?.slice(0, 4).map((est, index) => <div key={est.nombre} className="flex items-center gap-3 py-3 border-b border-[#F2F5F3] last:border-0"><Avatar name={est.nombre} size="sm" /><div className="flex-1"><p className="text-sm font-medium text-[#1A2B22]">{est.nombre}</p><p className="text-xs text-[#637068]">{est.programa}</p></div><Badge variant="active">Activo</Badge></div>)}</Card><Card><h2 className="text-sm font-semibold text-[#1A2B22] mb-4">Proyectos Asociados</h2>{semillero.proyectos_lista?.map((p, index) => <div key={p.codigo} className="flex gap-3 py-3 border-b border-[#F2F5F3] last:border-0"><span className="text-xs font-bold text-[#1E6B3C]">{index + 1}</span><div><p className="text-sm font-medium text-[#1A2B22]">{p.titulo}</p><p className="text-xs text-[#637068]">{p.codigo} · {p.estado}</p></div></div>)}</Card></div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Card><h2 className="text-sm font-semibold text-[#1A2B22] mb-4">Integrantes</h2>{["Sebastián Ortiz Herrera", "Diana Martínez", "Laura Gómez", "Mateo Ríos"].slice(0, semillero.integrantes > 4 ? 4 : semillero.integrantes).map((nombre, index) => <div key={nombre} className="flex items-center gap-3 py-3 border-b border-[#F2F5F3] last:border-0"><Avatar name={nombre} size="sm" /><div className="flex-1"><p className="text-sm font-medium text-[#1A2B22]">{nombre}</p><p className="text-xs text-[#637068]">{index === 0 ? "Coordinador estudiantil" : "Estudiante investigador"}</p></div><Badge variant="active">Activo</Badge></div>)}</Card><Card><h2 className="text-sm font-semibold text-[#1A2B22] mb-4">Cronograma de formación 2025</h2>{["Taller de metodología", "Lectura crítica de artículos", "Análisis de datos", "Presentación de resultados"].map((actividad, index) => <div key={actividad} className="flex gap-3 py-3 border-b border-[#F2F5F3] last:border-0"><span className="text-xs font-bold text-[#1E6B3C]">{index + 1}</span><div><p className="text-sm font-medium text-[#1A2B22]">{actividad}</p><p className="text-xs text-[#637068]">{["15 mar", "12 abr", "24 may", "07 jun"][index]} 2025 · 6 horas</p></div></div>)}</Card></div>
   </div>;
 }
 
@@ -206,22 +266,40 @@ function TrayectoriaTimeline() {
 
 export function Semilleros() {
   const [tab, setTab] = useState("grupos");
-  const [semilleros, setSemilleros] = useState<Semillero[]>([]);
+  const [semilleros, setSemilleros] = useState<SemilleroItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<SemilleroItem | null>(null);
   const [showSemilleroModal, setShowSemilleroModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [planes, setPlanes] = useState(PLANES_INICIALES);
 
-  useEffect(() => {
+  const cargarSemilleros = () => {
     setLoading(true);
-    semillerosApi.getAll()
-      .then(setSemilleros)
-      .catch(console.error)
+    getSemilleros()
+      .then((data) => {
+        if (data) {
+          const fromDb = data.map((s) => ({
+            id: s.codigo || `SEM-${String(s.id).padStart(3, "0")}`,
+            nombre: s.nombre,
+            descripcion: s.tema_interes || `Semillero adscrito al programa de ${s.programa || "investigación"}.`,
+            lider: s.lider_profesor || s.lider_estudiante_nombre || "Por asignar",
+            grupo: s.programa || "General",
+            estado: (s.vobo_vicerrectoria === 1 ? "active" : "pending") as "active" | "pending",
+            integrantes: s.integrantes ?? (Math.round(Number(s.horas_asignadas)) || 0),
+            proyectos: 0,
+          }));
+          setSemilleros(fromDb);
+        }
+      })
+      .catch((err) => console.error("Error al cargar semilleros:", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    cargarSemilleros();
   }, []);
 
-  if (selectedId) return <DetalleSemillero id={selectedId} onBack={() => setSelectedId(null)} />;
+  if (selected) return <DetalleSemillero semillero={selected} onBack={() => setSelected(null)} />;
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-5">
@@ -237,10 +315,10 @@ export function Semilleros() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Semilleros Activos", value: semilleros.filter(s => s.estado === 'activo').length, sub: "Registrados" },
-          { label: "Estudiantes Vinculados", value: semilleros.reduce((a, c) => a + c.integrantes, 0), sub: "Total histórico" },
-          { label: "Proyectos de Semillero", value: semilleros.reduce((a, c) => a + c.proyectos, 0), sub: "En ejecución" },
-          { label: "Jóvenes Investigadores", value: "23", sub: "Certificados" }, // Hardcoded static stat
+          { label: "Semilleros Registrados", value: String(semilleros.length), sub: "En base de datos" },
+          { label: "Semilleros Activos", value: String(semilleros.filter(s => s.estado === "active").length), sub: "Con aval institucional" },
+          { label: "Estudiantes Vinculados", value: String(semilleros.reduce((acc, s) => acc + (s.integrantes || 0), 0)), sub: "Integrantes registrados" },
+          { label: "Planes de Formación", value: String(planes.length), sub: "En seguimiento" },
         ].map((s) => (
           <div key={s.label} className="bg-white border border-[#DDE4DF] rounded-xl p-4">
             <p className="text-2xl font-bold text-[#1E6B3C]">{s.value}</p>
@@ -262,10 +340,8 @@ export function Semilleros() {
 
       {tab === "grupos" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {loading ? (
-             <div className="p-8 text-center text-[#637068] col-span-3">Cargando semilleros...</div>
-          ) : semilleros.map((s) => (
-            <Card key={s.id} onClick={() => setSelectedId(s.id)} className="hover:shadow-md transition-shadow cursor-pointer">
+          {semilleros.map((s) => (
+            <Card key={s.id} onClick={() => setSelected(s)} className="hover:shadow-md transition-shadow cursor-pointer">
               <div className="flex items-start justify-between mb-3">
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center text-base font-bold text-white"
@@ -273,7 +349,7 @@ export function Semilleros() {
                 >
                   🌱
                 </div>
-                <Badge variant={mapEstadoSem(s.estado)} />
+                <Badge variant={s.estado} />
               </div>
               <h3 className="text-base font-bold text-[#1A2B22] mb-0.5">{s.nombre}</h3>
               <p className="text-xs text-[#637068] mb-3 leading-snug">{s.descripcion}</p>
@@ -341,8 +417,20 @@ export function Semilleros() {
           ))}
         </div>
       )}
-      <SemilleroModal open={showSemilleroModal} onClose={() => setShowSemilleroModal(false)} onCreate={(nombre) => { setShowSemilleroModal(false); }} />
-      <PlanModal open={showPlanModal} onClose={() => setShowPlanModal(false)} semillerosList={semilleros.map(s => s.nombre)} onCreate={(semillero, periodo) => { setPlanes([...planes, { semillero, periodo, estado: "active" as const, actividades: [] }]); setShowPlanModal(false); }} />
+      <SemilleroModal
+        open={showSemilleroModal}
+        onClose={() => setShowSemilleroModal(false)}
+        onCreate={async (nombre) => {
+          try {
+            await crearSemillero({ nombre });
+            cargarSemilleros();
+          } catch (err) {
+            console.error("Error al crear semillero:", err);
+          }
+          setShowSemilleroModal(false);
+        }}
+      />
+      <PlanModal open={showPlanModal} onClose={() => setShowPlanModal(false)} semilleros={semilleros} onCreate={(semillero, periodo) => { setPlanes([...planes, { semillero, periodo, estado: "active" as const, actividades: [] }]); setShowPlanModal(false); }} />
     </div>
   );
 }

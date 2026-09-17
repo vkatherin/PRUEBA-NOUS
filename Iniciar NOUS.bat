@@ -13,14 +13,14 @@ echo.
 
 REM --- 1. BACKEND (puerto 4200) ---
 echo  [1/2] Iniciando Backend  ^(puerto 4200^)...
-start "NOUS - Backend" cmd /k "cd /d d:\Practica\NOUS\nous_project\Backend && color 0B && echo. && echo  *** NOUS Backend corriendo en http://localhost:4200 *** && echo. && node src/index.js"
+start "NOUS - Backend" cmd /k "cd /d "%~dp0backend" && color 0B && echo. && echo  *** NOUS Backend corriendo en http://localhost:4200 *** && echo. && npm run dev"
 
 REM Esperar 3 segundos para que el backend arranque primero
 timeout /t 3 /nobreak >nul
 
 REM --- 2. FRONTEND (puerto 8443) ---
 echo  [2/2] Iniciando Frontend ^(puerto 8443^)...
-start "NOUS - Frontend" cmd /k "cd /d \"d:\Practica\NOUS\nous_project\Frontend\Proyecto nous\" && color 0E && echo. && echo  *** NOUS Frontend corriendo en http://localhost:8443 *** && echo. && npm run dev"
+start "NOUS - Frontend" cmd /k "cd /d "%~dp0frontend\Proyecto nous" && color 0E && echo. && echo  *** NOUS Frontend corriendo en http://localhost:8443 *** && echo. && npm run dev"
 
 REM Esperar 5 segundos para que el frontend compile
 timeout /t 5 /nobreak >nul

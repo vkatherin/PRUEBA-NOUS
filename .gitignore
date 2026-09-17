@@ -1,3 +1,8 @@
+# Variables de entorno (credenciales - NUNCA subir a git)
+.env
+.env.local
+.env.production
+
 # Logs
 logs
 *.log
@@ -142,16 +147,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# ── Sistema operativo ────────────────────────────
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ── Editor ──────────────────────────────────────
-.vscode/
-.idea/
-*.suo
-*.user
-
-# ── Figma Make cache ─────────────────────────────
-.figma/make/deploy-preview/
+# Uploads
+uploads/
+**/uploads/*
+!**/uploads/.gitkeep

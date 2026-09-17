@@ -90,13 +90,18 @@ export function Card({
   children,
   className = "",
   padding = true,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
   padding?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div className={`bg-white rounded-xl border border-[#DDE4DF] shadow-sm ${padding ? "p-5" : ""} ${className}`}>
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-xl border border-[#DDE4DF] shadow-sm ${padding ? "p-5" : ""} ${className}`}
+    >
       {children}
     </div>
   );
@@ -348,11 +353,13 @@ export function Field({
   children,
   required,
   hint,
+  error,
 }: {
   label: string;
   children: React.ReactNode;
   required?: boolean;
   hint?: string;
+  error?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -361,7 +368,13 @@ export function Field({
         {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
-      {hint && <p className="text-xs text-[#637068]">{hint}</p>}
+      {error ? (
+        <p className="text-xs text-red-600 font-medium flex items-center gap-1 mt-0.5">
+          <span>⚠</span> {error}
+        </p>
+      ) : hint ? (
+        <p className="text-xs text-[#637068]">{hint}</p>
+      ) : null}
     </div>
   );
 }
@@ -371,11 +384,17 @@ export function Input({
   value,
   onChange,
   type = "text",
+  hasError,
+  disabled,
+  className = "",
 }: {
   placeholder?: string;
   value?: string;
   onChange?: (v: string) => void;
   type?: string;
+  hasError?: boolean;
+  disabled?: boolean;
+  className?: string;
 }) {
   return (
     <input
@@ -383,7 +402,14 @@ export function Input({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
-      className="w-full px-3 py-2 text-sm border border-[#DDE4DF] rounded-lg bg-white text-[#1A2B22] placeholder-[#9BAD9F] focus:outline-none focus:border-[#1E6B3C] focus:ring-1 focus:ring-[#1E6B3C]"
+      disabled={disabled}
+      className={`w-full px-3 py-2 text-sm border rounded-lg text-[#1A2B22] placeholder-[#9BAD9F] focus:outline-none transition-colors ${
+        disabled
+          ? "bg-[#F2F5F3] border-[#DDE4DF] text-[#637068] cursor-not-allowed select-none"
+          : hasError
+          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+          : "border-[#DDE4DF] bg-white focus:border-[#1E6B3C] focus:ring-1 focus:ring-[#1E6B3C]"
+      } ${className}`}
     />
   );
 }
@@ -393,17 +419,30 @@ export function Select({
   value,
   onChange,
   placeholder,
+  hasError,
+  disabled,
+  className = "",
 }: {
   options: { value: string; label: string }[];
   value?: string;
   onChange?: (v: string) => void;
   placeholder?: string;
+  hasError?: boolean;
+  disabled?: boolean;
+  className?: string;
 }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
-      className="w-full px-3 py-2 text-sm border border-[#DDE4DF] rounded-lg bg-white text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-1 focus:ring-[#1E6B3C] appearance-none cursor-pointer"
+      disabled={disabled}
+      className={`w-full px-3 py-2 text-sm border rounded-lg text-[#1A2B22] focus:outline-none appearance-none cursor-pointer transition-colors ${
+        disabled
+          ? "bg-[#F2F5F3] border-[#DDE4DF] text-[#637068] cursor-not-allowed select-none"
+          : hasError
+          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+          : "border-[#DDE4DF] bg-white focus:border-[#1E6B3C] focus:ring-1 focus:ring-[#1E6B3C]"
+      } ${className}`}
     >
       {placeholder && <option value="">{placeholder}</option>}
       {options.map((opt) => (
@@ -420,11 +459,17 @@ export function Textarea({
   value,
   onChange,
   rows = 3,
+  hasError,
+  disabled,
+  className = "",
 }: {
   placeholder?: string;
   value?: string;
   onChange?: (v: string) => void;
   rows?: number;
+  hasError?: boolean;
+  disabled?: boolean;
+  className?: string;
 }) {
   return (
     <textarea
@@ -432,7 +477,14 @@ export function Textarea({
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
       rows={rows}
-      className="w-full px-3 py-2 text-sm border border-[#DDE4DF] rounded-lg bg-white text-[#1A2B22] placeholder-[#9BAD9F] focus:outline-none focus:border-[#1E6B3C] focus:ring-1 focus:ring-[#1E6B3C] resize-none"
+      disabled={disabled}
+      className={`w-full px-3 py-2 text-sm border rounded-lg text-[#1A2B22] placeholder-[#9BAD9F] focus:outline-none resize-none transition-colors ${
+        disabled
+          ? "bg-[#F2F5F3] border-[#DDE4DF] text-[#637068] cursor-not-allowed select-none"
+          : hasError
+          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+          : "border-[#DDE4DF] bg-white focus:border-[#1E6B3C] focus:ring-1 focus:ring-[#1E6B3C]"
+      } ${className}`}
     />
   );
 }
