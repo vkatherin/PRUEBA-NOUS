@@ -1,55 +1,62 @@
 require('dotenv').config(); // ← PRIMERO, antes de todo
 const express = require('express');
 const cors = require('cors');
+const passport = require('passport');
+const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 const pool = require('./db/connection');
 
-<<<<<<< HEAD
-// Routes
-const authRoutes         = require('./modules/auth/auth.routes');
-const dashboardRoutes    = require('./modules/dashboard/dashboard.routes');
-const proyectosRoutes    = require('./modules/proyectos/proyectos.routes');
-const convocatoriasRoutes= require('./modules/convocatorias/convocatorias.routes');
-const semillerosRoutes   = require('./modules/semilleros/semilleros.routes');
-const usuariosRoutes     = require('./modules/usuarios/usuarios.routes');
-=======
 // Routers
-const authRouter = require('./modules/auth/auth.routes');
-const dashboardRouter = require('./modules/dashboard/dashboard.routes');
-const proyectosRouter = require('./modules/proyectos/proyectos.routes');
-const convocatoriasRouter = require('./modules/convocatorias/convocatorias.routes');
-const semillerosRouter = require('./modules/semilleros/semilleros.routes');
-const evaluacionRouter = require('./modules/evaluacion/evaluacion.routes');
-const usuariosRouter = require('./modules/usuarios/usuarios.routes');
->>>>>>> main
+const authRoutes = require('./modules/auth/auth.routes');
+const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
+const proyectosRoutes = require('./modules/proyectos/proyectos.routes');
+const convocatoriasRoutes = require('./modules/convocatorias/convocatorias.routes');
+const semillerosRoutes = require('./modules/semilleros/semilleros.routes');
+const evaluacionRoutes = require('./modules/evaluacion/evaluacion.routes');
+const usuariosRoutes = require('./modules/usuarios/usuarios.routes');
 
 const path = require('path');
 const app = express();
 
+// ── Passport — Google OAuth 2.0 (RF-AU-01) ──────────────────────────────────
+try {
+  if (!process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID.startsWith('TU_')) {
+    console.warn('⚠️  Google OAuth no configurado. Añade GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env');
+  } else {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        },
+        (_accessToken, _refreshToken, profile, done) => {
+          const correo = profile.emails?.[0]?.value || '';
+          const nombre = profile.displayName || correo;
+          done(null, { correo, nombre, googleId: profile.id });
+        }
+      )
+    );
+  }
+} catch (err) {
+  console.error('❌ Error configurando Passport Google Strategy:', err.message);
+}
+
 // Middlewares
 app.use(cors({ origin: ['http://localhost:8443', 'http://localhost:3000'] }));
 app.use(express.json());
+app.use(passport.initialize());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-<<<<<<< HEAD
 // ── Rutas ─────────────────────────────────────────────────────────────────────
-app.use('/api/auth',         authRoutes);
-app.use('/api/dashboard',    dashboardRoutes);
-app.use('/api/proyectos',    proyectosRoutes);
-app.use('/api/convocatorias',convocatoriasRoutes);
-app.use('/api/semilleros',   semillerosRoutes);
-app.use('/api/usuarios',     usuariosRoutes);
-=======
-// Rutas
-app.use('/api/auth', authRouter);
-app.use('/api/dashboard', dashboardRouter);
-app.use('/api/proyectos', proyectosRouter);
-app.use('/api/convocatorias', convocatoriasRouter);
-app.use('/api/semilleros', semillerosRouter);
-app.use('/api/evaluaciones', evaluacionRouter);
-app.use('/api', usuariosRouter);
->>>>>>> main
+app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/proyectos', proyectosRoutes);
+app.use('/api/convocatorias', convocatoriasRoutes);
+app.use('/api/semilleros', semillerosRoutes);
+app.use('/api/evaluaciones', evaluacionRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 
-// Endpoint de salud: confirma que la conexión real funciona
+// Endpoint de salud
 app.get('/api/health', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT COUNT(*) AS total FROM roles');
