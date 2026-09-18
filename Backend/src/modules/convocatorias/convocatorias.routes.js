@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const convocatoriasController = require("./convocatorias.controller");
+const semilleroExternoController = require("./semillero-externo.controller");
+const pasosSemilleroController = require("./pasos-semillero.controller");
 
 // ─── RF-CON-03: Alertas de Fechas (Debe ir antes de /:id) ───────────────────
 router.get("/alertas", convocatoriasController.obtenerAlertas);
@@ -27,7 +29,36 @@ router.delete("/:id", convocatoriasController.eliminar);
 router.patch("/:id/comite/aprobar", convocatoriasController.aprobarComite);
 router.patch("/:id/comite/objetar", convocatoriasController.objetarComite);
 
-// ─── Inscripciones a Convocatorias ──────────────────────────────────────────
+// ─── Inscripción Externa: Catálogos ─────────────────────────────────────────
+router.get("/:id/semillero-catalogos", pasosSemilleroController.getCatalogos);
+
+// ─── Inscripción Externa: Paso 1 — Semillero ────────────────────────────────
+router.get("/:id/semillero-externo", semilleroExternoController.obtener);
+router.post("/:id/semillero-externo", semilleroExternoController.guardar);
+
+// ─── Inscripción Externa: Paso 2 — Integrantes ──────────────────────────────
+router.get("/:id/semillero-integrantes", pasosSemilleroController.getIntegrantes);
+router.post("/:id/semillero-integrantes", pasosSemilleroController.addIntegrante);
+router.put("/:id/semillero-integrantes/:integId", pasosSemilleroController.updateIntegrante);
+router.delete("/:id/semillero-integrantes/:integId", pasosSemilleroController.deleteIntegrante);
+
+// ─── Inscripción Externa: Paso 3 — Información general ──────────────────────
+router.get("/:id/semillero-info-general", pasosSemilleroController.getInfoGeneral);
+router.post("/:id/semillero-info-general", pasosSemilleroController.saveInfoGeneral);
+
+// ─── Inscripción Externa: Paso 4 — Contenido del trabajo ────────────────────
+router.get("/:id/semillero-contenido", pasosSemilleroController.getContenido);
+router.post("/:id/semillero-contenido", pasosSemilleroController.saveContenido);
+
+// ─── Inscripción Externa: Paso 5 — Envío final ──────────────────────────────
+router.get("/:id/semillero-resumen", pasosSemilleroController.getResumen);
+router.post(
+  "/:id/semillero-enviar",
+  pasosSemilleroController.uploadEnvioMiddleware,
+  pasosSemilleroController.enviarFinal
+);
+
+// ─── Inscripciones Generales (internas) ─────────────────────────────────────
 router.post(
   "/:id/inscribirse",
   convocatoriasController.uploadDocumentoMiddleware,

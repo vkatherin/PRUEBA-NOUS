@@ -11,12 +11,31 @@ import {
   getConvocatoriasAlertas,
   inscribirseConvocatoria,
   getInscripcionesConvocatoria,
+  getSemilleroExterno,
+  guardarSemilleroExterno,
+  getCatalogosSemillero,
+  getIntegrantesSemillero,
+  addIntegranteSemillero,
+  deleteIntegranteSemillero,
+  saveInfoGeneralSemillero,
+  getInfoGeneralSemillero,
+  saveContenidoSemillero,
+  getContenidoSemillero,
+  getResumenSemillero,
+  enviarInscripcionExterna,
+  getUsuarioActual,
   TIPOS_INVESTIGACION,
   MAPA_TIPO_INVESTIGACION,
   type Convocatoria,
   type ConvocatoriaExterna,
   type AlertasConvocatorias,
   type Inscripcion,
+  type SemilleroExterno,
+  type IntegranteSemillero,
+  type InfoGeneralSemillero,
+  type ContenidoSemillero,
+  type CatalogosSemillero,
+  type ResumenInscripcionExterna,
 } from "@/services/api";
 
 // ─── Wizard steps ─────────────────────────────────────────────────────────────
@@ -45,7 +64,7 @@ interface WizardData {
   titulo: string;
   tipo: string;
   tipo_investigacion: string;
-  dirigida: string;
+  dirigida: string[];
   descripcion: string;
   fecha_apertura: string;
   fecha_cierre: string;
@@ -55,7 +74,7 @@ interface WizardData {
 }
 
 const EMPTY_WIZARD: WizardData = {
-  titulo: "", tipo: "", tipo_investigacion: "", dirigida: "", descripcion: "",
+  titulo: "", tipo: "", tipo_investigacion: "", dirigida: [], descripcion: "",
   fecha_apertura: "", fecha_cierre: "", fecha_resultados: "",
   requisitos: [...REQUISITOS_DEFAULT],
   notificar_investigadores: true,
@@ -77,6 +96,25 @@ function WizardModal({
       setFieldErrors((prev) => {
         const next = { ...prev };
         delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const toggleDirigida = (opcion: string) => {
+    const exists = data.dirigida.includes(opcion);
+    let updated: string[];
+    if (exists) {
+      updated = data.dirigida.filter((item) => item !== opcion);
+    } else {
+      if (data.dirigida.length >= 2) return;
+      updated = [...data.dirigida, opcion];
+    }
+    set("dirigida", updated);
+    if (updated.length > 0 && fieldErrors.dirigida) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.dirigida;
         return next;
       });
     }
@@ -115,10 +153,12 @@ function WizardModal({
     if (data.tipo === "Externa" && (!data.tipo_investigacion || !data.tipo_investigacion.trim())) {
       errs.tipo_investigacion = "Selecciona el tipo de investigación para generar el código de la convocatoria.";
     }
-    if (!data.dirigida || !data.dirigida.trim()) {
-      errs.dirigida = "Selecciona a quién va dirigida la convocatoria.";
-    } else if (!OPCIONES_DIRIGIDA_A.some((o) => o.value === data.dirigida.trim())) {
-      errs.dirigida = "Selecciona una opción válida (Docente, Estudiante, Administrativo).";
+    if (!data.dirigida || data.dirigida.length === 0) {
+      errs.dirigida = "Selecciona a quién va dirigida la convocatoria (máximo 2).";
+    } else if (data.dirigida.length > 2) {
+      errs.dirigida = "Puedes seleccionar máximo 2 opciones.";
+    } else if (data.dirigida.some((v) => !OPCIONES_DIRIGIDA_A.some((o) => o.value === v))) {
+      errs.dirigida = "Selecciona opciones válidas (Docente, Estudiante, Administrativo).";
     }
     if (!data.descripcion || !data.descripcion.trim()) {
       errs.descripcion = "Ingresa una descripción.";
@@ -211,7 +251,7 @@ function WizardModal({
         titulo: data.titulo.trim(),
         tipo: data.tipo.trim(),
         tipo_investigacion: data.tipo === "Externa" ? data.tipo_investigacion.trim() : undefined,
-        dirigida_a: data.dirigida.trim(),
+        dirigida_a: data.dirigida.join(", "),
         descripcion: data.descripcion.trim(),
         fecha_apertura: data.fecha_apertura,
         fecha_cierre: data.fecha_cierre,
@@ -349,14 +389,42 @@ function WizardModal({
             />
           </Field>
 
-          <Field label="Dirigida a" required error={fieldErrors.dirigida}>
-            <Select
-              options={OPCIONES_DIRIGIDA_A}
-              placeholder="Seleccionar público objetivo"
-              value={data.dirigida}
-              hasError={!!fieldErrors.dirigida}
-              onChange={(v) => set("dirigida", v)}
-            />
+          <Field
+            label="Dirigida a"
+            required
+            error={fieldErrors.dirigida}
+            hint="Selecciona hasta 2 opciones (Docente, Estudiante, Administrativo)"
+          >
+            <div className="flex flex-wrap gap-2 pt-1">
+              {OPCIONES_DIRIGIDA_A.map((opcion) => {
+                const isSelected = data.dirigida.includes(opcion.value);
+                const isDisabled = !isSelected && data.dirigida.length >= 2;
+                return (
+                  <button
+                    key={opcion.value}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => toggleDirigida(opcion.value)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${
+                      isSelected
+                        ? "bg-[#1E6B3C] text-white border-[#1E6B3C] shadow-sm"
+                        : isDisabled
+                        ? "bg-[#F2F5F3] text-[#9BAD9F] border-[#DDE4DF] cursor-not-allowed opacity-60"
+                        : "bg-white text-[#1A2B22] border-[#DDE4DF] hover:border-[#1E6B3C] hover:bg-[#F2F5F3]"
+                    }`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded flex items-center justify-center text-xs ${
+                        isSelected ? "bg-white text-[#1E6B3C] font-bold" : "border border-[#9BAD9F]"
+                      }`}
+                    >
+                      {isSelected ? "✓" : ""}
+                    </span>
+                    {opcion.label}
+                  </button>
+                );
+              })}
+            </div>
           </Field>
 
           <Field label="Descripción de la Convocatoria" required error={fieldErrors.descripcion}>
@@ -450,14 +518,14 @@ function WizardModal({
           <div className="space-y-3">
             <p className="text-sm font-medium text-[#1A2B22]">Resumen de la convocatoria</p>
             {[
-              { label: "ID", value: "CON (Se asignará automáticamente al guardar)" },
-              { label: "Nombre", value: data.titulo || "—" },
-              { label: "Tipo", value: data.tipo || "—" },
-              { label: "Dirigida a", value: data.dirigida || "—" },
-              { label: "Fecha de apertura", value: data.fecha_apertura || "—" },
-              { label: "Fecha de cierre", value: data.fecha_cierre || "—" },
-              { label: "Descripción", value: data.descripcion ? (data.descripcion.length > 70 ? data.descripcion.slice(0, 70) + "..." : data.descripcion) : "—" },
-              { label: "Requisitos", value: `${data.requisitos.length} documentos obligatorios` },
+              { label: "ID",                 value: "CON (Se asignará automáticamente al guardar)" },
+              { label: "Nombre",             value: data.titulo || "—" },
+              { label: "Tipo",               value: data.tipo || "—" },
+              { label: "Dirigida a",         value: Array.isArray(data.dirigida) ? (data.dirigida.length > 0 ? data.dirigida.join(", ") : "—") : (data.dirigida || "—") },
+              { label: "Fecha de apertura",  value: data.fecha_apertura || "—" },
+              { label: "Fecha de cierre",    value: data.fecha_cierre || "—" },
+              { label: "Descripción",        value: data.descripcion ? (data.descripcion.length > 70 ? data.descripcion.slice(0, 70) + "..." : data.descripcion) : "—" },
+              { label: "Requisitos",         value: `${data.requisitos.length} documentos obligatorios` },
             ].map((item) => (
               <div key={item.label} className="flex justify-between py-2 border-b border-[#F2F5F3]">
                 <span className="text-xs text-[#637068] font-medium">{item.label}</span>
@@ -512,7 +580,7 @@ function EditModal({
   const [formData, setFormData] = useState({
     titulo: "",
     tipo: "",
-    dirigida_a: "",
+    dirigida_a: [] as string[],
     descripcion: "",
     fecha_apertura: "",
     fecha_cierre: "",
@@ -527,7 +595,9 @@ function EditModal({
       setFormData({
         titulo: conv.titulo || "",
         tipo: conv.tipo || "Interna",
-        dirigida_a: conv.dirigida_a || "Docente",
+        dirigida_a: conv.dirigida_a
+          ? conv.dirigida_a.split(",").map((s) => s.trim()).filter(Boolean)
+          : ["Docente"],
         descripcion: conv.descripcion || "",
         fecha_apertura: conv.fecha_apertura ? conv.fecha_apertura.slice(0, 10) : "",
         fecha_cierre: conv.fecha_cierre ? conv.fecha_cierre.slice(0, 10) : "",
@@ -539,6 +609,27 @@ function EditModal({
   }, [conv]);
 
   if (!conv) return null;
+
+  const toggleDirigidaEdit = (opcion: string) => {
+    setFormData((prev) => {
+      const exists = prev.dirigida_a.includes(opcion);
+      let updated: string[];
+      if (exists) {
+        updated = prev.dirigida_a.filter((item) => item !== opcion);
+      } else {
+        if (prev.dirigida_a.length >= 2) return prev;
+        updated = [...prev.dirigida_a, opcion];
+      }
+      if (updated.length > 0 && fieldErrors.dirigida_a) {
+        setFieldErrors((e) => {
+          const next = { ...e };
+          delete next.dirigida_a;
+          return next;
+        });
+      }
+      return { ...prev, dirigida_a: updated };
+    });
+  };
 
   const toggleRequisito = (req: string) => {
     setFormData((prev) => {
@@ -564,10 +655,12 @@ function EditModal({
     if (!formData.tipo || !formData.tipo.trim()) {
       errs.tipo = "Selecciona una opción.";
     }
-    if (!formData.dirigida_a || !formData.dirigida_a.trim()) {
-      errs.dirigida_a = "Selecciona a quién va dirigida la convocatoria.";
-    } else if (!OPCIONES_DIRIGIDA_A.some((o) => o.value === formData.dirigida_a.trim())) {
-      errs.dirigida_a = "Selecciona una opción válida (Docente, Estudiante, Administrativo).";
+    if (formData.dirigida_a.length === 0) {
+      errs.dirigida_a = "Selecciona a quién va dirigida la convocatoria (máximo 2).";
+    } else if (formData.dirigida_a.length > 2) {
+      errs.dirigida_a = "Puedes seleccionar máximo 2 opciones.";
+    } else if (formData.dirigida_a.some((v) => !OPCIONES_DIRIGIDA_A.some((o) => o.value === v))) {
+      errs.dirigida_a = "Selecciona opciones válidas (Docente, Estudiante, Administrativo).";
     }
     if (!formData.descripcion || !formData.descripcion.trim()) {
       errs.descripcion = "Ingresa una descripción.";
@@ -606,7 +699,7 @@ function EditModal({
       await actualizarConvocatoria(conv.id, {
         titulo: formData.titulo.trim(),
         tipo: formData.tipo.trim(),
-        dirigida_a: formData.dirigida_a.trim(),
+        dirigida_a: formData.dirigida_a.join(", "),
         descripcion: formData.descripcion.trim(),
         fecha_apertura: formData.fecha_apertura,
         fecha_cierre: formData.fecha_cierre,
@@ -673,17 +766,42 @@ function EditModal({
           />
         </Field>
 
-        <Field label="Dirigida a" required error={fieldErrors.dirigida_a}>
-          <Select
-            options={OPCIONES_DIRIGIDA_A}
-            placeholder="Seleccionar público objetivo"
-            value={formData.dirigida_a}
-            hasError={!!fieldErrors.dirigida_a}
-            onChange={(v) => {
-              setFormData((prev) => ({ ...prev, dirigida_a: v }));
-              if (fieldErrors.dirigida_a) setFieldErrors((prev) => ({ ...prev, dirigida_a: "" }));
-            }}
-          />
+        <Field
+          label="Dirigida a"
+          required
+          error={fieldErrors.dirigida_a}
+          hint="Selecciona hasta 2 opciones (Docente, Estudiante, Administrativo)"
+        >
+          <div className="flex flex-wrap gap-2 pt-1">
+            {OPCIONES_DIRIGIDA_A.map((opcion) => {
+              const isSelected = formData.dirigida_a.includes(opcion.value);
+              const isDisabled = !isSelected && formData.dirigida_a.length >= 2;
+              return (
+                <button
+                  key={opcion.value}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => toggleDirigidaEdit(opcion.value)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${
+                    isSelected
+                      ? "bg-[#1E6B3C] text-white border-[#1E6B3C] shadow-sm"
+                      : isDisabled
+                      ? "bg-[#F2F5F3] text-[#9BAD9F] border-[#DDE4DF] cursor-not-allowed opacity-60"
+                      : "bg-white text-[#1A2B22] border-[#DDE4DF] hover:border-[#1E6B3C] hover:bg-[#F2F5F3]"
+                  }`}
+                >
+                  <span
+                    className={`w-4 h-4 rounded flex items-center justify-center text-xs ${
+                      isSelected ? "bg-white text-[#1E6B3C] font-bold" : "border border-[#9BAD9F]"
+                    }`}
+                  >
+                    {isSelected ? "✓" : ""}
+                  </span>
+                  {opcion.label}
+                </button>
+              );
+            })}
+          </div>
         </Field>
 
         <Field label="Descripción de la Convocatoria" required error={fieldErrors.descripcion}>
@@ -1812,6 +1930,1045 @@ function ExternasTab() {
 }
 
 // ─── Convocatorias Page ───────────────────────────────────────────────────────
+
+// ─── Modal Semillero Externo — Formulario completo de 5 pasos ────────────────
+const PASOS_SEMILLERO_EXTERNO = [
+  { id: 1, label: "Semillero" },
+  { id: 2, label: "Integrantes" },
+  { id: 3, label: "Info general" },
+  { id: 4, label: "Contenido" },
+  { id: 5, label: "Envío final" },
+];
+
+// ─── Sub-componente: fila de integrante en tabla ─────────────────────────────
+function FilaIntegrante({
+  integrante,
+  onEliminar,
+  eliminando,
+}: {
+  integrante: {
+    id: number;
+    nombre_completo: string;
+    tipo_documento: string;
+    numero_documento: string;
+    rol: string;
+    email: string;
+    telefono?: string;
+  };
+  onEliminar: (id: number) => void;
+  eliminando?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-[#1A2B22] truncate">{integrante.nombre_completo}</p>
+        <p className="text-xs text-[#637068]">{integrante.rol} · {integrante.tipo_documento} {integrante.numero_documento}</p>
+        <p className="text-xs text-[#637068]">{integrante.email}{integrante.telefono ? ` · ${integrante.telefono}` : ""}</p>
+      </div>
+      <button
+        onClick={() => onEliminar(integrante.id)}
+        disabled={eliminando}
+        className="text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded-lg border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50"
+      >
+        Eliminar
+      </button>
+    </div>
+  );
+}
+
+// ─── Stepper visual compartido ────────────────────────────────────────────────
+function StepperHeader({
+  pasoActual,
+  pasosCompletados,
+  onSelectPaso,
+}: {
+  pasoActual: number;
+  pasosCompletados: Set<number>;
+  onSelectPaso?: (p: number) => void;
+}) {
+  const maxCompletado = pasosCompletados.size > 0 ? Math.max(...Array.from(pasosCompletados)) : 0;
+  return (
+    <div className="flex items-center mb-5 overflow-x-auto pb-1">
+      {PASOS_SEMILLERO_EXTERNO.map((paso, i) => {
+        const completado = pasosCompletados.has(paso.id) && paso.id !== pasoActual;
+        const activo = paso.id === pasoActual;
+        const clickable = onSelectPaso && (pasosCompletados.has(paso.id) || paso.id === 1 || paso.id <= maxCompletado + 1);
+        return (
+          <React.Fragment key={paso.id}>
+            <div
+              className={`flex items-center gap-1.5 flex-shrink-0 transition-opacity ${clickable ? "cursor-pointer hover:opacity-80 select-none" : "opacity-75"}`}
+              onClick={() => {
+                if (clickable && onSelectPaso) onSelectPaso(paso.id);
+              }}
+              title={clickable ? `Ir al paso ${paso.id}: ${paso.label}` : undefined}
+            >
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
+                completado ? "bg-[#1E6B3C] border-[#1E6B3C] text-white"
+                  : activo ? "border-[#1E6B3C] text-[#1E6B3C] bg-[#EBF5EF]"
+                  : "border-[#DDE4DF] text-[#9BAD9F] bg-[#F2F5F3]"
+              }`}>
+                {completado ? "✓" : paso.id}
+              </div>
+              <span className={`text-xs font-medium hidden sm:block whitespace-nowrap ${
+                completado ? "text-[#1E6B3C]" : activo ? "text-[#1E6B3C] font-semibold" : "text-[#9BAD9F]"
+              }`}>{paso.label}</span>
+            </div>
+            {i < PASOS_SEMILLERO_EXTERNO.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-1.5 min-w-[12px] ${completado ? "bg-[#1E6B3C]" : "bg-[#DDE4DF]"}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+function SemilleroExternoModal({
+  conv, onClose, onGuardado,
+}: {
+  conv: Convocatoria | null;
+  onClose: () => void;
+  onGuardado: () => void;
+}) {
+  // ── Estado global del wizard ──────────────────────────────────────────────
+  const [paso, setPaso] = useState(1);
+  const [pasosCompletados, setPasosCompletados] = useState<Set<number>>(new Set());
+  const [catalogos, setCatalogos] = useState<CatalogosSemillero | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [generalError, setGeneralError] = useState("");
+  const [inscripcionEnviada, setInscripcionEnviada] = useState(false);
+
+  // ── Estado Paso 1: Semillero ──────────────────────────────────────────────
+  const [tiposInstitucion, setTiposInstitucion] = useState<string[]>([
+    "Universidad", "Instituto Tecnológico", "Politécnico", "Fundación", "Centro de Investigación", "Empresa", "Otro",
+  ]);
+  const [tipoInstitucion, setTipoInstitucion] = useState("");
+  const [institucionProcedencia, setInstitucionProcedencia] = useState("");
+  const [semilleroNombre, setSemilleroNombre] = useState("");
+  const [errores1, setErrores1] = useState<Record<string, string>>({});
+
+  // ── Estado Paso 2: Integrantes ────────────────────────────────────────────
+  const [integrantes, setIntegrantes] = useState<Array<{
+    id: number;
+    nombre_completo: string;
+    tipo_documento: string;
+    numero_documento: string;
+    rol: string;
+    email: string;
+    telefono?: string;
+  }>>([]);
+  const [mostrarFormIntegrante, setMostrarFormIntegrante] = useState(false);
+  const [nuevoIntg, setNuevoIntg] = useState({
+    nombre_completo: "",
+    tipo_documento: "",
+    numero_documento: "",
+    rol: "",
+    email: "",
+    telefono: "",
+  });
+  const [erroresIntg, setErroresIntg] = useState<Record<string, string>>({});
+
+  // ── Estado Paso 3: Info general ───────────────────────────────────────────
+  const [tituloTrabajo, setTituloTrabajo] = useState("");
+  const [lineaInv, setLineaInv] = useState("");
+  const [palabrasClave, setPalabrasClave] = useState("");
+  const [resumenInfo, setResumenInfo] = useState("");
+  const [errores3, setErrores3] = useState<Record<string, string>>({});
+
+  // ── Estado Paso 4: Contenido ──────────────────────────────────────────────
+  const [planteamiento, setPlanteamiento] = useState("");
+  const [objetivoGral, setObjetivoGral] = useState("");
+  const [objetivosEsp, setObjetivosEsp] = useState("");
+  const [metodologia, setMetodologia] = useState("");
+  const [resultados, setResultados] = useState("");
+  const [errores4, setErrores4] = useState<Record<string, string>>({});
+
+  // ── Estado Paso 5: Envío final ────────────────────────────────────────────
+  const [docFinal, setDocFinal] = useState<File | null>(null);
+
+  const PROCEDENCIA_FIJA = "Semillero externo";
+  const user = getUsuarioActual();
+
+  // ── Carga inicial de catálogos y datos previos si existen ─────────────────
+  useEffect(() => {
+    if (!conv) return;
+    setPaso(1);
+    setPasosCompletados(new Set());
+    setSaving(false);
+    setGeneralError("");
+    setInscripcionEnviada(false);
+    setTipoInstitucion("");
+    setInstitucionProcedencia("");
+    setSemilleroNombre("");
+    setErrores1({});
+    setIntegrantes([]);
+    setMostrarFormIntegrante(false);
+    setNuevoIntg({ nombre_completo: "", tipo_documento: "", numero_documento: "", rol: "", email: "", telefono: "" });
+    setErroresIntg({});
+    setTituloTrabajo("");
+    setLineaInv("");
+    setPalabrasClave("");
+    setResumenInfo("");
+    setErrores3({});
+    setPlanteamiento("");
+    setObjetivoGral("");
+    setObjetivosEsp("");
+    setMetodologia("");
+    setResultados("");
+    setErrores4({});
+    setDocFinal(null);
+
+    // Cargar catálogos
+    getCatalogosSemillero(conv.id)
+      .then((catData) => {
+        if (catData) setCatalogos(catData);
+      })
+      .catch(() => {});
+
+    // Cargar datos previos si ya existía una inscripción previa
+    getSemilleroExterno(conv.id, user?.id)
+      .then((semData) => {
+        if (semData.tipos_institucion && semData.tipos_institucion.length > 0) {
+          setTiposInstitucion(semData.tipos_institucion);
+        }
+        if (semData.semillero) {
+          setTipoInstitucion(semData.semillero.tipo_institucion || "");
+          setInstitucionProcedencia(semData.semillero.institucion_procedencia || "");
+          setSemilleroNombre(semData.semillero.semillero_nombre || "");
+          setPasosCompletados((p) => new Set([...p, 1]));
+        }
+      })
+      .catch(() => {});
+
+    if (user?.id) {
+      getIntegrantesSemillero(conv.id, user.id)
+        .then((res) => {
+          if (res.integrantes && res.integrantes.length > 0) {
+            setIntegrantes(res.integrantes);
+            setPasosCompletados((p) => new Set([...p, 2]));
+          }
+        })
+        .catch(() => {});
+
+      getInfoGeneralSemillero(conv.id, user.id)
+        .then((res) => {
+          if (res.info_general) {
+            setTituloTrabajo(res.info_general.titulo_trabajo || "");
+            setLineaInv(res.info_general.linea_investigacion || "");
+            setPalabrasClave(res.info_general.palabras_clave || "");
+            setResumenInfo(res.info_general.resumen || "");
+            setPasosCompletados((p) => new Set([...p, 3]));
+          }
+        })
+        .catch(() => {});
+
+      getContenidoSemillero(conv.id, user.id)
+        .then((res) => {
+          if (res.contenido) {
+            setPlanteamiento(res.contenido.planteamiento_problema || "");
+            setObjetivoGral(res.contenido.objetivo_general || "");
+            setObjetivosEsp(res.contenido.objetivos_especificos || "");
+            setMetodologia(res.contenido.metodologia || "");
+            setResultados(res.contenido.resultados_esperados || "");
+            setPasosCompletados((p) => new Set([...p, 4]));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [conv]);
+
+  if (!conv) return null;
+  const codigoDisplay = conv.codigo_con || conv.codigo || `CON${conv.id}`;
+  const usuarioId = user?.id || 1;
+
+  // ── Avanzar Paso 1 (Solo validación local) ──────────────────────────────────
+  const avanzarPaso1 = () => {
+    const errs: Record<string, string> = {};
+    if (!tipoInstitucion.trim()) errs.tipo_institucion = "Selecciona el tipo de institución.";
+    if (!institucionProcedencia.trim()) errs.institucion_procedencia = "La institución de procedencia es obligatoria.";
+    if (!semilleroNombre.trim()) errs.semillero_nombre = "El nombre del semillero es obligatorio.";
+
+    if (Object.keys(errs).length > 0) {
+      setErrores1(errs);
+      setGeneralError("Completa todos los campos obligatorios antes de continuar.");
+      return;
+    }
+    setErrores1({});
+    setGeneralError("");
+    setPasosCompletados((p) => new Set([...p, 1]));
+    setPaso(2);
+  };
+
+  // ── Manejo Paso 2: Integrantes (Solo local) ────────────────────────────────
+  const agregarIntegrante = () => {
+    const errs: Record<string, string> = {};
+    if (!nuevoIntg.nombre_completo.trim()) errs.nombre_completo = "El nombre completo es obligatorio.";
+    if (!nuevoIntg.tipo_documento) errs.tipo_documento = "Selecciona el tipo de documento.";
+    if (!nuevoIntg.numero_documento.trim()) errs.numero_documento = "El número de documento es obligatorio.";
+    if (!nuevoIntg.rol) errs.rol = "Selecciona el rol.";
+    if (!nuevoIntg.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevoIntg.email)) {
+      errs.email = "Ingresa un correo electrónico válido.";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErroresIntg(errs);
+      return;
+    }
+
+    const nuevo = {
+      id: Date.now(),
+      nombre_completo: nuevoIntg.nombre_completo.trim(),
+      tipo_documento: nuevoIntg.tipo_documento.trim(),
+      numero_documento: nuevoIntg.numero_documento.trim(),
+      rol: nuevoIntg.rol.trim(),
+      email: nuevoIntg.email.trim(),
+      telefono: nuevoIntg.telefono.trim() || undefined,
+    };
+
+    setIntegrantes((p) => [...p, nuevo]);
+    setNuevoIntg({ nombre_completo: "", tipo_documento: "", numero_documento: "", rol: "", email: "", telefono: "" });
+    setErroresIntg({});
+    setMostrarFormIntegrante(false);
+    setGeneralError("");
+    setPasosCompletados((p) => new Set([...p, 2]));
+  };
+
+  const eliminarIntegrante = (id: number) => {
+    setIntegrantes((p) => {
+      const next = p.filter((i) => i.id !== id);
+      if (next.length === 0) {
+        setPasosCompletados((prev) => {
+          const n = new Set(prev);
+          n.delete(2);
+          return n;
+        });
+      }
+      return next;
+    });
+  };
+
+  const avanzarPaso2 = () => {
+    if (integrantes.length === 0) {
+      setGeneralError("Debes agregar al menos un integrante al semillero para continuar.");
+      return;
+    }
+    setGeneralError("");
+    setPasosCompletados((p) => new Set([...p, 2]));
+    setPaso(3);
+  };
+
+  // ── Avanzar Paso 3 (Solo validación local) ──────────────────────────────────
+  const avanzarPaso3 = () => {
+    const errs: Record<string, string> = {};
+    if (!tituloTrabajo.trim()) errs.titulo_trabajo = "El título del trabajo es obligatorio.";
+    if (!palabrasClave.trim()) errs.palabras_clave = "Las palabras clave son obligatorias.";
+    if (!resumenInfo.trim()) errs.resumen = "El resumen es obligatorio.";
+    else if (resumenInfo.trim().length > 500) errs.resumen = "El resumen no puede exceder 500 caracteres.";
+
+    if (Object.keys(errs).length > 0) {
+      setErrores3(errs);
+      setGeneralError("Completa todos los campos obligatorios antes de continuar.");
+      return;
+    }
+    setErrores3({});
+    setGeneralError("");
+    setPasosCompletados((p) => new Set([...p, 3]));
+    setPaso(4);
+  };
+
+  // ── Avanzar Paso 4 (Solo validación local) ──────────────────────────────────
+  const avanzarPaso4 = () => {
+    const errs: Record<string, string> = {};
+    if (!planteamiento.trim()) errs.planteamiento_problema = "El planteamiento del problema es obligatorio.";
+    if (!objetivoGral.trim()) errs.objetivo_general = "El objetivo general es obligatorio.";
+    if (!objetivosEsp.trim()) errs.objetivos_especificos = "Los objetivos específicos son obligatorios.";
+    if (!metodologia.trim()) errs.metodologia = "La metodología es obligatoria.";
+    if (!resultados.trim()) errs.resultados_esperados = "Los resultados esperados son obligatorios.";
+
+    if (Object.keys(errs).length > 0) {
+      setErrores4(errs);
+      setGeneralError("Completa todos los campos obligatorios antes de continuar.");
+      return;
+    }
+    setErrores4({});
+    setGeneralError("");
+    setPasosCompletados((p) => new Set([...p, 4]));
+    setPaso(5);
+  };
+
+  // ── Guardar y Enviar Final (Paso 5: Guarda todo en la BD) ───────────────────
+  const enviarFinal = async () => {
+    setSaving(true);
+    setGeneralError("");
+    try {
+      const fd = new FormData();
+      fd.append("usuario_id", usuarioId.toString());
+      fd.append(
+        "semillero",
+        JSON.stringify({
+          tipo_institucion: tipoInstitucion.trim(),
+          institucion_procedencia: institucionProcedencia.trim(),
+          semillero_nombre: semilleroNombre.trim(),
+        })
+      );
+      fd.append("integrantes", JSON.stringify(integrantes));
+      fd.append(
+        "info_general",
+        JSON.stringify({
+          titulo_trabajo: tituloTrabajo.trim(),
+          linea_investigacion: lineaInv || "",
+          palabras_clave: palabrasClave.trim(),
+          resumen: resumenInfo.trim(),
+        })
+      );
+      fd.append(
+        "contenido",
+        JSON.stringify({
+          planteamiento_problema: planteamiento.trim(),
+          objetivo_general: objetivoGral.trim(),
+          objetivos_especificos: objetivosEsp.trim(),
+          metodologia: metodologia.trim(),
+          resultados_esperados: resultados.trim(),
+        })
+      );
+      if (docFinal) {
+        fd.append("documento", docFinal, docFinal.name);
+      }
+
+      await enviarInscripcionExterna(conv.id, fd);
+      setInscripcionEnviada(true);
+      setPasosCompletados((p) => new Set([...p, 5]));
+      onGuardado();
+    } catch (e: any) {
+      setGeneralError(e.message || "Error al enviar la inscripción.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Banner convocatoria ───────────────────────────────────────────────────
+  const Banner = () => (
+    <div className="p-3 rounded-xl bg-[#EBF5EF] border border-[#C8E6D2] flex items-center gap-2 mb-4">
+      <span className="text-xs font-mono font-bold text-[#1E6B3C] bg-white px-2 py-0.5 rounded border border-[#C8E6D2]">
+        {codigoDisplay}
+      </span>
+      <span className="text-sm font-semibold text-[#1A2B22] truncate">{conv.titulo}</span>
+      <span className="ml-auto text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium border border-blue-200 flex-shrink-0">
+        Externa
+      </span>
+    </div>
+  );
+
+  // ── Botones de navegación ─────────────────────────────────────────────────
+  const NavButtons = ({
+    onBack,
+    onNext,
+    nextLabel = "Continuar →",
+    nextDisabled = false,
+  }: {
+    onBack?: () => void;
+    onNext: () => void;
+    nextLabel?: string;
+    nextDisabled?: boolean;
+  }) => (
+    <div className="flex justify-between pt-4 border-t border-[#DDE4DF] mt-4">
+      <div className="flex gap-2">
+        <Button variant="ghost" onClick={onClose} disabled={saving}>
+          Cancelar
+        </Button>
+        {onBack && (
+          <Button variant="outline" onClick={onBack} disabled={saving}>
+            ← Volver
+          </Button>
+        )}
+      </div>
+      <Button variant="primary" onClick={onNext} disabled={saving || nextDisabled}>
+        {saving ? "Guardando y enviando..." : nextLabel}
+      </Button>
+    </div>
+  );
+
+  // ── Error banner ──────────────────────────────────────────────────────────
+  const ErrorBanner = () =>
+    generalError ? (
+      <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-sm font-medium flex items-center gap-2 mb-3">
+        <span>⚠</span>
+        <span>{generalError}</span>
+      </div>
+    ) : null;
+
+  return (
+    <Modal open={!!conv} onClose={saving ? () => {} : onClose} title="INSCRIPCIÓN — CONVOCATORIA EXTERNA" size="xl">
+      <StepperHeader pasoActual={paso} pasosCompletados={pasosCompletados} onSelectPaso={setPaso} />
+      <Banner />
+      <ErrorBanner />
+
+      {/* ── PASO 1: SEMILLERO ────────────────────────────────────────────── */}
+      {paso === 1 && (
+        <div className="space-y-4">
+          <SectionTitle>Información del Semillero</SectionTitle>
+          <Field label="Tipo de institución" required error={errores1.tipo_institucion}>
+            <Select
+              options={tiposInstitucion.map((t) => ({ value: t, label: t }))}
+              placeholder="Seleccionar..."
+              value={tipoInstitucion}
+              hasError={!!errores1.tipo_institucion}
+              onChange={(v) => {
+                setTipoInstitucion(v);
+                setErrores1((p) => {
+                  const n = { ...p };
+                  delete n.tipo_institucion;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+            />
+          </Field>
+          <Field label="Procedencia" hint="Establecido automáticamente para convocatorias externas">
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#DDE4DF] bg-[#F2F5F3] text-sm cursor-not-allowed select-none">
+              <span className="text-[#1A2B22] font-medium">{PROCEDENCIA_FIJA}</span>
+              <span className="ml-auto text-[#9BAD9F]">🔒</span>
+            </div>
+          </Field>
+          <Field label="Institución de procedencia" required error={errores1.institucion_procedencia}>
+            <Input
+              placeholder="Ej: Universidad Nacional de Colombia"
+              value={institucionProcedencia}
+              hasError={!!errores1.institucion_procedencia}
+              onChange={(v) => {
+                setInstitucionProcedencia(v);
+                setErrores1((p) => {
+                  const n = { ...p };
+                  delete n.institucion_procedencia;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+            />
+          </Field>
+          <Field label="Semillero" required error={errores1.semillero_nombre}>
+            <Input
+              placeholder="Ej: Semillero de Investigación en IA"
+              value={semilleroNombre}
+              hasError={!!errores1.semillero_nombre}
+              onChange={(v) => {
+                setSemilleroNombre(v);
+                setErrores1((p) => {
+                  const n = { ...p };
+                  delete n.semillero_nombre;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+            />
+          </Field>
+          <NavButtons onNext={avanzarPaso1} nextLabel="Continuar →" />
+        </div>
+      )}
+
+      {/* ── PASO 2: INTEGRANTES ──────────────────────────────────────────── */}
+      {paso === 2 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <SectionTitle>Integrantes del Semillero</SectionTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setMostrarFormIntegrante(true);
+                setErroresIntg({});
+              }}
+            >
+              + Agregar integrante
+            </Button>
+          </div>
+
+          {integrantes.length === 0 && !mostrarFormIntegrante && (
+            <div className="text-center py-8 text-[#637068] bg-[#FAFFFE] rounded-xl border border-dashed border-[#DDE4DF]">
+              <p className="text-sm">No hay integrantes agregados.</p>
+              <p className="text-xs mt-1">Debes agregar al menos uno para continuar.</p>
+            </div>
+          )}
+
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {integrantes.map((intg) => (
+              <FilaIntegrante
+                key={intg.id}
+                integrante={intg}
+                onEliminar={eliminarIntegrante}
+                eliminando={false}
+              />
+            ))}
+          </div>
+
+          {mostrarFormIntegrante && (
+            <div className="p-4 rounded-xl border border-[#C8E6D2] bg-[#EBF5EF] space-y-3">
+              <p className="text-sm font-semibold text-[#1A2B22]">Nuevo integrante</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Nombre completo" required error={erroresIntg.nombre_completo}>
+                  <Input
+                    placeholder="Nombre completo"
+                    value={nuevoIntg.nombre_completo}
+                    onChange={(v) => {
+                      setNuevoIntg((p) => ({ ...p, nombre_completo: v }));
+                      setErroresIntg((p) => {
+                        const n = { ...p };
+                        delete n.nombre_completo;
+                        return n;
+                      });
+                    }}
+                    hasError={!!erroresIntg.nombre_completo}
+                  />
+                </Field>
+                <Field label="Tipo de documento" required error={erroresIntg.tipo_documento}>
+                  <Select
+                    options={(
+                      catalogos?.tipos_documento || ["CC", "TI", "CE", "Pasaporte", "Otro"]
+                    ).map((t) => ({ value: t, label: t }))}
+                    placeholder="Tipo doc..."
+                    value={nuevoIntg.tipo_documento}
+                    onChange={(v) => {
+                      setNuevoIntg((p) => ({ ...p, tipo_documento: v }));
+                      setErroresIntg((p) => {
+                        const n = { ...p };
+                        delete n.tipo_documento;
+                        return n;
+                      });
+                    }}
+                    hasError={!!erroresIntg.tipo_documento}
+                  />
+                </Field>
+                <Field label="Número de documento" required error={erroresIntg.numero_documento}>
+                  <Input
+                    placeholder="Número"
+                    value={nuevoIntg.numero_documento}
+                    onChange={(v) => {
+                      setNuevoIntg((p) => ({ ...p, numero_documento: v }));
+                      setErroresIntg((p) => {
+                        const n = { ...p };
+                        delete n.numero_documento;
+                        return n;
+                      });
+                    }}
+                    hasError={!!erroresIntg.numero_documento}
+                  />
+                </Field>
+                <Field label="Rol" required error={erroresIntg.rol}>
+                  <Select
+                    options={(
+                      catalogos?.roles_integrante || [
+                        "Director",
+                        "Coinvestigador",
+                        "Estudiante",
+                        "Auxiliar de Investigación",
+                        "Otro",
+                      ]
+                    ).map((r) => ({ value: r, label: r }))}
+                    placeholder="Rol..."
+                    value={nuevoIntg.rol}
+                    onChange={(v) => {
+                      setNuevoIntg((p) => ({ ...p, rol: v }));
+                      setErroresIntg((p) => {
+                        const n = { ...p };
+                        delete n.rol;
+                        return n;
+                      });
+                    }}
+                    hasError={!!erroresIntg.rol}
+                  />
+                </Field>
+                <Field label="Correo electrónico" required error={erroresIntg.email}>
+                  <Input
+                    placeholder="correo@ejemplo.com"
+                    value={nuevoIntg.email}
+                    onChange={(v) => {
+                      setNuevoIntg((p) => ({ ...p, email: v }));
+                      setErroresIntg((p) => {
+                        const n = { ...p };
+                        delete n.email;
+                        return n;
+                      });
+                    }}
+                    hasError={!!erroresIntg.email}
+                  />
+                </Field>
+                <Field label="Teléfono">
+                  <Input
+                    placeholder="Opcional"
+                    value={nuevoIntg.telefono}
+                    onChange={(v) => setNuevoIntg((p) => ({ ...p, telefono: v }))}
+                  />
+                </Field>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMostrarFormIntegrante(false);
+                    setErroresIntg({});
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button variant="primary" size="sm" onClick={agregarIntegrante}>
+                  Agregar a la lista
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <NavButtons onBack={() => setPaso(1)} onNext={avanzarPaso2} nextLabel="Continuar →" />
+        </div>
+      )}
+
+      {/* ── PASO 3: INFORMACIÓN GENERAL ─────────────────────────────────── */}
+      {paso === 3 && (
+        <div className="space-y-4">
+          <SectionTitle>Información General del Trabajo</SectionTitle>
+          <Field label="Título del trabajo" required error={errores3.titulo_trabajo}>
+            <Input
+              placeholder="Título del proyecto o trabajo de investigación"
+              value={tituloTrabajo}
+              onChange={(v) => {
+                setTituloTrabajo(v);
+                setErrores3((p) => {
+                  const n = { ...p };
+                  delete n.titulo_trabajo;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores3.titulo_trabajo}
+            />
+          </Field>
+          <Field label="Línea de investigación">
+            <Select
+              options={(catalogos?.lineas_investigacion || []).map((l) => ({ value: l.nombre, label: l.nombre }))}
+              placeholder="Seleccionar línea (opcional)"
+              value={lineaInv}
+              onChange={(v) => setLineaInv(v)}
+            />
+          </Field>
+          <Field
+            label="Palabras clave"
+            required
+            error={errores3.palabras_clave}
+            hint="Separa con comas. Ej: inteligencia artificial, machine learning"
+          >
+            <Input
+              placeholder="Ej: inteligencia artificial, datos, redes neuronales"
+              value={palabrasClave}
+              onChange={(v) => {
+                setPalabrasClave(v);
+                setErrores3((p) => {
+                  const n = { ...p };
+                  delete n.palabras_clave;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores3.palabras_clave}
+            />
+          </Field>
+          <Field label="Resumen" required error={errores3.resumen} hint={`${resumenInfo.length}/500 caracteres`}>
+            <Textarea
+              placeholder="Resumen del trabajo de investigación (máx. 500 caracteres)"
+              value={resumenInfo}
+              rows={4}
+              onChange={(v) => {
+                setResumenInfo(v);
+                setErrores3((p) => {
+                  const n = { ...p };
+                  delete n.resumen;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores3.resumen}
+            />
+          </Field>
+          <NavButtons onBack={() => setPaso(2)} onNext={avanzarPaso3} nextLabel="Continuar →" />
+        </div>
+      )}
+
+      {/* ── PASO 4: CONTENIDO DEL TRABAJO ───────────────────────────────── */}
+      {paso === 4 && (
+        <div className="space-y-4">
+          <SectionTitle>Contenido del Trabajo</SectionTitle>
+          <Field label="Planteamiento del problema" required error={errores4.planteamiento_problema}>
+            <Textarea
+              placeholder="Describe el problema que aborda la investigación..."
+              value={planteamiento}
+              rows={3}
+              onChange={(v) => {
+                setPlanteamiento(v);
+                setErrores4((p) => {
+                  const n = { ...p };
+                  delete n.planteamiento_problema;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores4.planteamiento_problema}
+            />
+          </Field>
+          <Field label="Objetivo general" required error={errores4.objetivo_general}>
+            <Textarea
+              placeholder="Objetivo principal del trabajo..."
+              value={objetivoGral}
+              rows={3}
+              onChange={(v) => {
+                setObjetivoGral(v);
+                setErrores4((p) => {
+                  const n = { ...p };
+                  delete n.objetivo_general;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores4.objetivo_general}
+            />
+          </Field>
+          <Field label="Objetivos específicos" required error={errores4.objetivos_especificos}>
+            <Textarea
+              placeholder="Lista los objetivos específicos..."
+              value={objetivosEsp}
+              rows={3}
+              onChange={(v) => {
+                setObjetivosEsp(v);
+                setErrores4((p) => {
+                  const n = { ...p };
+                  delete n.objetivos_especificos;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores4.objetivos_especificos}
+            />
+          </Field>
+          <Field label="Metodología" required error={errores4.metodologia}>
+            <Textarea
+              placeholder="Describe la metodología a utilizar..."
+              value={metodologia}
+              rows={3}
+              onChange={(v) => {
+                setMetodologia(v);
+                setErrores4((p) => {
+                  const n = { ...p };
+                  delete n.metodologia;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores4.metodologia}
+            />
+          </Field>
+          <Field label="Resultados esperados" required error={errores4.resultados_esperados}>
+            <Textarea
+              placeholder="¿Qué resultados o productos esperas obtener?..."
+              value={resultados}
+              rows={3}
+              onChange={(v) => {
+                setResultados(v);
+                setErrores4((p) => {
+                  const n = { ...p };
+                  delete n.resultados_esperados;
+                  return n;
+                });
+                setGeneralError("");
+              }}
+              hasError={!!errores4.resultados_esperados}
+            />
+          </Field>
+          <NavButtons onBack={() => setPaso(3)} onNext={avanzarPaso4} nextLabel="Continuar →" />
+        </div>
+      )}
+
+      {/* ── PASO 5: ENVÍO FINAL ──────────────────────────────────────────── */}
+      {paso === 5 && (
+        <div className="space-y-4">
+          {inscripcionEnviada ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="text-5xl">🎉</div>
+              <h3 className="text-xl font-bold text-[#1E6B3C]">¡Inscripción enviada exitosamente!</h3>
+              <p className="text-sm text-[#637068] max-w-md mx-auto">
+                Tu solicitud de inscripción a la convocatoria externa ha sido registrada con toda la información
+                del semillero, integrantes y contenido.
+              </p>
+              <div className="pt-2">
+                <Button variant="primary" onClick={onClose}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <SectionTitle>Envío Final — Resumen y Confirmación</SectionTitle>
+
+              <div className="space-y-3 text-sm">
+                {/* Paso 1 summary */}
+                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-[#1E6B3C]">✓ Paso 1 — Semillero</p>
+                    <button
+                      type="button"
+                      onClick={() => setPaso(1)}
+                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[#637068]">Tipo de institución:</span>
+                      <strong className="text-[#1A2B22]">{tipoInstitucion || "—"}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#637068]">Procedencia:</span>
+                      <strong className="text-[#1A2B22]">{PROCEDENCIA_FIJA}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#637068]">Institución:</span>
+                      <strong className="text-[#1A2B22]">{institucionProcedencia || "—"}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#637068]">Semillero:</span>
+                      <strong className="text-[#1A2B22]">{semilleroNombre || "—"}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Paso 2 summary */}
+                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-[#1E6B3C]">
+                      ✓ Paso 2 — Integrantes ({integrantes.length})
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPaso(2)}
+                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    {integrantes.map((intg, idx) => (
+                      <div key={intg.id || idx} className="flex justify-between py-0.5 border-b border-[#F2F5F3] last:border-none">
+                        <div>
+                          <span className="font-semibold text-[#1A2B22]">{intg.nombre_completo}</span>
+                          <span className="text-[#637068] ml-2">({intg.rol})</span>
+                        </div>
+                        <span className="text-[#637068]">{intg.email}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Paso 3 summary */}
+                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-[#1E6B3C]">✓ Paso 3 — Información general</p>
+                    <button
+                      type="button"
+                      onClick={() => setPaso(3)}
+                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div>
+                      <span className="text-[#637068]">Título: </span>
+                      <strong className="text-[#1A2B22]">{tituloTrabajo}</strong>
+                    </div>
+                    {lineaInv && (
+                      <div>
+                        <span className="text-[#637068]">Línea: </span>
+                        <span className="text-[#1A2B22] font-medium">{lineaInv}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-[#637068]">Palabras clave: </span>
+                      <span className="text-[#1A2B22]">{palabrasClave}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Paso 4 summary */}
+                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-[#1E6B3C]">✓ Paso 4 — Contenido del trabajo</p>
+                    <button
+                      type="button"
+                      onClick={() => setPaso(4)}
+                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div>
+                      <span className="text-[#637068]">Planteamiento: </span>
+                      <span className="text-[#1A2B22] line-clamp-2">{planteamiento}</span>
+                    </div>
+                    <div>
+                      <span className="text-[#637068]">Objetivo general: </span>
+                      <span className="text-[#1A2B22] line-clamp-2">{objetivoGral}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Documento adjunto opcional */}
+              <Field label="Documento adjunto (opcional)" hint="PDF con propuesta o aval institucional">
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE] cursor-pointer hover:bg-[#EBF5EF] transition-colors">
+                    <span className="text-sm text-[#637068]">{docFinal ? docFinal.name : "Seleccionar PDF..."}</span>
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) setDocFinal(f);
+                      }}
+                    />
+                  </label>
+                  {docFinal && (
+                    <button
+                      type="button"
+                      onClick={() => setDocFinal(null)}
+                      className="text-red-400 hover:text-red-600 text-sm"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </Field>
+
+              <div className="p-3 rounded-xl bg-[#EBF5EF] border border-[#C8E6D2]">
+                <p className="text-xs text-[#1E6B3C] font-medium">
+                  Al presionar "Guardar y Enviar inscripción" se registrará formalmente toda la información ingresada.
+                </p>
+              </div>
+
+              <NavButtons
+                onBack={() => setPaso(4)}
+                onNext={enviarFinal}
+                nextLabel="🚀 Guardar y Enviar inscripción"
+                nextDisabled={saving}
+              />
+            </>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 type Tab = "internas" | "externas" | "alertas";
 export function Convocatorias() {
   const [activeTab, setActiveTab] = useState<Tab>("internas");
@@ -1821,6 +2978,8 @@ export function Convocatorias() {
   const [selected, setSelected] = useState<Convocatoria | null>(null);
   const [editingConv, setEditingConv] = useState<Convocatoria | null>(null);
   const [inscribiendoConv, setInscribiendoConv] = useState<Convocatoria | null>(null);
+  // Estado para flujo de inscripción en convocatorias externas (Paso 1: Semillero)
+  const [semilleroExternoConv, setSemilleroExternoConv] = useState<Convocatoria | null>(null);
 
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -2037,7 +3196,13 @@ export function Convocatorias() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setInscribiendoConv(c)}
+                          onClick={() => {
+                            if (c.tipo === "Externa") {
+                              setSemilleroExternoConv(c);
+                            } else {
+                              setInscribiendoConv(c);
+                            }
+                          }}
                         >
                           📝 Inscribirse
                         </Button>
@@ -2064,7 +3229,11 @@ export function Convocatorias() {
         onClose={() => setSelected(null)}
         onInscribirse={(c) => {
           setSelected(null);
-          setInscribiendoConv(c);
+          if (c.tipo === "Externa") {
+            setSemilleroExternoConv(c);
+          } else {
+            setInscribiendoConv(c);
+          }
         }}
       />
       <InscripcionModal
@@ -2076,6 +3245,11 @@ export function Convocatorias() {
         conv={editingConv}
         onClose={() => setEditingConv(null)}
         onUpdated={cargar}
+      />
+      <SemilleroExternoModal
+        conv={semilleroExternoConv}
+        onClose={() => setSemilleroExternoConv(null)}
+        onGuardado={cargar}
       />
     </div>
   );

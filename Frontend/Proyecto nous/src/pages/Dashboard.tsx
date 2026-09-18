@@ -299,7 +299,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F0" vertical={false} />
                 <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9BAD9F" }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9BAD9F" }} tickFormatter={formatMillions} />
-                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #DDE4DF", fontSize: 12 }} formatter={(v: number) => [`$${v}M`, ""]} />
+                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #DDE4DF", fontSize: 12 }} formatter={(v: any) => [`$${v}M`, ""]} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                 <Line type="monotone" dataKey="aprobado"  name="Aprobado"  stroke="#DDE4DF" strokeWidth={2.5} strokeDasharray="5 3" dot={false} />
                 <Line type="monotone" dataKey="ejecutado" name="Ejecutado" stroke={GREEN}   strokeWidth={2.5} dot={{ r: 4, fill: GREEN, strokeWidth: 0 }} activeDot={{ r: 6 }} />

@@ -87,7 +87,7 @@ function DetalleProyecto({ id, onBack }: { id: number; onBack: () => void }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Investigador Principal", value: proyecto.lider, sub: proyecto.facultad },
-          { label: "Grupo de Investigación", value: proyecto.grupo, sub: proyecto.grupo_nombre || "Sin grupo" },
+          { label: "Grupo de Investigación", value: proyecto.grupo, sub: (proyecto as any).grupo_nombre || "Sin grupo" },
           { label: "Vigencia", value: `${proyecto.inicio} — ${proyecto.fin}`, sub: `${proyecto.duracion_meses} meses` },
           { label: "Presupuesto Total", value: proyecto.presupuesto, sub: `${Math.round(proyecto.avance)}% ejecutado` },
         ].map((s) => (
