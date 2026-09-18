@@ -6,8 +6,10 @@ import {
   crearConvocatoria,
   actualizarConvocatoria,
   publicarConvocatoria,
+  eliminarConvocatoria,
   getConvocatoriasExternas,
   crearConvocatoriaExterna,
+  eliminarConvocatoriaExterna,
   getConvocatoriasAlertas,
   inscribirseConvocatoria,
   getInscripcionesConvocatoria,
@@ -150,9 +152,6 @@ function WizardModal({
     if (!data.tipo || !data.tipo.trim()) {
       errs.tipo = "Selecciona una opción.";
     }
-    if (data.tipo === "Externa" && (!data.tipo_investigacion || !data.tipo_investigacion.trim())) {
-      errs.tipo_investigacion = "Selecciona el tipo de investigación para generar el código de la convocatoria.";
-    }
     if (!data.dirigida || data.dirigida.length === 0) {
       errs.dirigida = "Selecciona a quién va dirigida la convocatoria (máximo 2).";
     } else if (data.dirigida.length > 2) {
@@ -166,11 +165,7 @@ function WizardModal({
 
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) {
-      if (errs.tipo_investigacion) {
-        setGeneralError(errs.tipo_investigacion);
-      } else {
-        setGeneralError("Completa todos los campos obligatorios antes de continuar.");
-      }
+      setGeneralError("Completa todos los campos obligatorios antes de continuar.");
       return false;
     }
     setGeneralError("");
@@ -315,16 +310,14 @@ function WizardModal({
               label="ID de la Convocatoria"
               hint={
                 data.tipo === "Externa"
-                  ? "Estructura externa: TIPO + E + AÑO + NNN"
+                  ? "Estructura externa: EXTE + AÑO + NNN"
                   : "Identificador único generado automáticamente"
               }
             >
               <Input
                 value={
                   data.tipo === "Externa"
-                    ? data.tipo_investigacion
-                      ? `${MAPA_TIPO_INVESTIGACION[data.tipo_investigacion] || ""}E${new Date().getFullYear()}XXX (generado automáticamente)`
-                      : "Selecciona el tipo de investigación para generar el código"
+                    ? `EXTE${new Date().getFullYear()}XXX (generado automáticamente)`
                     : "CONXX (generado automáticamente)"
                 }
                 disabled
@@ -350,35 +343,6 @@ function WizardModal({
               />
             </Field>
           </div>
-
-          {data.tipo === "Externa" && (
-            <Field
-              label="Tipo de investigación"
-              required
-              error={fieldErrors.tipo_investigacion}
-              hint="El código externo se construirá automáticamente a partir del tipo seleccionado (IC, IPD, IF, UE, SEM)"
-            >
-              <Select
-                options={TIPOS_INVESTIGACION.map((t) => ({
-                  value: t.label,
-                  label: `${t.label} (${t.codigo})`,
-                }))}
-                placeholder="Selecciona el tipo de investigación..."
-                value={data.tipo_investigacion}
-                hasError={!!fieldErrors.tipo_investigacion}
-                onChange={(v) => {
-                  set("tipo_investigacion", v);
-                  if (fieldErrors.tipo_investigacion) {
-                    setFieldErrors((prev) => {
-                      const next = { ...prev };
-                      delete next.tipo_investigacion;
-                      return next;
-                    });
-                  }
-                }}
-              />
-            </Field>
-          )}
 
           <Field label="Nombre de la Convocatoria" required error={fieldErrors.titulo}>
             <Input
@@ -880,10 +844,12 @@ function DetailModal({
   conv,
   onClose,
   onInscribirse,
+  onEliminar,
 }: {
   conv: Convocatoria | null;
   onClose: () => void;
   onInscribirse: (c: Convocatoria) => void;
+  onEliminar?: (c: Convocatoria) => void;
 }) {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
   const [loadingInscripciones, setLoadingInscripciones] = useState(false);
@@ -1099,8 +1065,22 @@ function DetailModal({
           )}
         </div>
       </div>
-      <div className="flex justify-between mt-6 pt-4 border-t border-[#DDE4DF]">
-        <Button variant="ghost" onClick={onClose}>Cerrar</Button>
+      <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#DDE4DF]">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={onClose}>Cerrar</Button>
+          {onEliminar && (
+            <Button
+              variant="outline"
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+              onClick={() => {
+                onClose();
+                onEliminar(conv);
+              }}
+            >
+              🗑️ Eliminar
+            </Button>
+          )}
+        </div>
         <Button
           variant="primary"
           disabled={inscripciones.length >= 50}
@@ -1637,16 +1617,12 @@ function ExternaModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 
   const handleGuardar = async () => {
     if (!data.titulo.trim()) { setError("El título es obligatorio."); return; }
-    if (!data.tipo_investigacion || !data.tipo_investigacion.trim()) {
-      setError("Selecciona el tipo de investigación para generar el código de la convocatoria.");
-      return;
-    }
     setSaving(true); setError("");
     try {
       await crearConvocatoriaExterna({
         ...data,
         titulo: data.titulo.trim(),
-        tipo_investigacion: data.tipo_investigacion.trim(),
+        tipo_investigacion: undefined,
       });
       onCreated();
       handleClose();
@@ -1657,33 +1633,12 @@ function ExternaModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
     }
   };
 
-  const siglaPreview = data.tipo_investigacion ? MAPA_TIPO_INVESTIGACION[data.tipo_investigacion] : "";
-  const codigoPreview = siglaPreview
-    ? `${siglaPreview}E${new Date().getFullYear()}XXX (generado automáticamente)`
-    : "Selecciona el tipo de investigación para generar el código";
-
   return (
     <Modal open={open} onClose={handleClose} title="Agregar Convocatoria Externa" size="lg">
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="ID de la Convocatoria" hint="Estructura externa: TIPO + E + AÑO + NNN">
-            <Input value={codigoPreview} disabled />
-          </Field>
-          <Field label="Tipo de investigación" required hint="Determina el prefijo del código (IC, IPD, IF, UE, SEM)">
-            <Select
-              options={TIPOS_INVESTIGACION.map((t) => ({
-                value: t.label,
-                label: `${t.label} (${t.codigo})`,
-              }))}
-              placeholder="Selecciona el tipo de investigación..."
-              value={data.tipo_investigacion}
-              onChange={(v) => {
-                set("tipo_investigacion", v);
-                if (error) setError("");
-              }}
-            />
-          </Field>
-        </div>
+        <Field label="ID de la Convocatoria" hint="Identificador único generado automáticamente">
+          <Input value={`EXTE${new Date().getFullYear()}XXX (generado automáticamente)`} disabled />
+        </Field>
 
         <Field label="Título de la Convocatoria" required>
           <Input placeholder="Ej: Convocatoria MinCiencias 2025" value={data.titulo} onChange={(v) => set("titulo", v)} />
@@ -1835,6 +1790,7 @@ function ExternasTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [deletingExterna, setDeletingExterna] = useState<ConvocatoriaExterna | null>(null);
 
   const cargar = useCallback(() => {
     setLoading(true);
@@ -1920,11 +1876,26 @@ function ExternasTab() {
                 )}
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                onClick={() => setDeletingExterna(e)}
+              >
+                🗑️ Eliminar
+              </Button>
+            </div>
           </div>
         </Card>
       ))}
 
       <ExternaModal open={showModal} onClose={() => setShowModal(false)} onCreated={cargar} />
+      <EliminarExternaModal
+        conv={deletingExterna}
+        onClose={() => setDeletingExterna(null)}
+        onDeleted={cargar}
+      />
     </div>
   );
 }
@@ -2969,21 +2940,188 @@ function SemilleroExternoModal({
   );
 }
 
-type Tab = "internas" | "externas" | "alertas";
+// ─── Modal Confirmar Eliminación Convocatoria ───────────────────────────────
+function EliminarConvocatoriaModal({
+  conv,
+  onClose,
+  onDeleted,
+}: {
+  conv: Convocatoria | null;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [eliminando, setEliminando] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!conv) return null;
+
+  const codigo = conv.codigo_con || conv.codigo || `CON${conv.id}`;
+
+  const handleEliminar = async () => {
+    try {
+      setEliminando(true);
+      setError("");
+      await eliminarConvocatoria(conv.id);
+      onClose();
+      onDeleted();
+    } catch (e: any) {
+      console.error("Error al eliminar convocatoria:", e);
+      setError(e?.message || "No se pudo eliminar la convocatoria. Intente nuevamente.");
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  return (
+    <Modal open={!!conv} onClose={onClose} title="Eliminar Convocatoria" size="md">
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-800">
+          <span className="text-2xl">⚠️</span>
+          <div className="text-sm">
+            <p className="font-bold">¿Está seguro de que desea eliminar esta convocatoria?</p>
+            <p className="text-xs text-red-700 mt-1">
+              Esta acción no se puede deshacer. Se eliminará permanentemente la convocatoria y sus registros asociados.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-[#FAFFFE] border border-[#DDE4DF] rounded-xl text-xs space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-[#1E6B3C] bg-[#EBF5EF] px-2 py-0.5 rounded border border-[#C8E6D2]">
+              {codigo}
+            </span>
+            <span className="font-semibold text-[#1A2B22] text-sm truncate">{conv.titulo}</span>
+          </div>
+          {conv.descripcion && (
+            <p className="text-[#637068] line-clamp-2">{conv.descripcion}</p>
+          )}
+          <div className="flex flex-wrap gap-3 text-[#637068] pt-1">
+            <span>📅 Apertura: <strong>{conv.fecha_apertura ? new Date(conv.fecha_apertura).toLocaleDateString("es-CO") : "—"}</strong></span>
+            <span>🔒 Cierre: <strong>{conv.fecha_cierre ? new Date(conv.fecha_cierre).toLocaleDateString("es-CO") : "—"}</strong></span>
+            <span>🏷️ Estado: <strong className="capitalize">{conv.estado}</strong></span>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-[#DDE4DF]">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={eliminando}>
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleEliminar}
+            disabled={eliminando}
+          >
+            {eliminando ? "Eliminando..." : "🗑️ Sí, eliminar"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Modal Confirmar Eliminación Convocatoria Externa ───────────────────────
+function EliminarExternaModal({
+  conv,
+  onClose,
+  onDeleted,
+}: {
+  conv: ConvocatoriaExterna | null;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [eliminando, setEliminando] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!conv) return null;
+
+  const codigo = conv.codigo || conv.codigo_ext || `EXT${conv.id}`;
+
+  const handleEliminar = async () => {
+    try {
+      setEliminando(true);
+      setError("");
+      await eliminarConvocatoriaExterna(conv.id);
+      onClose();
+      onDeleted();
+    } catch (e: any) {
+      console.error("Error al eliminar convocatoria externa:", e);
+      setError(e?.message || "No se pudo eliminar la convocatoria externa.");
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  return (
+    <Modal open={!!conv} onClose={onClose} title="Eliminar Convocatoria Externa" size="md">
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-800">
+          <span className="text-2xl">⚠️</span>
+          <div className="text-sm">
+            <p className="font-bold">¿Está seguro de que desea eliminar esta convocatoria externa?</p>
+            <p className="text-xs text-red-700 mt-1">
+              Esta acción no se puede deshacer. Se eliminará del banco de convocatorias externas.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-[#FAFFFE] border border-[#DDE4DF] rounded-xl text-xs space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-[#1E6B3C] bg-[#EBF5EF] px-2 py-0.5 rounded border border-[#C8E6D2]">
+              {codigo}
+            </span>
+            <span className="font-semibold text-[#1A2B22] text-sm truncate">{conv.titulo}</span>
+          </div>
+          {conv.entidad_externa && (
+            <p className="text-[#637068]">🏛️ Entidad: <strong className="text-[#1A2B22]">{conv.entidad_externa}</strong></p>
+          )}
+        </div>
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-[#DDE4DF]">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={eliminando}>
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleEliminar}
+            disabled={eliminando}
+          >
+            {eliminando ? "Eliminando..." : "🗑️ Sí, eliminar"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+type Tab = "todas" | "internas" | "externas" | "conjunta" | "alertas";
 export function Convocatorias() {
-  const [activeTab, setActiveTab] = useState<Tab>("internas");
+  const [activeTab, setActiveTab] = useState<Tab>("todas");
   const [showWizard, setShowWizard] = useState(false);
   const [convocatorias, setConvocatorias] = useState<Convocatoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Convocatoria | null>(null);
   const [editingConv, setEditingConv] = useState<Convocatoria | null>(null);
+  const [deletingConv, setDeletingConv] = useState<Convocatoria | null>(null);
   const [inscribiendoConv, setInscribiendoConv] = useState<Convocatoria | null>(null);
   // Estado para flujo de inscripción en convocatorias externas (Paso 1: Semillero)
   const [semilleroExternoConv, setSemilleroExternoConv] = useState<Convocatoria | null>(null);
 
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
-  const [filterTipo, setFilterTipo] = useState("todos");
 
   const cargar = useCallback(() => {
     setLoading(true);
@@ -2996,9 +3134,24 @@ export function Convocatorias() {
   useEffect(() => { cargar(); }, [cargar]);
 
   const filtradas = convocatorias.filter((c) => {
-    const matchSearch = !search || c.titulo.toLowerCase().includes(search.toLowerCase());
+    const cod = (c.codigo_con || c.codigo || "").toLowerCase();
+    const matchSearch =
+      !search ||
+      c.titulo.toLowerCase().includes(search.toLowerCase()) ||
+      cod.includes(search.toLowerCase()) ||
+      (c.tipo_investigacion ?? "").toLowerCase().includes(search.toLowerCase());
     const matchEstado = filterEstado === "todos" || c.estado === filterEstado;
-    const matchTipo = filterTipo === "todos" || (c.tipo ?? "").toLowerCase() === filterTipo.toLowerCase();
+
+    let matchTipo = true;
+    const tipoLower = (c.tipo ?? "").toLowerCase();
+    if (activeTab === "internas") {
+      matchTipo = tipoLower === "interna" || tipoLower === "internas";
+    } else if (activeTab === "externas") {
+      matchTipo = tipoLower === "externa" || tipoLower === "externas";
+    } else if (activeTab === "conjunta") {
+      matchTipo = tipoLower === "conjunta" || tipoLower === "conjuntas";
+    }
+
     return matchSearch && matchEstado && matchTipo;
   });
 
@@ -3043,16 +3196,18 @@ export function Convocatorias() {
       </div>
 
       <div className="bg-white border border-[#DDE4DF] rounded-xl overflow-hidden">
-        <div className="flex border-b border-[#DDE4DF]">
+        <div className="flex border-b border-[#DDE4DF] overflow-x-auto">
           {([
+            { id: "todas" as Tab, label: "Todas", icon: "📋" },
             { id: "internas" as Tab, label: "Internas", icon: "🏫" },
-            { id: "externas" as Tab, label: "Banco Externas", icon: "🌐" },
+            { id: "externas" as Tab, label: "Externas", icon: "🌐" },
+            { id: "conjunta" as Tab, label: "Conjunta", icon: "🤝" },
             { id: "alertas" as Tab, label: "Alertas", icon: "🔔" },
           ]).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === tab.id
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${activeTab === tab.id
                   ? "border-[#1E6B3C] text-[#1E6B3C] bg-[#EBF5EF]"
                   : "border-transparent text-[#637068] hover:text-[#1A2B22] hover:bg-[#F2F5F3]"
                 }`}
@@ -3067,16 +3222,16 @@ export function Convocatorias() {
         </div>
 
         <div className="p-4">
-          {activeTab === "externas" && <ExternasTab />}
-          {activeTab === "alertas" && <AlertasTab />}
-          {activeTab === "internas" && (
+          {activeTab === "alertas" ? (
+            <AlertasTab />
+          ) : (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-3 items-center">
                 <div className="flex-1 min-w-[200px] relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9BAD9F] text-sm">🔍</span>
                   <input
                     type="text"
-                    placeholder="Buscar convocatoria por nombre o código CON..."
+                    placeholder="Buscar convocatoria por nombre, tipo o código CON..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full pl-8 pr-3 py-2 text-sm border border-[#DDE4DF] rounded-xl bg-[#FAFFFE] focus:outline-none focus:border-[#1E6B3C] transition-colors"
@@ -3102,28 +3257,9 @@ export function Convocatorias() {
                     </button>
                   ))}
                 </div>
-                <div className="flex gap-1">
-                  {[
-                    { value: "todos", label: "Tipo: Todos" },
-                    { value: "interna", label: "Interna" },
-                    { value: "externa", label: "Externa" },
-                    { value: "conjunta", label: "Conjunta" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFilterTipo(opt.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterTipo === opt.value
-                          ? "bg-[#2563EB] text-white"
-                          : "bg-[#F2F5F3] text-[#637068] hover:bg-[#DDE4DF]"
-                        }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                {(search || filterEstado !== "todos" || filterTipo !== "todos") && (
+                {(search || filterEstado !== "todos") && (
                   <button
-                    onClick={() => { setSearch(""); setFilterEstado("todos"); setFilterTipo("todos"); }}
+                    onClick={() => { setSearch(""); setFilterEstado("todos"); }}
                     className="text-xs text-red-500 hover:text-red-700 font-medium"
                   >
                     ✕ Limpiar filtros
@@ -3165,11 +3301,6 @@ export function Convocatorias() {
                             🎯 {c.dirigida_a}
                           </span>
                         )}
-                        {!c.aprobada_comite && (
-                          <span className="text-xs bg-[#FFF8E6] text-[#D97706] px-2 py-0.5 rounded-full font-medium border border-[#FFE5A0]">
-                            ⏳ Pendiente comité
-                          </span>
-                        )}
                       </div>
                       <h3 className="text-base font-bold text-[#1A2B22] mb-1">{c.titulo}</h3>
                       {c.descripcion && (
@@ -3181,17 +3312,24 @@ export function Convocatorias() {
                         {c.creado_por_nombre && (
                           <span>👤 Creado por: <strong className="text-[#1A2B22]">{c.creado_por_nombre}</strong></span>
                         )}
-                        <span>✅ Aprobada: <strong className="text-[#1A2B22]">{c.aprobada_comite ? "Sí" : "No"}</strong></span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap justify-end">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setEditingConv(c)}
                         >
                           ✏️ Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                          onClick={() => setDeletingConv(c)}
+                        >
+                          🗑️ Eliminar
                         </Button>
                         <Button
                           variant="ghost"
@@ -3227,6 +3365,7 @@ export function Convocatorias() {
       <DetailModal
         conv={selected}
         onClose={() => setSelected(null)}
+        onEliminar={(c) => setDeletingConv(c)}
         onInscribirse={(c) => {
           setSelected(null);
           if (c.tipo === "Externa") {
@@ -3245,6 +3384,11 @@ export function Convocatorias() {
         conv={editingConv}
         onClose={() => setEditingConv(null)}
         onUpdated={cargar}
+      />
+      <EliminarConvocatoriaModal
+        conv={deletingConv}
+        onClose={() => setDeletingConv(null)}
+        onDeleted={cargar}
       />
       <SemilleroExternoModal
         conv={semilleroExternoConv}

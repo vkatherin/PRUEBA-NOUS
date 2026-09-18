@@ -13,11 +13,7 @@ const convocatoriasService = {
    * Consecutivo independiente por tipo de investigación y año, reiniciado anualmente.
    */
   async generarCodigoConvocatoriaExterna(tipoInvestigacion, anioConvocatoria) {
-    const sigla = obtenerSiglaTipoInvestigacion(tipoInvestigacion);
-    if (!sigla) {
-      throw new Error("Tipo de investigación no válido para generar el código.");
-    }
-
+    const sigla = tipoInvestigacion ? (obtenerSiglaTipoInvestigacion(tipoInvestigacion) || "EXT") : "EXT";
     const anio = parseInt(anioConvocatoria, 10) || new Date().getFullYear();
 
     // Incremento atómico en MySQL
@@ -123,9 +119,6 @@ const convocatoriasService = {
     const tipoInvLimpio = tipo_investigacion ? tipo_investigacion.trim() : null;
 
     if (tipo === "Externa") {
-      if (!tipoInvLimpio) {
-        throw new Error("Selecciona el tipo de investigación para generar el código de la convocatoria.");
-      }
       const anio = fecha_apertura ? new Date(fecha_apertura).getFullYear() : new Date().getFullYear();
       codigo = await this.generarCodigoConvocatoriaExterna(tipoInvLimpio, anio);
     }
@@ -304,15 +297,9 @@ const convocatoriasService = {
   },
 
   async crearExterna({ titulo, entidad_externa, tipo_investigacion, fecha_apertura, fecha_cierre, descripcion }) {
-    let codigo = null;
     const tipoInvLimpio = tipo_investigacion ? tipo_investigacion.trim() : null;
-
-    if (!tipoInvLimpio) {
-      throw new Error("Selecciona el tipo de investigación para generar el código de la convocatoria.");
-    }
-
     const anio = fecha_apertura ? new Date(fecha_apertura).getFullYear() : new Date().getFullYear();
-    codigo = await this.generarCodigoConvocatoriaExterna(tipoInvLimpio, anio);
+    const codigo = await this.generarCodigoConvocatoriaExterna(tipoInvLimpio, anio);
 
     const sql = `
       INSERT INTO convocatoria_externa (codigo, tipo_investigacion, titulo, entidad_externa, fecha_apertura, fecha_cierre, descripcion)

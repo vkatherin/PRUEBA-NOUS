@@ -416,6 +416,7 @@ const pasosSemilleroController = {
       // Validar datos recibidos
       const semNombre = semilleroData?.semillero_nombre || req.body.semillero_nombre || "";
       const tipoInst = semilleroData?.tipo_institucion || req.body.tipo_institucion || "";
+      const tipoInv = (req.body.tipo_investigacion || semilleroData?.tipo_investigacion || "").trim();
       const instProc = semilleroData?.institucion_procedencia || req.body.institucion_procedencia || "";
       const procFija = "Semillero externo";
 
@@ -471,14 +472,14 @@ const pasosSemilleroController = {
         if (archivo) {
           await pool.query(
             `UPDATE convocatoria_inscripciones
-             SET estado='registrada', documento_nombre_original=?, documento_ruta=?, documento_mime=?, documento_peso_bytes=?, fecha_inscripcion=NOW()
+             SET estado='registrada', tipo_investigacion=COALESCE(NULLIF(?, ''), tipo_investigacion), documento_nombre_original=?, documento_ruta=?, documento_mime=?, documento_peso_bytes=?, fecha_inscripcion=NOW()
              WHERE id=?`,
-            [docInfo.nombre, docInfo.ruta, docInfo.mime, docInfo.peso, inscripcion.id]
+            [tipoInv, docInfo.nombre, docInfo.ruta, docInfo.mime, docInfo.peso, inscripcion.id]
           );
         } else {
           await pool.query(
-            "UPDATE convocatoria_inscripciones SET estado='registrada', fecha_inscripcion=NOW() WHERE id=?",
-            [inscripcion.id]
+            "UPDATE convocatoria_inscripciones SET estado='registrada', tipo_investigacion=COALESCE(NULLIF(?, ''), tipo_investigacion), fecha_inscripcion=NOW() WHERE id=?",
+            [tipoInv, inscripcion.id]
           );
         }
       } else {
@@ -486,8 +487,8 @@ const pasosSemilleroController = {
           `INSERT INTO convocatoria_inscripciones
            (convocatoria_id, usuario_id, tipo_investigacion, resumen_proyecto, justificacion,
             documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes, estado, fecha_inscripcion)
-           VALUES (?, ?, '', '', '', ?, ?, ?, ?, 'registrada', NOW())`,
-          [convId, usuarioId, docInfo.nombre, docInfo.ruta, docInfo.mime, docInfo.peso]
+           VALUES (?, ?, ?, '', '', ?, ?, ?, ?, 'registrada', NOW())`,
+          [convId, usuarioId, tipoInv, docInfo.nombre, docInfo.ruta, docInfo.mime, docInfo.peso]
         );
         const [newInsc] = await pool.query("SELECT * FROM convocatoria_inscripciones WHERE id=?", [insRes.insertId]);
         inscripcion = newInsc[0];

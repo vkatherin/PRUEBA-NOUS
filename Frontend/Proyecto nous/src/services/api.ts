@@ -34,6 +34,10 @@ async function apiFetch<T>(
   const res = await fetch(`${BASE}${endpoint}`, { ...options, headers });
 
   if (res.status === 401) {
+    if (endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/registro') || endpoint.startsWith('/auth/mfa')) {
+      const err = await res.json().catch(() => ({ error: 'Credenciales inválidas' }));
+      throw new Error(err.error || 'Credenciales inválidas');
+    }
     // Token expirado o inválido — limpiar y recargar
     clearToken();
     window.dispatchEvent(new Event('nous:session-expired'));
@@ -383,6 +387,10 @@ export async function publicarConvocatoria(id: number): Promise<{ ok: boolean; c
   return apiFetch(`/convocatorias/${id}/publicar`, { method: "PATCH" });
 }
 
+export async function eliminarConvocatoria(id: number): Promise<{ ok: boolean; mensaje: string }> {
+  return apiFetch(`/convocatorias/${id}`, { method: "DELETE" });
+}
+
 export async function getConvocatoriasExternas(q?: string): Promise<ConvocatoriaExterna[]> {
   const query = q ? `?q=${encodeURIComponent(q)}` : "";
   return apiFetch(`/convocatorias/externas${query}`);
@@ -390,6 +398,10 @@ export async function getConvocatoriasExternas(q?: string): Promise<Convocatoria
 
 export async function crearConvocatoriaExterna(data: Partial<ConvocatoriaExterna>): Promise<{ ok: boolean; convocatoria: ConvocatoriaExterna }> {
   return apiFetch("/convocatorias/externas", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function eliminarConvocatoriaExterna(id: number): Promise<{ ok: boolean; mensaje: string }> {
+  return apiFetch(`/convocatorias/externas/${id}`, { method: "DELETE" });
 }
 
 // ─── Inscripciones a Convocatorias ──────────────────────────────────────────

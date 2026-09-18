@@ -140,15 +140,7 @@ const convocatoriasController = {
         return res.status(400).json({ error: "El tipo de convocatoria es obligatorio", campo: "tipo" });
       }
 
-      // Validación obligatoria para convocatorias externas
-      if (tipo.trim() === "Externa") {
-        if (!tipo_investigacion || !tipo_investigacion.trim()) {
-          return res.status(400).json({
-            error: "Selecciona el tipo de investigación para generar el código de la convocatoria.",
-            campo: "tipo_investigacion",
-          });
-        }
-      }
+
 
       // 3. Validar dirigida_a (Docente, Estudiante, Administrativo - hasta 2 opciones)
       const DIRIGIDA_PERMITIDOS = ["Docente", "Estudiante", "Administrativo"];
@@ -410,17 +402,10 @@ const convocatoriasController = {
         return res.status(400).json({ error: "El título de la convocatoria externa es obligatorio", campo: "titulo" });
       }
 
-      if (!tipo_investigacion || !tipo_investigacion.trim()) {
-        return res.status(400).json({
-          error: "Selecciona el tipo de investigación para generar el código de la convocatoria.",
-          campo: "tipo_investigacion",
-        });
-      }
-
       const nueva = await convocatoriasService.crearExterna({
         titulo: titulo.trim(),
         entidad_externa: entidad_externa ? entidad_externa.trim() : null,
-        tipo_investigacion: tipo_investigacion.trim(),
+        tipo_investigacion: tipo_investigacion ? tipo_investigacion.trim() : null,
         fecha_apertura,
         fecha_cierre,
         descripcion,
