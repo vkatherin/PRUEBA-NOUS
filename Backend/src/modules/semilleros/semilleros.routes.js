@@ -2,9 +2,29 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../../db/connection");
 
+const { verificarAutenticacion, verificarPermiso } = require('../auth/auth.middleware');
+
+router.use(verificarAutenticacion);
+
 // GET /api/semilleros
-router.get("/", async (req, res) => {
+router.get("/", verificarPermiso('semilleros.leer'), async (req, res) => {
   try {
+    const usuario = req.usuario;
+    const roles = usuario.roles || [];
+    const veTodos = ['administrador', 'directivos', 'director_semilleros'].some(r => roles.includes(r));
+    
+    let whereClause = "1=1";
+    let queryParams = [];
+
+    if (!veTodos) {
+      if (roles.includes('lider_semilleros') || roles.includes('docente') || roles.includes('estudiante')) {
+        whereClause = "(s.lider_profesor_id = ? OR s.id IN (SELECT semillero_id FROM semillero_integrantes WHERE usuario_id = ?))";
+        queryParams.push(usuario.id, usuario.id);
+      } else {
+        whereClause = "1=0";
+      }
+    }
+
     const [rows] = await pool.query(`
       SELECT s.id, s.nombre, s.codigo, s.estado_arte,
              s.vobo_programa, s.vobo_vicerrectoria, s.fecha_creacion,
@@ -16,8 +36,9 @@ router.get("/", async (req, res) => {
       FROM semilleros s
       LEFT JOIN usuarios u ON u.id = s.lider_profesor_id
       LEFT JOIN programas_academicos p ON p.id = s.programa_id
+      WHERE ${whereClause}
       ORDER BY s.fecha_creacion DESC
-    `);
+    `, queryParams);
     res.json(rows);
   } catch (err) {
     console.error("Error en semilleros:", err);
@@ -26,16 +47,33 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/semilleros/:id
-router.get("/:id", async (req, res) => {
+router.get("/:id", verificarPermiso('semilleros.leer'), async (req, res) => {
   try {
+    const usuario = req.usuario;
+    const roles = usuario.roles || [];
+    const veTodos = ['administrador', 'directivos', 'director_semilleros'].some(r => roles.includes(r));
+    
+    let whereClause = "s.id = ?";
+    let queryParams = [req.params.id];
+
+    if (!veTodos) {
+      if (roles.includes('lider_semilleros') || roles.includes('docente') || roles.includes('estudiante')) {
+        whereClause += " AND (s.lider_profesor_id = ? OR s.id IN (SELECT semillero_id FROM semillero_integrantes WHERE usuario_id = ?))";
+        queryParams.push(usuario.id, usuario.id);
+      } else {
+        whereClause += " AND 1=0";
+      }
+    }
+
     const [rows] = await pool.query(`
       SELECT s.*, u.nombre_completo as lider_profesor, p.nombre as programa
       FROM semilleros s
       LEFT JOIN usuarios u ON u.id = s.lider_profesor_id
       LEFT JOIN programas_academicos p ON p.id = s.programa_id
-      WHERE s.id = ?
-    `, [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: "No encontrado" });
+      WHERE ${whereClause}
+    `, queryParams);
+    
+    if (rows.length === 0) return res.status(403).json({ error: "No encontrado o sin permiso" });
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: "Error interno" });
@@ -43,7 +81,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // GET /api/semilleros/:id/integrantes
-router.get("/:id/integrantes", async (req, res) => {
+router.get("/:id/integrantes", verificarPermiso('semilleros.leer'), async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT si.*, u.nombre_completo, u.correo_institucional
@@ -59,7 +97,7 @@ router.get("/:id/integrantes", async (req, res) => {
 });
 
 // POST /api/semilleros
-router.post("/", async (req, res) => {
+router.post("/", verificarPermiso('semilleros.crear'), async (req, res) => {
   try {
     const {
       nombre, codigo, programa_id, lider_profesor_id,

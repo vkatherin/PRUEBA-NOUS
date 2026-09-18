@@ -379,25 +379,15 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           <div className="w-full max-w-md">
             <div className="bg-white rounded-2xl border border-[#DDE4DF] shadow-lg p-8">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[#1A2B22]">Crear cuenta</h2>
+                <h2 className="text-2xl font-bold text-[#1A2B22]">Registro Externo</h2>
                 <p className="text-sm text-[#637068] mt-1">
-                  Usa tu correo institucional <span className="font-medium text-[#1A2B22]">@{DOMINIO}</span>
+                  Exclusivo para investigadores <span className="font-medium text-[#1A2B22]">sin correo institucional</span>
                 </p>
               </div>
 
               {errorAlert}
 
-              {/* Botón Google arriba en registro también */}
-              <div className="mb-5">
-                {googleBtn}
-                <div className="flex items-center gap-3 mt-5 mb-1">
-                  <div className="flex-1 h-px bg-[#DDE4DF]" />
-                  <span className="text-xs text-[#9BAD9F] font-medium">O crear cuenta con correo</span>
-                  <div className="flex-1 h-px bg-[#DDE4DF]" />
-                </div>
-              </div>
-
-              <form onSubmit={handleRegistro} className="flex flex-col gap-4">
+              <form onSubmit={handleRegistro} className="flex flex-col gap-4 mt-2">
                 {/* Nombre completo */}
                 <div>
                   <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
@@ -422,7 +412,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                 {/* Correo */}
                 <div>
                   <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
-                    Correo institucional <span className="text-red-500">*</span>
+                    Correo de contacto <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -434,7 +424,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
-                      placeholder={`usuario@${DOMINIO}`}
+                      placeholder="usuario@gmail.com"
                       required
                     />
                   </div>

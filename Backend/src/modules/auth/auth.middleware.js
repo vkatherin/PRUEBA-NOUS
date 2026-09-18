@@ -32,6 +32,17 @@ exports.verificarAutenticacion = (req, res, next) => {
       }
     }
 
+    // Bloquear tokens temporales de elección de rol en rutas que no sean /seleccionar-rol
+    if (payload.elegirRol) {
+      const ruta = req.path;
+      if (!ruta.endsWith('/seleccionar-rol')) {
+        return res.status(403).json({
+          error: 'Selección de rol pendiente',
+          elegirRolRequired: true,
+        });
+      }
+    }
+
     req.usuario = { id: payload.id, correo: payload.correo };
     next();
   } catch (err) {
@@ -118,5 +129,53 @@ exports.verificarPermiso = (permiso) => async (req, res, next) => {
     next();
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// ── Nivel 3 — Verificar propietario de registro (Row-Level Access) ──────────
+
+/**
+ * Middleware que verifica si el usuario autenticado es el "dueño" del registro que intenta acceder por ID.
+ * Si el usuario tiene un rol que le permite ver/modificar todo (ej. administrador, directivos, etc.
+ * según el módulo), se le permite el paso usando el arreglo 'rolesExentos'.
+ *
+ * @param {string} tabla - Nombre de la tabla en BD.
+ * @param {string} campoPropietario - Nombre de la columna que almacena el ID del dueño.
+ * @param {Array<string>} rolesExentos - Roles que no necesitan ser dueños para acceder.
+ */
+exports.verificarPropietario = (tabla, campoPropietario, rolesExentos = ['administrador', 'directivos']) => async (req, res, next) => {
+  if (!req.usuario) {
+    return res.status(401).json({ error: 'Autenticación requerida' });
+  }
+
+  // Si tiene algún rol exento, pasa derecho
+  if (req.usuario.roles && req.usuario.roles.some(r => rolesExentos.includes(r))) {
+    return next();
+  }
+
+  const idRegistro = req.params.id;
+  if (!idRegistro) {
+    // Si la ruta no requiere ID (ej. listado genérico), pasamos. El listado se filtrará en el controlador.
+    return next();
+  }
+
+  try {
+    const [[registro]] = await pool.query(
+      `SELECT ?? FROM ?? WHERE id = ?`,
+      [campoPropietario, tabla, idRegistro]
+    );
+
+    if (!registro) {
+      return res.status(404).json({ error: 'Registro no encontrado' });
+    }
+
+    if (registro[campoPropietario] !== req.usuario.id) {
+      return res.status(403).json({ error: 'No tienes permiso para ver/modificar este registro (acceso denegado por propietario)' });
+    }
+
+    next();
+  } catch (err) {
+    console.error('Error en verificarPropietario:', err);
+    res.status(500).json({ error: 'Error interno al verificar permisos de registro' });
   }
 };

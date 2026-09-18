@@ -2,9 +2,29 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../../db/connection");
 
+const { verificarAutenticacion, verificarPermiso } = require('../auth/auth.middleware');
+
+router.use(verificarAutenticacion);
+
 // GET /api/evaluaciones
-router.get("/", async (req, res) => {
+router.get("/", verificarPermiso('evaluaciones.leer'), async (req, res) => {
   try {
+    const usuario = req.usuario;
+    const roles = usuario.roles || [];
+    const veTodos = ['administrador', 'directivos'].some(r => roles.includes(r));
+    
+    let whereClause = "1=1";
+    let queryParams = [];
+
+    if (!veTodos) {
+      if (roles.includes('evaluador')) {
+        whereClause = "e.evaluador_id = ?";
+        queryParams.push(usuario.id);
+      } else {
+        whereClause = "1=0";
+      }
+    }
+
     const [rows] = await pool.query(`
       SELECT
         e.id, e.proyecto_id, e.evaluador_id, e.tipo,
@@ -17,8 +37,9 @@ router.get("/", async (req, res) => {
       LEFT JOIN proyectos p ON p.id = e.proyecto_id
       LEFT JOIN convocatorias c ON c.id = p.convocatoria_id
       LEFT JOIN usuarios u ON u.id = e.evaluador_id
+      WHERE ${whereClause}
       ORDER BY e.fecha_asignacion DESC
-    `);
+    `, queryParams);
     res.json(rows);
   } catch (err) {
     console.error("Error al listar evaluaciones:", err);
@@ -27,8 +48,24 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/evaluaciones/:id
-router.get("/:id", async (req, res) => {
+router.get("/:id", verificarPermiso('evaluaciones.leer'), async (req, res) => {
   try {
+    const usuario = req.usuario;
+    const roles = usuario.roles || [];
+    const veTodos = ['administrador', 'directivos'].some(r => roles.includes(r));
+    
+    let whereClause = "e.id = ?";
+    let queryParams = [req.params.id];
+
+    if (!veTodos) {
+      if (roles.includes('evaluador')) {
+        whereClause += " AND e.evaluador_id = ?";
+        queryParams.push(usuario.id);
+      } else {
+        whereClause += " AND 1=0";
+      }
+    }
+
     const [[evaluacion]] = await pool.query(`
       SELECT
         e.*,
@@ -39,8 +76,8 @@ router.get("/:id", async (req, res) => {
       LEFT JOIN proyectos p ON p.id = e.proyecto_id
       LEFT JOIN convocatorias c ON c.id = p.convocatoria_id
       LEFT JOIN usuarios u ON u.id = e.evaluador_id
-      WHERE e.id = ?
-    `, [req.params.id]);
+      WHERE ${whereClause}
+    `, queryParams);
 
     if (!evaluacion) return res.status(404).json({ error: "Evaluación no encontrada" });
 
@@ -57,7 +94,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/evaluaciones/:id/calificar
-router.post("/:id/calificar", async (req, res) => {
+router.post("/:id/calificar", verificarPermiso('evaluaciones.evaluar'), async (req, res) => {
   try {
     const { puntaje_total, observaciones, criterios } = req.body;
 

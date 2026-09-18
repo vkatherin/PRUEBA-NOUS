@@ -29,6 +29,46 @@ const rolColors: Record<string, string> = {
   "Consulta": "#9CA3AF",
 };
 
+function EliminarUsuarioModal({
+  usuario,
+  onClose,
+  onConfirm,
+}: {
+  usuario: UsuarioRol | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!usuario) return null;
+  return (
+    <Modal open={!!usuario} onClose={onClose} title="Eliminar Usuario" size="md">
+      <div className="space-y-4">
+        <div className="flex items-center gap-4 p-4 rounded-xl" style={{ backgroundColor: "#FEF2F2", border: "1px solid #FECACA" }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0" style={{ backgroundColor: "#FEE2E2" }}>⚠️</div>
+          <div>
+            <p className="text-sm font-semibold text-red-700">Esta accion es permanente</p>
+            <p className="text-xs text-red-600 mt-0.5">El usuario y todos sus datos seran eliminados del sistema.</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-xl" style={{ backgroundColor: "#F2F5F3", border: "1px solid #DDE4DF" }}>
+          <p className="text-xs text-[#637068] mb-1">Usuario a eliminar:</p>
+          <p className="text-sm font-bold text-[#1A2B22]">{usuario.nombre}</p>
+          <p className="text-xs text-[#637068]">{usuario.email}</p>
+        </div>
+        <div className="flex justify-end gap-3 pt-2 border-t border-[#DDE4DF]">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+            style={{ backgroundColor: "#DC2626" }}
+          >
+            Eliminar definitivamente
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function NuevoUsuarioModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Modal open={open} onClose={onClose} title="Crear Nuevo Usuario" size="md">
@@ -87,7 +127,8 @@ export function Administracion() {
   const [subTabUsuarios, setSubTabUsuarios] = useState("con-rol");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
-  
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState<UsuarioRol | null>(null);
+
   const [usuarios, setUsuarios] = useState<UsuarioRol[]>([]);
   const [rolesDisponibles, setRolesDisponibles] = useState<RolDisponible[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +154,6 @@ export function Administracion() {
   const handleAssignRole = async (userId: number, roleName: string) => {
     try {
       await usuariosApi.asignarRol(userId, roleName);
-      // Reload users to see changes
       const updated = await usuariosApi.getAll();
       setUsuarios(updated);
     } catch (err) {
@@ -126,12 +166,22 @@ export function Administracion() {
     if(!confirm(`¿Estás seguro de quitar el rol ${roleName}?`)) return;
     try {
       await usuariosApi.removerRol(userId, roleName);
-      // Reload users
       const updated = await usuariosApi.getAll();
       setUsuarios(updated);
     } catch (err) {
       console.error(err);
       alert("Error removiendo rol");
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!usuarioAEliminar) return;
+    try {
+      await usuariosApi.deleteUsuario(usuarioAEliminar.id);
+      setUsuarios(prev => prev.filter(u => u.id !== usuarioAEliminar.id));
+      setUsuarioAEliminar(null);
+    } catch (err: any) {
+      alert(err.message || "Error al eliminar usuario");
     }
   };
 
@@ -149,12 +199,14 @@ export function Administracion() {
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-5">
       <PageHeader
-        title="Administración del Sistema"
-        subtitle="Gestión de usuarios, roles, parámetros institucionales y configuración"
-        breadcrumb={["NOUS", "Administración"]}
+        title="Asignación de Roles"
+        subtitle="Gestión de usuarios y asignación de roles en el sistema"
+        breadcrumb={["NOUS", "Asignación de Roles"]}
         actions={
           tab === "usuarios" ? (
-            <Button variant="primary" onClick={() => setShowModal(true)}>+ Nuevo Usuario</Button>
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={() => setShowModal(true)}>+ Nuevo Usuario</Button>
+            </div>
           ) : undefined
         }
       />
@@ -253,6 +305,21 @@ export function Administracion() {
                           ))
                         }
                       </select>
+                      <button
+                        onClick={() => setUsuarioAEliminar(u)}
+                        className="p-1.5 rounded-lg transition-colors"
+                        title="Eliminar usuario"
+                        style={{ color: "#DC2626", backgroundColor: "#FEE2E2" }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = "#FECACA")}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = "#FEE2E2")}
+                      >
+                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4h6v2" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -345,6 +412,11 @@ export function Administracion() {
       )}
 
       <NuevoUsuarioModal open={showModal} onClose={() => setShowModal(false)} />
+      <EliminarUsuarioModal
+        usuario={usuarioAEliminar}
+        onClose={() => setUsuarioAEliminar(null)}
+        onConfirm={handleDeleteUser}
+      />
     </div>
   );
 }

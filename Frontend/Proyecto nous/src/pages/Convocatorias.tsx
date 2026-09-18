@@ -2940,6 +2940,7 @@ function SemilleroExternoModal({
   );
 }
 
+
 // ─── Modal Confirmar Eliminación Convocatoria ───────────────────────────────
 function EliminarConvocatoriaModal({
   conv,
@@ -3108,7 +3109,7 @@ function EliminarExternaModal({
 }
 
 type Tab = "todas" | "internas" | "externas" | "conjunta" | "alertas";
-export function Convocatorias() {
+export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
   const [activeTab, setActiveTab] = useState<Tab>("todas");
   const [showWizard, setShowWizard] = useState(false);
   const [convocatorias, setConvocatorias] = useState<Convocatoria[]>([]);

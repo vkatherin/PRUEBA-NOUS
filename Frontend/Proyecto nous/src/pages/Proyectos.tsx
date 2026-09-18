@@ -3,7 +3,7 @@ import {
   Badge, Button, Card, PageHeader, SearchBar, Table, Modal,
   Field, Input, Select, Textarea, ProgressBar, Tabs, SectionTitle, Avatar,
 } from "@/components/ui";
-import { proyectosApi, type Proyecto, type ProyectoDetalle } from "@/services/api";
+import { proyectosApi, type Proyecto, type ProyectoDetalle, type UsuarioMe } from "@/services/api";
 
 const TABS = [
   { id: "info", label: "Información" },
@@ -25,7 +25,7 @@ function mapEstadoProy(estado: string): "active" | "evaluation" | "closed" | "dr
   return 'draft';
 }
 
-function DetalleProyecto({ id, onBack }: { id: number; onBack: () => void }) {
+function DetalleProyecto({ id, onBack, user }: { id: number; onBack: () => void; user?: UsuarioMe | null }) {
   const [tab, setTab] = useState("info");
   const [proyecto, setProyecto] = useState<ProyectoDetalle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,9 @@ function DetalleProyecto({ id, onBack }: { id: number; onBack: () => void }) {
         </div>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" size="sm">Exportar PDF</Button>
-          <Button variant="primary" size="sm">Editar Proyecto</Button>
+          {(user?.permisos?.includes('proyectos.editar') || user?.roles?.includes('administrador')) && (
+            <Button variant="primary" size="sm">Editar Proyecto</Button>
+          )}
         </div>
       </div>
 
@@ -356,7 +358,7 @@ const UI_TO_DB_ESTADO: Record<string, string> = {
   draft: 'borrador'
 };
 
-export function Proyectos() {
+export function Proyectos({ user }: { user?: UsuarioMe | null }) {
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("all");
   const [selectedProyectoId, setSelectedProyectoId] = useState<number | null>(null);
@@ -377,7 +379,7 @@ export function Proyectos() {
   }, [search, estadoFilter]);
 
   if (selectedProyectoId) {
-    return <DetalleProyecto id={selectedProyectoId} onBack={() => setSelectedProyectoId(null)} />;
+    return <DetalleProyecto id={selectedProyectoId} onBack={() => setSelectedProyectoId(null)} user={user} />;
   }
 
   const cols = [
@@ -440,9 +442,11 @@ export function Proyectos() {
         actions={
           <>
             <Button variant="outline" size="sm">Exportar</Button>
-            <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
-              + Nuevo Proyecto
-            </Button>
+            {(user?.permisos?.includes('proyectos.crear') || user?.roles?.includes('administrador')) && (
+              <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
+                + Nuevo Proyecto
+              </Button>
+            )}
           </>
         }
       />

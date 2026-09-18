@@ -1,9 +1,22 @@
 const pool = require("../../db/connection");
 
 // ─── Lista de proyectos con filtros ──────────────────────────────────────────
-async function listarProyectos({ estado, tipo, q, convocatoria_id } = {}) {
+async function listarProyectos({ estado, tipo, q, convocatoria_id, usuario } = {}) {
   let where = ["1=1"];
   const params = [];
+
+  if (usuario) {
+    const roles = usuario.roles || [];
+    const veTodos = ['administrador', 'directivos', 'director_investigacion'].some(r => roles.includes(r));
+    if (!veTodos) {
+      if (roles.includes('lider_investigacion') || roles.includes('docente')) {
+        where.push("(p.investigador_principal_id = ? OR p.id IN (SELECT proyecto_id FROM proyecto_equipo WHERE usuario_id = ?))");
+        params.push(usuario.id, usuario.id);
+      } else {
+        where.push("1=0"); // Falla de seguridad o rol inesperado sin acceso global ni local
+      }
+    }
+  }
 
   if (estado) { where.push("p.estado = ?"); params.push(estado); }
   if (tipo)   { where.push("p.tipo_proyecto = ?"); params.push(tipo); }

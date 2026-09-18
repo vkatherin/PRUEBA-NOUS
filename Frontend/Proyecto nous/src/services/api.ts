@@ -60,6 +60,7 @@ export interface UsuarioMe {
   mfa_habilitado: boolean;
   activo: boolean;
   roles: string[];
+  permisos: string[];
 }
 
 export interface LoginLocalResponse {
@@ -137,6 +138,15 @@ export const authApi = {
     return apiFetch<LoginLocalResponse>('/auth/registro', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  /** Selecciona el rol tras el login con Google (para usuarios sin rol previo) */
+  seleccionarRol(rol: string, tempToken: string): Promise<{ token: string; mensaje: string }> {
+    return apiFetch<{ token: string; mensaje: string }>('/auth/seleccionar-rol', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tempToken}` },
+      body: JSON.stringify({ rol }),
     });
   },
 };
@@ -298,6 +308,9 @@ export const usuariosApi = {
     body: JSON.stringify({ rol }),
   }),
   removerRol: (id: number, rol: string) => apiFetch<{ message: string }>(`/usuarios/${id}/roles/${rol}`, {
+    method: 'DELETE',
+  }),
+  deleteUsuario: (id: number) => apiFetch<{ ok: boolean; mensaje: string }>(`/usuarios/${id}`, {
     method: 'DELETE',
   }),
 };

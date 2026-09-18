@@ -41,7 +41,7 @@ function Rubrica({ onBack }: { onBack: () => void }) {
   </div>;
 }
 
-export function Evaluaciones() {
+export function Evaluaciones({ user }: { user?: any }) {
   const [selected, setSelected] = useState(false);
   if (selected) return <Rubrica onBack={() => setSelected(false)} />;
   return <div className="p-6 max-w-[1200px] mx-auto space-y-5">

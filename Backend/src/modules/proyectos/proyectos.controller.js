@@ -7,7 +7,7 @@ const err = (res, msg, status = 500) => res.status(status).json({ error: msg });
 async function listar(req, res) {
   try {
     const { estado, tipo, q, convocatoria_id } = req.query;
-    const data = await svc.listarProyectos({ estado, tipo, q, convocatoria_id });
+    const data = await svc.listarProyectos({ estado, tipo, q, convocatoria_id, usuario: req.usuario });
     ok(res, data);
   } catch (e) {
     console.error(e);

@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('./usuarios.controller');
-const { verificarAutenticacion, verificarRol } = require('../auth/auth.middleware');
+const { verificarAutenticacion, verificarPermiso } = require('../auth/auth.middleware');
 
-// Todas las rutas de usuarios requieren estar autenticado y ser administrador
-router.use(verificarAutenticacion, verificarRol('administrador'));
+// Todas las rutas de usuarios requieren estar autenticado
+router.use(verificarAutenticacion);
 
-router.get('/', ctrl.getUsuarios);
-router.post('/', ctrl.crearUsuario);
-router.patch('/:id/estado', ctrl.actualizarEstado);
-router.get('/roles', ctrl.getRolesDisponibles);
-router.post('/:id/roles', ctrl.asignarRol);
-router.delete('/:id/roles/:role', ctrl.removerRol);
+router.get('/', verificarPermiso('usuarios.leer'), ctrl.getUsuarios);
+router.post('/', verificarPermiso('usuarios.crear'), ctrl.crearUsuario);
+router.delete('/:id', verificarPermiso('usuarios.eliminar'), ctrl.eliminarUsuario);
+router.patch('/:id/estado', verificarPermiso('usuarios.editar'), ctrl.actualizarEstado);
+router.get('/roles', verificarPermiso('usuarios.leer'), ctrl.getRolesDisponibles);
+router.post('/:id/roles', verificarPermiso('usuarios.editar'), ctrl.asignarRol);
+router.delete('/:id/roles/:role', verificarPermiso('usuarios.editar'), ctrl.removerRol);
 
 module.exports = router;

@@ -4,56 +4,61 @@ const convocatoriasController = require("./convocatorias.controller");
 const semilleroExternoController = require("./semillero-externo.controller");
 const pasosSemilleroController = require("./pasos-semillero.controller");
 
+const { verificarAutenticacion, verificarPermiso } = require('../auth/auth.middleware');
+
+router.use(verificarAutenticacion);
+
 // ─── RF-CON-03: Alertas de Fechas (Debe ir antes de /:id) ───────────────────
-router.get("/alertas", convocatoriasController.obtenerAlertas);
+router.get("/alertas", verificarPermiso('convocatorias.leer'), convocatoriasController.obtenerAlertas);
 
 // ─── RF-CON-02: Convocatorias Vigentes (Debe ir antes de /:id) ──────────────
-router.get("/vigentes", convocatoriasController.listarVigentes);
+router.get("/vigentes", verificarPermiso('convocatorias.leer'), convocatoriasController.listarVigentes);
 
 // ─── RF-CON-04: Banco de Convocatorias Externas ─────────────────────────────
-router.get("/externas", convocatoriasController.listarExternas);
-router.post("/externas", convocatoriasController.crearExterna);
-router.get("/externas/:id", convocatoriasController.obtenerExternaPorId);
-router.put("/externas/:id", convocatoriasController.actualizarExterna);
-router.delete("/externas/:id", convocatoriasController.eliminarExterna);
+router.get("/externas", verificarPermiso('convocatorias.leer'), convocatoriasController.listarExternas);
+router.post("/externas", verificarPermiso('convocatorias.crear'), convocatoriasController.crearExterna);
+router.get("/externas/:id", verificarPermiso('convocatorias.leer'), convocatoriasController.obtenerExternaPorId);
+router.put("/externas/:id", verificarPermiso('convocatorias.editar'), convocatoriasController.actualizarExterna);
+router.delete("/externas/:id", verificarPermiso('convocatorias.eliminar'), convocatoriasController.eliminarExterna);
 
 // ─── RF-CON-01 y RF-CON-02: Convocatorias Internas ──────────────────────────
-router.get("/", convocatoriasController.listar);
-router.post("/", convocatoriasController.crear);
-router.get("/:id", convocatoriasController.obtenerPorId);
-router.put("/:id", convocatoriasController.actualizar);
-router.patch("/:id/publicar", convocatoriasController.publicar);
-router.delete("/:id", convocatoriasController.eliminar);
+router.get("/", verificarPermiso('convocatorias.leer'), convocatoriasController.listar);
+router.post("/", verificarPermiso('convocatorias.crear'), convocatoriasController.crear);
+router.get("/:id", verificarPermiso('convocatorias.leer'), convocatoriasController.obtenerPorId);
+router.put("/:id", verificarPermiso('convocatorias.editar'), convocatoriasController.actualizar);
+router.patch("/:id/publicar", verificarPermiso('convocatorias.publicar'), convocatoriasController.publicar);
+router.delete("/:id", verificarPermiso('convocatorias.eliminar'), convocatoriasController.eliminar);
 
 // ─── RF-CON-05: Comité de Asignación y Objeción ─────────────────────────────
-router.patch("/:id/comite/aprobar", convocatoriasController.aprobarComite);
-router.patch("/:id/comite/objetar", convocatoriasController.objetarComite);
+router.patch("/:id/comite/aprobar", verificarPermiso('convocatorias.consolidar'), convocatoriasController.aprobarComite);
+router.patch("/:id/comite/objetar", verificarPermiso('convocatorias.consolidar'), convocatoriasController.objetarComite);
 
 // ─── Inscripción Externa: Catálogos ─────────────────────────────────────────
-router.get("/:id/semillero-catalogos", pasosSemilleroController.getCatalogos);
+router.get("/:id/semillero-catalogos", verificarPermiso('convocatorias.leer'), pasosSemilleroController.getCatalogos);
 
 // ─── Inscripción Externa: Paso 1 — Semillero ────────────────────────────────
-router.get("/:id/semillero-externo", semilleroExternoController.obtener);
-router.post("/:id/semillero-externo", semilleroExternoController.guardar);
+router.get("/:id/semillero-externo", verificarPermiso('convocatorias.leer'), semilleroExternoController.obtener);
+router.post("/:id/semillero-externo", verificarPermiso('convocatorias.leer'), semilleroExternoController.guardar);
 
 // ─── Inscripción Externa: Paso 2 — Integrantes ──────────────────────────────
-router.get("/:id/semillero-integrantes", pasosSemilleroController.getIntegrantes);
-router.post("/:id/semillero-integrantes", pasosSemilleroController.addIntegrante);
-router.put("/:id/semillero-integrantes/:integId", pasosSemilleroController.updateIntegrante);
-router.delete("/:id/semillero-integrantes/:integId", pasosSemilleroController.deleteIntegrante);
+router.get("/:id/semillero-integrantes", verificarPermiso('convocatorias.leer'), pasosSemilleroController.getIntegrantes);
+router.post("/:id/semillero-integrantes", verificarPermiso('convocatorias.leer'), pasosSemilleroController.addIntegrante);
+router.put("/:id/semillero-integrantes/:integId", verificarPermiso('convocatorias.leer'), pasosSemilleroController.updateIntegrante);
+router.delete("/:id/semillero-integrantes/:integId", verificarPermiso('convocatorias.leer'), pasosSemilleroController.deleteIntegrante);
 
 // ─── Inscripción Externa: Paso 3 — Información general ──────────────────────
-router.get("/:id/semillero-info-general", pasosSemilleroController.getInfoGeneral);
-router.post("/:id/semillero-info-general", pasosSemilleroController.saveInfoGeneral);
+router.get("/:id/semillero-info-general", verificarPermiso('convocatorias.leer'), pasosSemilleroController.getInfoGeneral);
+router.post("/:id/semillero-info-general", verificarPermiso('convocatorias.leer'), pasosSemilleroController.saveInfoGeneral);
 
 // ─── Inscripción Externa: Paso 4 — Contenido del trabajo ────────────────────
-router.get("/:id/semillero-contenido", pasosSemilleroController.getContenido);
-router.post("/:id/semillero-contenido", pasosSemilleroController.saveContenido);
+router.get("/:id/semillero-contenido", verificarPermiso('convocatorias.leer'), pasosSemilleroController.getContenido);
+router.post("/:id/semillero-contenido", verificarPermiso('convocatorias.leer'), pasosSemilleroController.saveContenido);
 
 // ─── Inscripción Externa: Paso 5 — Envío final ──────────────────────────────
-router.get("/:id/semillero-resumen", pasosSemilleroController.getResumen);
+router.get("/:id/semillero-resumen", verificarPermiso('convocatorias.leer'), pasosSemilleroController.getResumen);
 router.post(
   "/:id/semillero-enviar",
+  verificarPermiso('convocatorias.leer'),
   pasosSemilleroController.uploadEnvioMiddleware,
   pasosSemilleroController.enviarFinal
 );
@@ -61,10 +66,11 @@ router.post(
 // ─── Inscripciones Generales (internas) ─────────────────────────────────────
 router.post(
   "/:id/inscribirse",
+  verificarPermiso('convocatorias.leer'), // anyone who can read convocatorias can try to inscribe (ownership checked later/implicitly by token)
   convocatoriasController.uploadDocumentoMiddleware,
   convocatoriasController.inscribirse
 );
-router.get("/:id/mi-inscripcion", convocatoriasController.verificarInscripcion);
-router.get("/:id/inscripciones", convocatoriasController.listarInscripciones);
+router.get("/:id/mi-inscripcion", verificarPermiso('convocatorias.leer'), convocatoriasController.verificarInscripcion);
+router.get("/:id/inscripciones", verificarPermiso('convocatorias.leer'), convocatoriasController.listarInscripciones);
 
 module.exports = router;

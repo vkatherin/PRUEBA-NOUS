@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Avatar } from "./ui";
+import type { UsuarioMe } from "../services/api";
 
 interface Notification {
   id: number;
@@ -34,7 +35,7 @@ const pageTitles: Record<string, string> = {
   administracion: "Administración del Sistema",
 };
 
-export function Header({ activePage, onSearch, onLogout }: { activePage: string; onSearch?: (q: string) => void; onLogout?: () => void }) {
+export function Header({ activePage, onSearch, onLogout, user }: { activePage: string; onSearch?: (q: string) => void; onLogout?: () => void; user?: UsuarioMe | null }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -42,6 +43,10 @@ export function Header({ activePage, onSearch, onLogout }: { activePage: string;
 
   const typeColors = { info: "#2563EB", warning: "#D97706", success: "#1E6B3C" };
   const typeBg = { info: "#EFF6FF", warning: "#FFFBEB", success: "#EBF5EF" };
+
+  const userName = user?.nombre || "Usuario NOUS";
+  const userRole = user?.roles?.[0] || "Sin Rol";
+  const userEmail = user?.correo || "";
 
   return (
     <header className="h-16 bg-white border-b border-[#DDE4DF] flex items-center gap-4 px-6 flex-shrink-0">
@@ -131,10 +136,10 @@ export function Header({ activePage, onSearch, onLogout }: { activePage: string;
       {/* User menu */}
       <div className="relative">
         <div className="flex items-center gap-2 cursor-pointer group" onClick={() => setUserOpen(!userOpen)}>
-          <Avatar name="Administrador NOUS" size="sm" />
+          <Avatar name={userName} size="sm" />
           <div className="hidden lg:block">
-            <p className="text-xs font-semibold text-[#1A2B22] leading-tight">Administrador</p>
-            <p className="text-xs text-[#637068] leading-tight">VRI · NOUS</p>
+            <p className="text-xs font-semibold text-[#1A2B22] leading-tight capitalize">{userRole}</p>
+            <p className="text-xs text-[#637068] leading-tight truncate w-32">{userName}</p>
           </div>
           <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-[#9BAD9F] ml-1">
             <path strokeLinecap="round" d="M19 9l-7 7-7-7" />
@@ -145,8 +150,8 @@ export function Header({ activePage, onSearch, onLogout }: { activePage: string;
             <div className="fixed inset-0 z-30" onClick={() => setUserOpen(false)} />
             <div className="absolute right-0 top-12 w-56 bg-white rounded-xl border border-[#DDE4DF] shadow-xl z-40 overflow-hidden">
               <div className="px-4 py-3 border-b border-[#DDE4DF] bg-[#F2F5F3]">
-                <p className="text-sm font-bold text-[#1A2B22]">Administrador</p>
-                <p className="text-xs text-[#637068]">admin@cusur.edu.co</p>
+                <p className="text-sm font-bold text-[#1A2B22] truncate">{userName}</p>
+                <p className="text-xs text-[#637068] truncate">{userEmail}</p>
               </div>
               {[
                 { label: "Mi perfil", icon: "👤" },

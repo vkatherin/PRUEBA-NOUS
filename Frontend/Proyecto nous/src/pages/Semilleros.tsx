@@ -204,7 +204,7 @@ function TrayectoriaTimeline() {
   );
 }
 
-export function Semilleros() {
+export function Semilleros({ user }: { user?: any }) {
   const [tab, setTab] = useState("grupos");
   const [semilleros, setSemilleros] = useState<Semillero[]>([]);
   const [loading, setLoading] = useState(true);

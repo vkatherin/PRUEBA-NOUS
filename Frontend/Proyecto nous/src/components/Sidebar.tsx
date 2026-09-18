@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import logoImg from "@/imports/images__1_.jpg";
 
 type Page =
   | "dashboard"
@@ -102,8 +101,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "administracion",
-    label: "Administración",
-    icon: <Icon path="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />,
+    label: "Asignación de Roles",
+    icon: <Icon path="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />,
   },
 ];
 
@@ -120,13 +119,36 @@ export function Sidebar({
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const topItems = NAV_ITEMS.slice(0, 8);
-  let bottomItems = NAV_ITEMS.slice(8);
-
+  const permisos = user?.permisos || [];
   const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador");
-  if (!isAdmin) {
-    bottomItems = bottomItems.filter(item => item.id !== "administracion");
-  }
+
+  const hasPermiso = (modulo: string) => permisos.includes(`${modulo}.leer`) || isAdmin;
+
+  const topItems = NAV_ITEMS.slice(0, 8).filter(item => {
+    switch (item.id) {
+      case "dashboard": return hasPermiso("dashboard");
+      case "convocatorias": return hasPermiso("convocatorias");
+      case "proyectos": return hasPermiso("proyectos");
+      case "evaluaciones": return hasPermiso("evaluaciones");
+      case "seguimiento": return hasPermiso("proyectos"); // Asociado a proyectos
+      case "financiero": return isAdmin; // Provisionalmente solo admin
+      case "documentos": return isAdmin || hasPermiso("proyectos");
+      case "productos": return isAdmin || hasPermiso("proyectos");
+      default: return true;
+    }
+  });
+
+  let bottomItems = NAV_ITEMS.slice(8).filter(item => {
+    switch (item.id) {
+      case "semilleros": return hasPermiso("semilleros");
+      case "administracion": return hasPermiso("usuarios") || isAdmin;
+      case "reportes": return isAdmin || hasPermiso("dashboard");
+      case "grupos": return isAdmin || hasPermiso("proyectos");
+      case "movilidad": return isAdmin;
+      case "integraciones": return isAdmin;
+      default: return true;
+    }
+  });
 
   return (
     <aside
@@ -140,7 +162,7 @@ export function Sidebar({
       {/* Logo area */}
       <div className="flex items-center gap-3 px-4 py-5 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", minHeight: "72px" }}>
         <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white flex items-center justify-center p-0.5">
-          <img src={logoImg} alt="CUS Logo" className="w-full h-full object-contain" />
+          <img src="/logo.png" alt="CUS Logo" className="w-full h-full object-contain" />
         </div>
         {!collapsed && (
           <div className="min-w-0">

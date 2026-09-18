@@ -132,3 +132,51 @@ exports.actualizarEstado = async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar estado de usuario' });
   }
 };
+
+// DELETE /api/usuarios/:id — Elimina un usuario permanentemente
+exports.eliminarUsuario = async (req, res) => {
+  const { id } = req.params;
+  const conn = await pool.getConnection();
+  try {
+    // No permitir que el administrador se elimine a sí mismo
+    if (parseInt(id) === req.usuario.id) {
+      conn.release();
+      return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
+    }
+
+    // Verificar que el usuario existe
+    const [[existe]] = await conn.query('SELECT id, nombre_completo FROM usuarios WHERE id = ?', [id]);
+    if (!existe) {
+      conn.release();
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    await conn.beginTransaction();
+
+    // Desactivar verificación de FK temporalmente para eliminar todas las referencias
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+
+    // Eliminar tablas con FK directa a usuario_id (las más comunes)
+    await conn.query('DELETE FROM usuario_rol WHERE usuario_id = ?', [id]);
+    await conn.query('DELETE FROM log_auditoria WHERE usuario_id = ?', [id]);
+    await conn.query('DELETE FROM usuario_mfa WHERE usuario_id = ?', [id]).catch(() => {});
+    await conn.query('DELETE FROM password_reset_tokens WHERE usuario_id = ?', [id]).catch(() => {});
+
+    // Eliminar el usuario
+    await conn.query('DELETE FROM usuarios WHERE id = ?', [id]);
+
+    // Reactivar verificación de FK
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+
+    await conn.commit();
+    conn.release();
+
+    res.json({ ok: true, mensaje: `Usuario "${existe.nombre_completo}" eliminado correctamente` });
+  } catch (err) {
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
+    await conn.rollback().catch(() => {});
+    conn.release();
+    console.error('Error al eliminar usuario:', err);
+    res.status(500).json({ error: 'Error al eliminar el usuario: ' + err.message });
+  }
+};

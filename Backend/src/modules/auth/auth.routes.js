@@ -63,6 +63,9 @@ router.post('/recuperar-password', ctrl.solicitarReset);
 // POST /api/auth/reset-password — aplica el nuevo password con el token
 router.post('/reset-password', ctrl.resetPassword);
 
+// POST /api/auth/seleccionar-rol — el usuario elige su rol tras Google OAuth
+router.post('/seleccionar-rol', verificarAutenticacion, ctrl.seleccionarRol);
+
 // ── RF-AU-03 — Registro local ─────────────────────────────────────────────────
 
 // POST /api/auth/registro — crea una nueva cuenta con correo institucional

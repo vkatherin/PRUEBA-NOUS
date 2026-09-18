@@ -100,9 +100,40 @@ exports.googleCallback = async (req, res) => {
       );
     }
 
-    const token = generarToken(usuario);
+    // Verificar si el usuario ya tiene roles asignados
+    const [rolesExistentes] = await pool.query(
+      `SELECT r.nombre FROM usuario_rol ur JOIN roles r ON r.id = ur.rol_id WHERE ur.usuario_id = ?`,
+      [usuarioId]
+    );
+
+    const nombresRoles = rolesExistentes.map(r => r.nombre);
+
+    // Roles "fijos" asignados por el administrador — no se interrumpe su login
+    const ROLES_FIJOS = ['administrador', 'Super Administrador', 'Coordinador VRI', 'Consulta'];
+    const tieneRolFijo = nombresRoles.some(r => ROLES_FIJOS.includes(r));
+    // El estudiante elige solo la primera vez — después entra directo
+    const esEstudiante = nombresRoles.includes('estudiante');
+
+    if (tieneRolFijo || esEstudiante) {
+      // Entrar directamente al sistema sin preguntar
+      const token = generarToken(usuario);
+      return res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${token}`
+      );
+    }
+
+    // Sin rol, o con docente/evaluador → mostrar selector
+    // Si ya tiene rol base 'docente' → solo mostrar opciones Docente/Evaluador
+    const esDocenteBase = nombresRoles.includes('docente');
+    const extraParam = esDocenteBase ? '&esDocente=true' : '';
+
+    const tempToken = jwt.sign(
+      { id: usuarioId, correo: usuario.correo_institucional, elegirRol: true },
+      process.env.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
     return res.redirect(
-      `${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${token}`
+      `${process.env.FRONTEND_URL || 'http://localhost:5173'}?elegirRol=true&tempToken=${tempToken}${extraParam}`
     );
   } catch (err) {
     console.error('❌ Error en googleCallback:', err.message);
@@ -136,10 +167,20 @@ exports.getMe = async (req, res) => {
 
     // JSON_ARRAYAGG puede retornar [null] si no hay roles
     const roles = Array.isArray(usuario.roles)
-      ? usuario.roles.filter(Boolean)
+      ? [...new Set(usuario.roles.filter(Boolean))]
       : [];
 
-    res.json({ ...usuario, roles });
+    const [permisosRows] = await pool.query(
+      `SELECT DISTINCT p.nombre
+       FROM usuario_rol ur
+       JOIN rol_permiso rp ON rp.rol_id = ur.rol_id
+       JOIN permisos p ON p.id = rp.permiso_id
+       WHERE ur.usuario_id = ?`,
+      [req.usuario.id]
+    );
+    const permisos = permisosRows.map(p => p.nombre);
+
+    res.json({ ...usuario, roles, permisos });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -217,6 +258,15 @@ exports.loginLocal = async (req, res) => {
  */
 exports.logout = async (req, res) => {
   try {
+    // Si el usuario tiene rol 'evaluador' (sesion temporal de docente), quitarlo al salir
+    // para que en el proximo login vuelva a elegir entre Docente o Evaluador
+    await pool.query(
+      `DELETE ur FROM usuario_rol ur
+       JOIN roles r ON r.id = ur.rol_id
+       WHERE ur.usuario_id = ? AND r.nombre = 'evaluador'`,
+      [req.usuario.id]
+    ).catch(() => {}); // no bloquear si falla
+
     await registrarAuditoria(req.usuario.id, 'logout', 'usuarios', req.usuario.id);
     res.json({ mensaje: 'Sesión cerrada correctamente' });
   } catch (err) {
@@ -435,7 +485,88 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-// ── POST /api/auth/registro (RF-AU-03) ───────────────────────────────────────
+// ── POST /api/auth/seleccionar-rol ──────────────────────────────────────────────────
+
+/**
+ * Usado tras el callback de Google cuando el usuario no tenía roles.
+ * Recibe { rol: 'Estudiante-Investigador' | 'docente' | 'sin_rol' } en el body.
+ * Si rol !== 'sin_rol', lo asigna. Siempre emite el JWT definitivo.
+ */
+exports.seleccionarRol = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const { rol } = req.body; // 'estudiante' | 'docente' | 'evaluador' | 'sin_rol'
+
+    // Verificar si el usuario ya tiene el rol base 'docente' (usuario tipo docente)
+    const [[tieneDocenteBase]] = await pool.query(
+      `SELECT ur.usuario_id FROM usuario_rol ur
+       JOIN roles r ON r.id = ur.rol_id
+       WHERE ur.usuario_id = ? AND r.nombre = 'docente'`,
+      [usuarioId]
+    );
+
+    if (tieneDocenteBase) {
+      // ── FLUJO DOCENTE: el rol 'docente' es permanente, solo se gestiona 'evaluador' ──
+      // Quitar Evaluador si lo tenía de una sesión anterior
+      await pool.query(
+        `DELETE ur FROM usuario_rol ur
+         JOIN roles r ON r.id = ur.rol_id
+         WHERE ur.usuario_id = ? AND r.nombre = 'evaluador'`,
+        [usuarioId]
+      );
+      // Si escogió Evaluador, agregarlo (docente se queda como base permanente)
+      if (rol === 'evaluador') {
+        const [[evalRol]] = await pool.query('SELECT id FROM roles WHERE nombre = ?', ['evaluador']);
+        if (evalRol) {
+          await pool.query(
+            'INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
+            [usuarioId, evalRol.id]
+          );
+        }
+      }
+      await registrarAuditoria(usuarioId, `rol_sesion_${rol}`, 'usuarios', usuarioId);
+    } else {
+      // ── FLUJO NUEVO USUARIO: asignar el rol elegido (reemplaza cualquier auto-rol previo) ──
+      const ROLES_AUTO = ['estudiante', 'docente', 'evaluador'];
+
+      await pool.query(
+        `DELETE ur FROM usuario_rol ur
+         JOIN roles r ON r.id = ur.rol_id
+         WHERE ur.usuario_id = ? AND r.nombre IN (?)`,
+        [usuarioId, ROLES_AUTO]
+      );
+
+      if (rol && rol !== 'sin_rol' && ROLES_AUTO.includes(rol)) {
+        // Si elige evaluador por primera vez, le damos 'docente' como rol permanente y 'evaluador' como sesión
+        const rolesToInsert = rol === 'evaluador' ? ['docente', 'evaluador'] : [rol];
+
+        for (const r of rolesToInsert) {
+          const [[rolData]] = await pool.query('SELECT id FROM roles WHERE nombre = ?', [r]);
+          if (rolData) {
+            await pool.query(
+              'INSERT IGNORE INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
+              [usuarioId, rolData.id]
+            );
+          }
+        }
+        await registrarAuditoria(usuarioId, `rol_seleccionado_${rol}`, 'usuarios', usuarioId);
+      }
+    }
+
+    // Emitir JWT definitivo
+    const [[usuario]] = await pool.query(
+      'SELECT id, correo_institucional FROM usuarios WHERE id = ?',
+      [usuarioId]
+    );
+
+    const token = generarToken(usuario);
+    res.json({ token, mensaje: 'Sesión iniciada correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── POST /api/auth/registro (RF-AU-03) ────────────────────────────────────────
 
 /**
  * Registra un nuevo usuario con correo institucional y contraseña.
@@ -453,13 +584,14 @@ exports.registro = async (req, res) => {
     return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
   }
 
-  // Verificar dominio institucional
-  const dominio = process.env.DOMINIO_INSTITUCIONAL || 'unicatolicadelsur.edu.co';
-  if (!correo.endsWith(`@${dominio}`)) {
-    return res.status(400).json({
-      error: `Solo se permiten correos institucionales del dominio @${dominio}`
-    });
-  }
+  // Ya no restringimos a dominio institucional porque el registro manual
+  // ahora es exclusivo para investigadores externos.
+  // const dominio = process.env.DOMINIO_INSTITUCIONAL || 'unicatolicadelsur.edu.co';
+  // if (!correo.endsWith(`@${dominio}`)) {
+  //   return res.status(400).json({
+  //     error: `Solo se permiten correos institucionales del dominio @${dominio}`
+  //   });
+  // }
 
   try {
     // Verificar si el correo ya existe
@@ -480,7 +612,18 @@ exports.registro = async (req, res) => {
       [nombre_completo.trim(), correo.trim().toLowerCase(), cedula || null, passwordHash]
     );
 
-    await registrarAuditoria(result.insertId, 'registro_local', 'usuarios', result.insertId);
+    const nuevoUsuarioId = result.insertId;
+
+    // Asignar rol 'externo' automáticamente
+    const [[rolExterno]] = await pool.query('SELECT id FROM roles WHERE nombre = ?', ['externo']);
+    if (rolExterno) {
+      await pool.query(
+        'INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
+        [nuevoUsuarioId, rolExterno.id]
+      );
+    }
+
+    await registrarAuditoria(nuevoUsuarioId, 'registro_local_externo', 'usuarios', nuevoUsuarioId);
 
     // Emitir JWT para iniciar sesión automáticamente tras el registro
     const token = jwt.sign(
