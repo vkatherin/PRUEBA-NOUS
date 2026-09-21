@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import logoImg from "@/imports/images__1_.jpg";
 import { authApi, setToken } from "../services/api";
 
@@ -7,7 +7,34 @@ type LoginView = "login" | "registro" | "mfa" | "reset-solicitud" | "reset-ok";
 
 const DOMINIO = "unicatolicadelsur.edu.co";
 
-export function Login({ onLogin }: { onLogin: () => void }) {
+// Texto completo de la política, también usado en el modal de registro
+export const TEXTO_POLITICA_REGISTRO = `De conformidad con lo establecido en la Ley 1581 de 2012, el Decreto 1377 de 2013 y demás normas que las modifiquen o complementen, la Fundación Universitaria Católica del Sur, con domicilio en Pasto, Nariño, actuando como Responsable del Tratamiento de Datos Personales, informa lo siguiente:
+
+Sus datos personales serán recolectados, almacenados, usados y/o procesados en la plataforma NOUS con las siguientes finalidades:
+
+• Gestionar su registro, autenticación y acceso al sistema.
+• Administrar convocatorias, proyectos de investigación, semilleros y procesos de evaluación académica.
+• Generar reportes institucionales y estadísticas de gestión de investigación.
+• Contactarlo para notificaciones relacionadas con los procesos en los que participe.
+• Dar cumplimiento a las obligaciones legales, contractuales y reglamentarias de la Institución.
+
+Sus datos serán tratados de acuerdo con la Política de Tratamiento de Datos Personales de la Fundación Universitaria Católica del Sur.
+
+Como Titular de los datos, usted tiene derecho a: conocer, actualizar y rectificar su información; solicitar prueba de la autorización otorgada; ser informado sobre el uso que se le ha dado a sus datos; presentar quejas ante la Superintendencia de Industria y Comercio; revocar la autorización y/o solicitar la supresión del dato, cuando no exista un deber legal o contractual que impida eliminarlo; y acceder de forma gratuita a sus datos personales.
+
+Para ejercer estos derechos, puede escribir a practicante.inv1@unicatolicadelsur.edu.co (Área de Investigación).
+
+Al hacer clic en “Acepto”, usted declara que ha leído y comprendido esta autorización, y que otorga su consentimiento libre, previo, expreso e informado para el tratamiento de sus datos personales conforme a lo aquí descrito.`;
+
+export function Login({
+  onLogin,
+  initialMfaTempToken = null,
+  onMfaDone,
+}: {
+  onLogin: () => void;
+  initialMfaTempToken?: string | null;
+  onMfaDone?: () => void;
+}) {
   const [view, setView] = useState<LoginView>("login");
 
   // Form local login
@@ -18,25 +45,35 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
   // MFA
   const [mfaCode, setMfaCode]     = useState("");
-  const [tempToken, setTempToken] = useState<string | null>(null);
+  const [tempToken, setTempToken] = useState<string | null>(initialMfaTempToken);
 
   // Reset password
   const [resetEmail, setResetEmail] = useState("");
 
   // Registro
-  const [regNombre,   setRegNombre]   = useState("");
-  const [regEmail,    setRegEmail]    = useState("");
-  const [regCedula,   setRegCedula]   = useState("");
-  const [regPassword, setRegPassword] = useState("");
-  const [regConfirm,  setRegConfirm]  = useState("");
-  const [showRegPass, setShowRegPass] = useState(false);
+  const [regNombre,       setRegNombre]       = useState("");
+  const [regEmail,        setRegEmail]        = useState("");
+  const [regCedula,       setRegCedula]       = useState("");
+  const [regPassword,     setRegPassword]     = useState("");
+  const [regConfirm,      setRegConfirm]      = useState("");
+  const [showRegPass,     setShowRegPass]     = useState(false);
+  const [regAceptaDatos,  setRegAceptaDatos]  = useState(false);
+  const [modalPolitica,   setModalPolitica]   = useState(false);
+
+  // Si nos pasaron un tempToken de MFA post-consentimiento, ir directo a vista MFA
+  useEffect(() => {
+    if (initialMfaTempToken) {
+      setTempToken(initialMfaTempToken);
+      setView("mfa");
+    }
+  }, [initialMfaTempToken]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   const resetForm = () => {
     setError(null);
     setEmail(""); setPassword("");
     setRegNombre(""); setRegEmail(""); setRegCedula("");
-    setRegPassword(""); setRegConfirm("");
+    setRegPassword(""); setRegConfirm(""); setRegAceptaDatos(false);
     setMfaCode(""); setResetEmail("");
   };
 
@@ -49,9 +86,21 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     setLoading(true);
     try {
       const resp = await authApi.loginLocal(email, password);
+      if (resp.datosPendientes && resp.tempToken) {
+        window.dispatchEvent(
+          new CustomEvent('nous:datos-pendientes', { detail: { tempToken: resp.tempToken } })
+        );
+        return;
+      }
       if (resp.mfaRequired && resp.tempToken) {
         setTempToken(resp.tempToken);
         setView("mfa");
+      } else if (resp.elegirRol && resp.tempToken) {
+        window.dispatchEvent(
+          new CustomEvent('nous:elegir-rol', {
+            detail: { tempToken: resp.tempToken, esDocente: resp.esDocente ?? false }
+          })
+        );
       } else if (resp.token) {
         setToken(resp.token);
         onLogin();
@@ -70,6 +119,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     e.preventDefault();
     setError(null);
 
+    if (!regAceptaDatos) {
+      setError("Debes aceptar la Autorización de Tratamiento de Datos Personales para continuar.");
+      return;
+    }
+
     if (regPassword !== regConfirm) {
       setError("Las contraseñas no coinciden");
       return;
@@ -86,6 +140,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         correo: regEmail,
         password: regPassword,
         cedula: regCedula || undefined,
+        aceptaDatos: true,
       });
       if (resp.token) {
         setToken(resp.token);
@@ -144,15 +199,15 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   const leftPanel = (
     <div
       className="hidden lg:flex flex-col justify-between w-[480px] flex-shrink-0 p-12"
-      style={{ backgroundColor: "#163D27" }}
+      style={{ backgroundColor: "var(--theme-primary)" }}
     >
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-1.5">
+        <div className="w-12 h-12 rounded-xl bg-theme-bg-card flex items-center justify-center p-1.5">
           <img src={logoImg} alt="CUS Logo" className="w-full h-full object-contain" />
         </div>
         <div>
           <p className="text-white font-bold text-lg leading-tight">NOUS</p>
-          <p className="text-xs" style={{ color: "#F2A900" }}>Sistema Integral de Gestión</p>
+          <p className="text-xs" style={{ color: "var(--theme-accent)" }}>Sistema Integral de Gestión</p>
         </div>
       </div>
 
@@ -160,16 +215,16 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         <div className="mb-8">
           <span
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
-            style={{ backgroundColor: "rgba(242,169,0,0.15)", color: "#F2A900" }}
+            style={{ backgroundColor: "rgba(242,169,0,0.15)", color: "var(--theme-accent)" }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#F2A900]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-theme-accent" />
             Vicerrectoría de Investigación e Innovación
           </span>
         </div>
         <h1 className="text-4xl font-bold text-white leading-tight mb-4">
           Gestión integral
           <br />
-          <span style={{ color: "#F2A900" }}>de la investigación</span>
+          <span style={{ color: "var(--theme-accent)" }}>de la investigación</span>
           <br />
           universitaria.
         </h1>
@@ -222,7 +277,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
       id="btn-google-oauth"
       type="button"
       onClick={() => authApi.loginWithGoogle()}
-      className="w-full py-2.5 rounded-xl border border-[#DDE4DF] text-sm font-medium text-[#1A2B22] flex items-center justify-center gap-2 hover:bg-[#F2F5F3] transition-colors"
+      className="w-full py-2.5 rounded-xl border border-theme-border text-sm font-medium text-theme-text-main flex items-center justify-center gap-2 hover:bg-theme-bg-main transition-colors"
     >
       <svg width={18} height={18} viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -243,19 +298,19 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           <div className="w-full max-w-md">
             {/* Mobile logo */}
             <div className="flex items-center gap-3 mb-10 lg:hidden">
-              <div className="w-10 h-10 rounded-xl bg-white border border-[#DDE4DF] flex items-center justify-center p-1">
+              <div className="w-10 h-10 rounded-xl bg-theme-bg-card border border-theme-border flex items-center justify-center p-1">
                 <img src={logoImg} alt="CUS Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <p className="font-bold text-base text-[#1A2B22]">NOUS</p>
-                <p className="text-xs text-[#637068]">Fundación Universitaria Católica del Sur</p>
+                <p className="font-bold text-base text-theme-text-main">NOUS</p>
+                <p className="text-xs text-theme-text-muted">Fundación Universitaria Católica del Sur</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#DDE4DF] shadow-lg p-8">
+            <div className="bg-theme-bg-card rounded-2xl border border-theme-border shadow-lg p-8">
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-[#1A2B22]">Bienvenido</h2>
-                <p className="text-sm text-[#637068] mt-1">
+                <h2 className="text-2xl font-bold text-theme-text-main">Bienvenido</h2>
+                <p className="text-sm text-theme-text-muted mt-1">
                   Ingresa tus credenciales institucionales para continuar
                 </p>
               </div>
@@ -264,11 +319,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
                     Correo institucional
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <input
@@ -276,7 +331,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                      className="w-full pl-10 pr-4 py-3 text-sm border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                       placeholder={`usuario@${DOMINIO}`}
                       required
                     />
@@ -284,9 +339,9 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">Contraseña</label>
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">Contraseña</label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     <input
@@ -294,7 +349,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                      className="w-full pl-10 pr-4 py-3 text-sm border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                       placeholder="Contraseña"
                     />
                   </div>
@@ -303,7 +358,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="button"
                       id="btn-olvide-password"
                       onClick={() => goTo("reset-solicitud")}
-                      className="text-xs text-[#1E6B3C] font-medium hover:underline"
+                      className="text-xs text-theme-primary font-medium hover:underline"
                     >
                       ¿Olvidaste tu contraseña?
                     </button>
@@ -315,7 +370,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                   type="submit"
                   disabled={loading}
                   className="w-full py-3 rounded-xl font-semibold text-white text-sm transition-all duration-200 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: loading ? "#9BAD9F" : "#1E6B3C" }}
+                  style={{ backgroundColor: loading ? "#9BAD9F" : "var(--theme-primary)" }}
                 >
                   {loading ? (
                     <>
@@ -340,29 +395,29 @@ export function Login({ onLogin }: { onLogin: () => void }) {
               <div className="mt-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex-1 h-px bg-[#DDE4DF]" />
-                  <span className="text-xs text-[#9BAD9F] font-medium">O ingresar con</span>
+                  <span className="text-xs text-theme-text-muted font-medium">O ingresar con</span>
                   <div className="flex-1 h-px bg-[#DDE4DF]" />
                 </div>
                 {googleBtn}
               </div>
 
               {/* Ir a registro */}
-              <p className="text-center text-sm text-[#637068] mt-6">
+              <p className="text-center text-sm text-theme-text-muted mt-6">
                 ¿No tienes cuenta?{" "}
                 <button
                   id="btn-ir-registro"
                   type="button"
                   onClick={() => goTo("registro")}
-                  className="text-[#1E6B3C] font-semibold hover:underline"
+                  className="text-theme-primary font-semibold hover:underline"
                 >
                   Regístrate aquí
                 </button>
               </p>
             </div>
 
-            <p className="text-center text-xs text-[#9BAD9F] mt-6">
+            <p className="text-center text-xs text-theme-text-muted mt-6">
               Sistema de uso exclusivo para personal autorizado de la VRI.{" "}
-              <span className="text-[#1E6B3C] cursor-pointer hover:underline">Soporte técnico</span>
+              <span className="text-theme-primary cursor-pointer hover:underline">Soporte técnico</span>
             </p>
           </div>
         </div>
@@ -377,11 +432,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         {leftPanel}
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="w-full max-w-md">
-            <div className="bg-white rounded-2xl border border-[#DDE4DF] shadow-lg p-8">
+            <div className="bg-theme-bg-card rounded-2xl border border-theme-border shadow-lg p-8">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[#1A2B22]">Registro Externo</h2>
-                <p className="text-sm text-[#637068] mt-1">
-                  Exclusivo para investigadores <span className="font-medium text-[#1A2B22]">sin correo institucional</span>
+                <h2 className="text-2xl font-bold text-theme-text-main">Registro Externo</h2>
+                <p className="text-sm text-theme-text-muted mt-1">
+                  Exclusivo para investigadores <span className="font-medium text-theme-text-main">sin correo institucional</span>
                 </p>
               </div>
 
@@ -390,11 +445,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
               <form onSubmit={handleRegistro} className="flex flex-col gap-4 mt-2">
                 {/* Nombre completo */}
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
                     Nombre completo <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     <input
@@ -402,7 +457,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="text"
                       value={regNombre}
                       onChange={(e) => setRegNombre(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                      className="w-full pl-10 pr-4 py-3 text-sm border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                       placeholder="Ej: Juan Pérez García"
                       required
                     />
@@ -411,11 +466,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
                 {/* Correo */}
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
                     Correo de contacto <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <input
@@ -423,7 +478,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="email"
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                      className="w-full pl-10 pr-4 py-3 text-sm border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                       placeholder="usuario@gmail.com"
                       required
                     />
@@ -432,11 +487,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
                 {/* Cédula (opcional) */}
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
-                    Cédula <span className="text-[#9BAD9F] font-normal">(opcional)</span>
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
+                    Cédula <span className="text-theme-text-muted font-normal">(opcional)</span>
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" />
                     </svg>
                     <input
@@ -444,7 +499,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="text"
                       value={regCedula}
                       onChange={(e) => setRegCedula(e.target.value.replace(/\D/g, ""))}
-                      className="w-full pl-10 pr-4 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                      className="w-full pl-10 pr-4 py-3 text-sm border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                       placeholder="Número de cédula"
                     />
                   </div>
@@ -452,11 +507,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
                 {/* Contraseña */}
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
                     Contraseña <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     <input
@@ -464,7 +519,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type={showRegPass ? "text" : "password"}
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                      className="w-full pl-10 pr-10 py-3 text-sm border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                       placeholder="Mínimo 8 caracteres"
                       required
                     />
@@ -472,7 +527,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="button"
                       tabIndex={-1}
                       onClick={() => setShowRegPass(!showRegPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9BAD9F] hover:text-[#637068]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-text-muted hover:text-theme-text-muted"
                     >
                       {showRegPass ? (
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
@@ -485,11 +540,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
                 {/* Confirmar contraseña */}
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
                     Confirmar contraseña <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     <input
@@ -497,10 +552,10 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type={showRegPass ? "text" : "password"}
                       value={regConfirm}
                       onChange={(e) => setRegConfirm(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 text-sm border rounded-xl text-[#1A2B22] focus:outline-none focus:ring-2 ${
+                      className={`w-full pl-10 pr-4 py-3 text-sm border rounded-xl text-theme-text-main focus:outline-none focus:ring-2 ${
                         regConfirm && regConfirm !== regPassword
                           ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
-                          : "border-[#DDE4DF] focus:border-[#1E6B3C] focus:ring-[#1E6B3C]/20"
+                          : "border-theme-border focus:border-theme-primary focus:ring-[var(--theme-primary)]/20"
                       }`}
                       placeholder="Repite la contraseña"
                       required
@@ -511,12 +566,116 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                   )}
                 </div>
 
+                {/* Autorización tratamiento de datos (Ley 1581) */}
+                <div
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: "#F8FAF9", border: "1px solid #DDE4DF" }}
+                >
+                  <label
+                    htmlFor="reg-acepta-datos"
+                    className="flex items-start gap-3 cursor-pointer"
+                  >
+                    <input
+                      id="reg-acepta-datos"
+                      type="checkbox"
+                      checked={regAceptaDatos}
+                      onChange={(e) => setRegAceptaDatos(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded flex-shrink-0 accent-[var(--theme-primary)] cursor-pointer"
+                    />
+                    <span className="text-xs leading-relaxed" style={{ color: "#2D3F35" }}>
+                      He leído y acepto la{" "}
+                      <button
+                        type="button"
+                        id="btn-ver-politica-datos"
+                        onClick={() => setModalPolitica(true)}
+                        className="font-semibold underline"
+                        style={{ color: "var(--theme-primary)" }}
+                      >
+                        Autorización de Tratamiento de Datos Personales
+                      </button>
+                      {" "}(Ley 1581 de 2012). <span className="text-red-500">*</span>
+                    </span>
+                  </label>
+                </div>
+
+                {/* Modal de política de datos */}
+                {modalPolitica && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ backgroundColor: "rgba(22,61,39,0.75)", backdropFilter: "blur(6px)" }}
+                  >
+                    <div
+                      className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
+                      style={{ backgroundColor: "#fff" }}
+                    >
+                      <div
+                        className="px-8 pt-7 pb-5"
+                        style={{ background: "linear-gradient(135deg, var(--theme-primary) 0%, #1a5c35 100%)" }}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div
+                            className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-xl"
+                            style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+                          >
+                            📄
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-white leading-tight">
+                              AUTORIZACIÓN PARA EL TRATAMIENTO DE DATOS PERSONALES
+                            </h3>
+                            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.75)" }}>
+                              Fundación Universitaria Católica del Sur · Ley 1581 de 2012
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="px-8 py-5">
+                        <div
+                          className="rounded-xl p-4 text-sm leading-relaxed overflow-y-auto"
+                          style={{
+                            maxHeight: "320px",
+                            backgroundColor: "#F8FAF9",
+                            border: "1px solid #DDE4DF",
+                            color: "#2D3F35",
+                            whiteSpace: "pre-line",
+                          }}
+                        >
+                          {TEXTO_POLITICA_REGISTRO}
+                        </div>
+                      </div>
+                      <div
+                        className="px-8 pb-6 pt-2 flex justify-end gap-3 border-t"
+                        style={{ borderColor: "#F2F5F3" }}
+                      >
+                        <button
+                          type="button"
+                          id="btn-cerrar-politica"
+                          onClick={() => setModalPolitica(false)}
+                          className="px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all"
+                          style={{ borderColor: "#DDE4DF", color: "#637068", backgroundColor: "#FAFFFE" }}
+                        >
+                          Cerrar
+                        </button>
+                        <button
+                          type="button"
+                          id="btn-aceptar-politica-modal"
+                          onClick={() => { setRegAceptaDatos(true); setModalPolitica(false); }}
+                          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+                          style={{ backgroundColor: "var(--theme-primary)" }}
+                        >
+                          Acepto
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   id="btn-crear-cuenta"
                   type="submit"
-                  disabled={loading || (!!regConfirm && regConfirm !== regPassword)}
+                  disabled={loading || !regAceptaDatos || (!!regConfirm && regConfirm !== regPassword)}
                   className="w-full py-3 rounded-xl font-semibold text-white text-sm transition-all duration-200 flex items-center justify-center gap-2 mt-1"
-                  style={{ backgroundColor: loading ? "#9BAD9F" : "#1E6B3C" }}
+                  style={{ backgroundColor: (loading || !regAceptaDatos) ? "#9BAD9F" : "var(--theme-primary)" }}
                 >
                   {loading ? (
                     <>
@@ -530,13 +689,14 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                 </button>
               </form>
 
-              <p className="text-center text-sm text-[#637068] mt-5">
+
+              <p className="text-center text-sm text-theme-text-muted mt-5">
                 ¿Ya tienes cuenta?{" "}
                 <button
                   id="btn-ir-login"
                   type="button"
                   onClick={() => goTo("login")}
-                  className="text-[#1E6B3C] font-semibold hover:underline"
+                  className="text-theme-primary font-semibold hover:underline"
                 >
                   Iniciar sesión
                 </button>
@@ -555,16 +715,16 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         {leftPanel}
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="w-full max-w-md">
-            <div className="bg-white rounded-2xl border border-[#DDE4DF] shadow-lg p-8">
+            <div className="bg-theme-bg-card rounded-2xl border border-theme-border shadow-lg p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(30,107,60,0.1)" }}>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#1E6B3C" strokeWidth={2}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="var(--theme-primary)" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-[#1A2B22]">Verificación MFA</h2>
-                  <p className="text-sm text-[#637068]">Ingresa el código de tu aplicación autenticadora</p>
+                  <h2 className="text-xl font-bold text-theme-text-main">Verificación MFA</h2>
+                  <p className="text-sm text-theme-text-muted">Ingresa el código de tu aplicación autenticadora</p>
                 </div>
               </div>
 
@@ -572,7 +732,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
               <form onSubmit={handleMfaVerify} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
                     Código de verificación (6 dígitos)
                   </label>
                   <input
@@ -583,7 +743,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                     maxLength={6}
                     value={mfaCode}
                     onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
-                    className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                    className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                     placeholder="000000"
                     required
                     autoFocus
@@ -594,14 +754,14 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                   type="submit"
                   disabled={loading || mfaCode.length !== 6}
                   className="w-full py-3 rounded-xl font-semibold text-white text-sm transition-all duration-200"
-                  style={{ backgroundColor: (loading || mfaCode.length !== 6) ? "#9BAD9F" : "#1E6B3C" }}
+                  style={{ backgroundColor: (loading || mfaCode.length !== 6) ? "#9BAD9F" : "var(--theme-primary)" }}
                 >
                   {loading ? "Verificando..." : "Verificar código"}
                 </button>
                 <button
                   type="button"
                   onClick={() => goTo("login")}
-                  className="text-sm text-[#637068] hover:text-[#1A2B22] text-center transition-colors"
+                  className="text-sm text-theme-text-muted hover:text-theme-text-main text-center transition-colors"
                 >
                   ← Volver al login
                 </button>
@@ -620,10 +780,10 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         {leftPanel}
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="w-full max-w-md">
-            <div className="bg-white rounded-2xl border border-[#DDE4DF] shadow-lg p-8">
+            <div className="bg-theme-bg-card rounded-2xl border border-theme-border shadow-lg p-8">
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-[#1A2B22]">Recuperar contraseña</h2>
-                <p className="text-sm text-[#637068] mt-1">
+                <h2 className="text-xl font-bold text-theme-text-main">Recuperar contraseña</h2>
+                <p className="text-sm text-theme-text-muted mt-1">
                   Ingresa tu correo institucional y recibirás instrucciones para restablecer tu contraseña.
                 </p>
               </div>
@@ -632,11 +792,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
               <form onSubmit={handleResetSolicitud} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-[#1A2B22] mb-1.5">
+                  <label className="block text-sm font-medium text-theme-text-main mb-1.5">
                     Correo institucional
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9BAD9F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <input
@@ -644,7 +804,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                       type="email"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 text-sm border border-[#DDE4DF] rounded-xl text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C] focus:ring-2 focus:ring-[#1E6B3C]/20"
+                      className="w-full pl-10 pr-4 py-3 text-sm border border-theme-border rounded-xl text-theme-text-main focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-[var(--theme-primary)]/20"
                       placeholder={`usuario@${DOMINIO}`}
                       required
                     />
@@ -655,14 +815,14 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                   type="submit"
                   disabled={loading}
                   className="w-full py-3 rounded-xl font-semibold text-white text-sm transition-all duration-200"
-                  style={{ backgroundColor: loading ? "#9BAD9F" : "#1E6B3C" }}
+                  style={{ backgroundColor: loading ? "#9BAD9F" : "var(--theme-primary)" }}
                 >
                   {loading ? "Enviando..." : "Enviar instrucciones"}
                 </button>
                 <button
                   type="button"
                   onClick={() => goTo("login")}
-                  className="text-sm text-[#637068] hover:text-[#1A2B22] text-center transition-colors"
+                  className="text-sm text-theme-text-muted hover:text-theme-text-main text-center transition-colors"
                 >
                   ← Volver al login
                 </button>
@@ -680,14 +840,14 @@ export function Login({ onLogin }: { onLogin: () => void }) {
       {leftPanel}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl border border-[#DDE4DF] shadow-lg p-8 text-center">
+          <div className="bg-theme-bg-card rounded-2xl border border-theme-border shadow-lg p-8 text-center">
             <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "rgba(30,107,60,0.1)" }}>
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="#1E6B3C" strokeWidth={2}>
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="var(--theme-primary)" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-[#1A2B22] mb-2">Solicitud enviada</h2>
-            <p className="text-sm text-[#637068] mb-6">
+            <h2 className="text-xl font-bold text-theme-text-main mb-2">Solicitud enviada</h2>
+            <p className="text-sm text-theme-text-muted mb-6">
               Si el correo <strong>{resetEmail}</strong> está registrado en el sistema, recibirás instrucciones para restablecer tu contraseña.
             </p>
             <button
@@ -695,7 +855,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
               type="button"
               onClick={() => goTo("login")}
               className="w-full py-3 rounded-xl font-semibold text-white text-sm"
-              style={{ backgroundColor: "#1E6B3C" }}
+              style={{ backgroundColor: "var(--theme-primary)" }}
             >
               Volver al login
             </button>

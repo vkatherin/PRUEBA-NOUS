@@ -1,86 +1,6 @@
 import React, { useState } from "react";
 import { Badge, Button, Card, PageHeader, Avatar } from "@/components/ui";
 
-// ─── Gestión Documental ───────────────────────────────────────────────────────
-const DOCUMENTOS = [
-  { nombre: "Propuesta_INV-2025-047_v3.pdf", tipo: "Propuesta", proyecto: "Modelación Hídrica", fecha: "15 Jul 2025", tamaño: "2.4 MB" },
-  { nombre: "Informe_Avance_Q2_2025.pdf", tipo: "Informe", proyecto: "Inclusión Financiera", fecha: "30 Jun 2025", tamaño: "1.8 MB" },
-  { nombre: "Acta_Inicio_INV-2025-045.pdf", tipo: "Acta", proyecto: "Producción Sostenible", fecha: "12 Feb 2025", tamaño: "0.5 MB" },
-  { nombre: "Evidencia_Campo_Mayo2025.zip", tipo: "Evidencia", proyecto: "Modelación Hídrica", fecha: "31 May 2025", tamaño: "45 MB" },
-  { nombre: "Resolucion_Aprobacion_FII2025.pdf", tipo: "Resolución", proyecto: "General VRI", fecha: "01 Ago 2025", tamaño: "0.3 MB" },
-  { nombre: "Certificado_Joven_Investigador_Ortiz.pdf", tipo: "Certificado", proyecto: "HIDROSUR", fecha: "15 Nov 2023", tamaño: "0.2 MB" },
-];
-
-const docTypeColors: Record<string, { bg: string; color: string; icon: string }> = {
-  Propuesta: { bg: "#EBF5EF", color: "#1E6B3C", icon: "📋" },
-  Informe: { bg: "#EFF6FF", color: "#2563EB", icon: "📊" },
-  Acta: { bg: "#FFF8E6", color: "#D4930B", icon: "📝" },
-  Evidencia: { bg: "#F5F3FF", color: "#7C3AED", icon: "🗂️" },
-  Resolución: { bg: "#ECFEFF", color: "#0891B2", icon: "⚖️" },
-  Certificado: { bg: "#FFF0F5", color: "#BE185D", icon: "🏆" },
-};
-
-export function Documentos() {
-  const [activeFilter, setActiveFilter] = useState("Todos");
-  const tipos = ["Todos", "Propuesta", "Informe", "Acta", "Evidencia", "Resolución", "Certificado"];
-
-  const filtered = activeFilter === "Todos" ? DOCUMENTOS : DOCUMENTOS.filter((d) => d.tipo === activeFilter);
-
-  return (
-    <div className="p-6 max-w-[1400px] mx-auto space-y-5">
-      <PageHeader
-        title="Gestión Documental"
-        subtitle="Repositorio central de documentos de proyectos e institucionales"
-        breadcrumb={["NOUS", "Documentos"]}
-        actions={<Button variant="primary">+ Subir Documento</Button>}
-      />
-
-      {/* Filters */}
-      <Card>
-        <div className="flex flex-wrap gap-2">
-          {tipos.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveFilter(t)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                activeFilter === t ? "bg-[#1E6B3C] text-white" : "bg-[#F2F5F3] text-[#637068] hover:bg-[#DDE4DF]"
-              }`}
-            >
-              {t !== "Todos" && docTypeColors[t] ? docTypeColors[t].icon + " " : ""}{t}
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Doc list */}
-      <Card padding={false}>
-        <div className="divide-y divide-[#F2F5F3]">
-          {filtered.map((doc, i) => {
-            const cfg = docTypeColors[doc.tipo] ?? { bg: "#F2F5F3", color: "#637068", icon: "📄" };
-            return (
-              <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-[#FAFFFE] group">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ backgroundColor: cfg.bg }}>
-                  {cfg.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#1A2B22] truncate">{doc.nombre}</p>
-                  <p className="text-xs text-[#637068]">{doc.proyecto} · {doc.fecha} · {doc.tamaño}</p>
-                </div>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full hidden sm:block" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-                  {doc.tipo}
-                </span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="outline" size="sm">Descargar</Button>
-                  <Button variant="ghost" size="sm">Ver</Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-    </div>
-  );
-}
 
 // ─── Productos de Investigación ───────────────────────────────────────────────
 const PRODUCTOS = [
@@ -93,7 +13,7 @@ const PRODUCTOS = [
 ];
 
 const productoTipos: Record<string, { icon: string; color: string }> = {
-  "Artículo científico": { icon: "📰", color: "#1E6B3C" },
+  "Artículo científico": { icon: "📰", color: "var(--theme-primary)" },
   Libro: { icon: "📗", color: "#2563EB" },
   "Capítulo de libro": { icon: "📖", color: "#7C3AED" },
   Software: { icon: "💻", color: "#0891B2" },
@@ -112,38 +32,38 @@ export function Productos() {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {[
-          { tipo: "Artículos", count: 28, icon: "📰", color: "#1E6B3C" },
+          { tipo: "Artículos", count: 28, icon: "📰", color: "var(--theme-primary)" },
           { tipo: "Libros/Cap.", count: 12, icon: "📗", color: "#2563EB" },
           { tipo: "Ponencias", count: 19, icon: "🎤", color: "#D97706" },
           { tipo: "Software", count: 8, icon: "💻", color: "#0891B2" },
           { tipo: "Otros", count: 22, icon: "🔬", color: "#7C3AED" },
         ].map((s) => (
-          <div key={s.tipo} className="bg-white border border-[#DDE4DF] rounded-xl p-4 flex items-center gap-3">
+          <div key={s.tipo} className="bg-theme-bg-card border border-theme-border rounded-xl p-4 flex items-center gap-3">
             <span className="text-2xl">{s.icon}</span>
             <div>
               <p className="text-xl font-bold" style={{ color: s.color }}>{s.count}</p>
-              <p className="text-xs text-[#637068]">{s.tipo}</p>
+              <p className="text-xs text-theme-text-muted">{s.tipo}</p>
             </div>
           </div>
         ))}
       </div>
 
       <Card padding={false}>
-        <div className="px-5 py-4 border-b border-[#DDE4DF]">
-          <h3 className="text-sm font-semibold text-[#1A2B22]">Productos Registrados</h3>
+        <div className="px-5 py-4 border-b border-theme-border">
+          <h3 className="text-sm font-semibold text-theme-text-main">Productos Registrados</h3>
         </div>
         <div className="divide-y divide-[#F2F5F3]">
           {PRODUCTOS.map((p, i) => {
             const cfg = productoTipos[p.tipo] ?? { icon: "📄", color: "#9CA3AF" };
             return (
-              <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-[#FAFFFE]">
-                <div className="w-10 h-10 rounded-xl bg-[#F2F5F3] flex items-center justify-center text-lg flex-shrink-0">
+              <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-theme-bg-main">
+                <div className="w-10 h-10 rounded-xl bg-theme-bg-main flex items-center justify-center text-lg flex-shrink-0">
                   {cfg.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#1A2B22]">{p.titulo}</p>
-                  <p className="text-xs text-[#637068]">{p.autor} · {p.revista}</p>
-                  <p className="text-xs text-[#9BAD9F] mt-0.5">{p.anio}</p>
+                  <p className="text-sm font-semibold text-theme-text-main">{p.titulo}</p>
+                  <p className="text-xs text-theme-text-muted">{p.autor} · {p.revista}</p>
+                  <p className="text-xs text-theme-text-muted mt-0.5">{p.anio}</p>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full hidden sm:block" style={{ backgroundColor: cfg.color + "15", color: cfg.color }}>
                   {p.tipo}
@@ -169,7 +89,7 @@ const GRUPOS = [
   { codigo: "COL0678901", nombre: "GIPSIC", fullName: "Grupo de Investigación en Psicología y Salud Integral", lider: "Claudia Herrera", categoria: "D", integrantes: 5, proyectos: 3, productos: 7 },
 ];
 
-const catColors: Record<string, string> = { A1: "#1E6B3C", A: "#2563EB", B: "#7C3AED", C: "#D97706", D: "#9CA3AF" };
+const catColors: Record<string, string> = { A1: "var(--theme-primary)", A: "#2563EB", B: "#7C3AED", C: "#D97706", D: "#9CA3AF" };
 
 export function Grupos() {
   return (
@@ -191,15 +111,15 @@ export function Grupos() {
               >
                 Cat. {g.categoria}
               </div>
-              <span className="text-xs font-mono text-[#9BAD9F]">{g.codigo}</span>
+              <span className="text-xs font-mono text-theme-text-muted">{g.codigo}</span>
             </div>
-            <h3 className="text-base font-bold text-[#1A2B22] mb-0.5">{g.nombre}</h3>
-            <p className="text-xs text-[#637068] mb-3 leading-snug">{g.fullName}</p>
+            <h3 className="text-base font-bold text-theme-text-main mb-0.5">{g.nombre}</h3>
+            <p className="text-xs text-theme-text-muted mb-3 leading-snug">{g.fullName}</p>
             <div className="flex items-center gap-2 mb-3">
               <Avatar name={g.lider} size="sm" />
-              <span className="text-xs text-[#637068]">{g.lider}</span>
+              <span className="text-xs text-theme-text-muted">{g.lider}</span>
             </div>
-            <div className="flex items-center justify-between pt-3 border-t border-[#F2F5F3] text-xs text-[#637068]">
+            <div className="flex items-center justify-between pt-3 border-t border-theme-border text-xs text-theme-text-muted">
               <span>👥 {g.integrantes} integrantes</span>
               <span>🔬 {g.proyectos} proyectos</span>
               <span>📄 {g.productos} productos</span>
@@ -234,41 +154,41 @@ export function Movilidad() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label:"Solicitudes 2025", value:"18", color:"#1E6B3C", icon:"✈️" },
-          { label:"Aprobadas", value:"11", color:"#1E6B3C", icon:"✅" },
+          { label:"Solicitudes 2025", value:"18", color:"var(--theme-primary)", icon:"✈️" },
+          { label:"Aprobadas", value:"11", color:"var(--theme-primary)", icon:"✅" },
           { label:"Pendientes de aval", value:"5", color:"#D97706", icon:"⏳" },
           { label:"Inversión total", value:"$24.6M", color:"#2563EB", icon:"💰" },
         ].map(s=>(
-          <div key={s.label} className="bg-white border border-[#DDE4DF] rounded-xl p-4 flex items-center gap-3">
+          <div key={s.label} className="bg-theme-bg-card border border-theme-border rounded-xl p-4 flex items-center gap-3">
             <span className="text-3xl">{s.icon}</span>
             <div>
               <p className="text-xl font-bold" style={{color:s.color}}>{s.value}</p>
-              <p className="text-xs text-[#637068]">{s.label}</p>
+              <p className="text-xs text-theme-text-muted">{s.label}</p>
             </div>
           </div>
         ))}
       </div>
 
       <Card padding={false}>
-        <div className="px-5 py-4 border-b border-[#DDE4DF]">
-          <h3 className="text-sm font-semibold text-[#1A2B22]">Solicitudes de Movilidad 2025</h3>
+        <div className="px-5 py-4 border-b border-theme-border">
+          <h3 className="text-sm font-semibold text-theme-text-main">Solicitudes de Movilidad 2025</h3>
         </div>
         <div className="divide-y divide-[#F2F5F3]">
           {MOVIL_SOLICITUDES.map((sol)=>(
-            <div key={sol.id} className="flex items-start gap-4 px-5 py-4 hover:bg-[#FAFFFE] cursor-pointer group" onClick={()=>setSelected(sol)}>
-              <div className="w-10 h-10 rounded-xl bg-[#EBF5EF] flex items-center justify-center text-xl flex-shrink-0">✈️</div>
+            <div key={sol.id} className="flex items-start gap-4 px-5 py-4 hover:bg-theme-bg-main cursor-pointer group" onClick={()=>setSelected(sol)}>
+              <div className="w-10 h-10 rounded-xl bg-theme-primary/10 flex items-center justify-center text-xl flex-shrink-0">✈️</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-xs font-mono text-[#9BAD9F]">{sol.id}</span>
+                  <span className="text-xs font-mono text-theme-text-muted">{sol.id}</span>
                   <Badge variant={sol.estado} />
                 </div>
-                <p className="text-sm font-bold text-[#1A2B22]">{sol.investigador}</p>
-                <p className="text-sm text-[#637068]">{sol.evento}</p>
-                <p className="text-xs text-[#9BAD9F]">{sol.ciudad} · {sol.fechas} · Aval: {sol.aval}</p>
+                <p className="text-sm font-bold text-theme-text-main">{sol.investigador}</p>
+                <p className="text-sm text-theme-text-muted">{sol.evento}</p>
+                <p className="text-xs text-theme-text-muted">{sol.ciudad} · {sol.fechas} · Aval: {sol.aval}</p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-base font-bold text-[#1E6B3C]">{sol.total}</p>
-                <p className="text-xs text-[#9BAD9F]">Total solicitado</p>
+                <p className="text-base font-bold text-theme-primary">{sol.total}</p>
+                <p className="text-xs text-theme-text-muted">Total solicitado</p>
                 <div className="flex gap-1 mt-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                   {sol.estado === "pending" && <Button variant="primary" size="sm">Aprobar aval</Button>}
                   <Button variant="outline" size="sm">Ver detalle</Button>
@@ -281,26 +201,26 @@ export function Movilidad() {
 
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{backgroundColor:"rgba(0,0,0,0.4)"}} onClick={()=>setSelected(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={e=>e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#DDE4DF]">
-              <h2 className="text-base font-bold text-[#1A2B22]">Detalle de Solicitud — {selected.id}</h2>
-              <button onClick={()=>setSelected(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[#637068] hover:bg-[#F2F5F3]">✕</button>
+          <div className="bg-theme-bg-card rounded-2xl shadow-2xl w-full max-w-lg" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border">
+              <h2 className="text-base font-bold text-theme-text-main">Detalle de Solicitud — {selected.id}</h2>
+              <button onClick={()=>setSelected(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-theme-text-muted hover:bg-theme-bg-main">✕</button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
-                <p className="text-xs text-[#9BAD9F] uppercase font-semibold mb-1">Investigador</p>
+                <p className="text-xs text-theme-text-muted uppercase font-semibold mb-1">Investigador</p>
                 <div className="flex items-center gap-2">
                   <Avatar name={selected.investigador} size="sm" />
-                  <p className="text-sm font-bold text-[#1A2B22]">{selected.investigador}</p>
+                  <p className="text-sm font-bold text-theme-text-main">{selected.investigador}</p>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-[#9BAD9F] uppercase font-semibold mb-1">Evento</p>
-                <p className="text-sm font-semibold text-[#1A2B22]">{selected.evento}</p>
-                <p className="text-xs text-[#637068]">{selected.ciudad} · {selected.fechas}</p>
+                <p className="text-xs text-theme-text-muted uppercase font-semibold mb-1">Evento</p>
+                <p className="text-sm font-semibold text-theme-text-main">{selected.evento}</p>
+                <p className="text-xs text-theme-text-muted">{selected.ciudad} · {selected.fechas}</p>
               </div>
-              <div className="bg-[#F2F5F3] rounded-xl p-4">
-                <p className="text-xs font-semibold text-[#637068] uppercase mb-3">Desglose presupuestal</p>
+              <div className="bg-theme-bg-main rounded-xl p-4">
+                <p className="text-xs font-semibold text-theme-text-muted uppercase mb-3">Desglose presupuestal</p>
                 <div className="space-y-2">
                   {[
                     { label:"Transporte", value:selected.transporte },
@@ -309,13 +229,13 @@ export function Movilidad() {
                     { label:"Inscripción", value:selected.inscripcion },
                   ].map(item=>(
                     <div key={item.label} className="flex justify-between text-sm">
-                      <span className="text-[#637068]">{item.label}</span>
-                      <span className="font-semibold text-[#1A2B22]">{item.value}</span>
+                      <span className="text-theme-text-muted">{item.label}</span>
+                      <span className="font-semibold text-theme-text-main">{item.value}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between text-sm font-bold pt-2 border-t border-[#DDE4DF]">
-                    <span className="text-[#1A2B22]">Total</span>
-                    <span className="text-[#1E6B3C]">{selected.total}</span>
+                  <div className="flex justify-between text-sm font-bold pt-2 border-t border-theme-border">
+                    <span className="text-theme-text-main">Total</span>
+                    <span className="text-theme-primary">{selected.total}</span>
                   </div>
                 </div>
               </div>
@@ -356,16 +276,16 @@ export function Integraciones() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {INTEGRACIONES.map((integ) => (
           <Card key={integ.nombre} className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#F2F5F3] flex items-center justify-center text-2xl flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-theme-bg-main flex items-center justify-center text-2xl flex-shrink-0">
               {integ.icon}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-sm font-bold text-[#1A2B22]">{integ.nombre}</h3>
+                <h3 className="text-sm font-bold text-theme-text-main">{integ.nombre}</h3>
                 <Badge variant={integ.estado} />
               </div>
-              <p className="text-xs text-[#637068] mb-2">{integ.desc}</p>
-              <span className="text-xs font-mono text-[#9BAD9F] bg-[#F2F5F3] px-2 py-0.5 rounded">{integ.tipo}</span>
+              <p className="text-xs text-theme-text-muted mb-2">{integ.desc}</p>
+              <span className="text-xs font-mono text-theme-text-muted bg-theme-bg-main px-2 py-0.5 rounded">{integ.tipo}</span>
             </div>
             <Button variant={integ.estado === "active" ? "outline" : "primary"} size="sm">
               {integ.estado === "active" ? "Configurar" : "Conectar"}

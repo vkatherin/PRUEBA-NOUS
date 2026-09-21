@@ -42,8 +42,7 @@ async function seedPermisos() {
       'estudiante': ['convocatorias.leer', 'semilleros.leer'],
       'evaluador': ['evaluaciones.leer', 'evaluaciones.evaluar'],
       'comite_etica': ['convocatorias.leer', 'etica.aprobar'],
-      'comite_investigacion': ['convocatorias.leer', 'investigaciones.aprobar'], // fix nombre: comite_investigaciones
-      'externo': ['convocatorias.leer'],
+      'comite_investigacion': ['convocatorias.leer', 'investigaciones.aprobar'],
     };
 
     // Fix name matching the DB which has `comité_investigación` or `comite_investigaciones` ? Let's check what we logged earlier.
@@ -55,12 +54,12 @@ async function seedPermisos() {
 
     // Handle character differences just in case
     const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    
+
     console.log('Asignando permisos a roles...');
     for (const [rolKey, asignados] of Object.entries(rolPermisoMap)) {
       const normKey = normalize(rolKey);
       const rolMatch = rolesDb.find(r => normalize(r.nombre) === normKey);
-      
+
       if (!rolMatch) {
         console.warn(`Rol no encontrado en BD: ${rolKey}`);
         continue;

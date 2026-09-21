@@ -26,10 +26,10 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center h-full w-full bg-[#F2F5F3]">
-          <div className="bg-white p-6 rounded-xl shadow-sm text-center max-w-lg border border-red-100">
+        <div className="flex items-center justify-center h-full w-full bg-theme-bg-main">
+          <div className="bg-theme-bg-card p-6 rounded-xl shadow-sm text-center max-w-lg border border-red-100">
             <h2 className="text-lg font-bold text-red-600 mb-2">⚠️ Ocurrió un error inesperado</h2>
-            <p className="text-sm text-[#637068] mb-4">
+            <p className="text-sm text-theme-text-muted mb-4">
               El componente no pudo ser cargado debido a un error interno. 
               Si tienes el traductor de Google activado, por favor desactívalo para esta página y recarga.
             </p>
@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <button 
               onClick={() => window.location.reload()} 
-              className="bg-[#1E6B3C] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155230]"
+              className="bg-theme-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155230]"
             >
               Recargar la página
             </button>

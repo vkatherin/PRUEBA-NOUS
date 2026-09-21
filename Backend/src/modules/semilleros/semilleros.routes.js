@@ -2,9 +2,13 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../../db/connection");
 
-const { verificarAutenticacion, verificarPermiso } = require('../auth/auth.middleware');
+const { verificarAutenticacion, verificarPermiso, verificarPropietario } = require('../auth/auth.middleware');
 
 router.use(verificarAutenticacion);
+
+const propSemillero = verificarPropietario('semilleros', 'lider_profesor_id', [
+  'administrador', 'directivos', 'director_semilleros', 'coordinador_semilleros'
+]);
 
 // GET /api/semilleros
 router.get("/", verificarPermiso('semilleros.leer'), async (req, res) => {
@@ -47,7 +51,7 @@ router.get("/", verificarPermiso('semilleros.leer'), async (req, res) => {
 });
 
 // GET /api/semilleros/:id
-router.get("/:id", verificarPermiso('semilleros.leer'), async (req, res) => {
+router.get("/:id", verificarPermiso('semilleros.leer'), propSemillero, async (req, res) => {
   try {
     const usuario = req.usuario;
     const roles = usuario.roles || [];
@@ -81,7 +85,7 @@ router.get("/:id", verificarPermiso('semilleros.leer'), async (req, res) => {
 });
 
 // GET /api/semilleros/:id/integrantes
-router.get("/:id/integrantes", verificarPermiso('semilleros.leer'), async (req, res) => {
+router.get("/:id/integrantes", verificarPermiso('semilleros.leer'), propSemillero, async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT si.*, u.nombre_completo, u.correo_institucional

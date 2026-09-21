@@ -96,6 +96,22 @@ router.get("/:id", verificarPermiso('evaluaciones.leer'), async (req, res) => {
 // POST /api/evaluaciones/:id/calificar
 router.post("/:id/calificar", verificarPermiso('evaluaciones.evaluar'), async (req, res) => {
   try {
+    const usuario = req.usuario;
+    const roles = usuario.roles || [];
+    const veTodos = ['administrador', 'directivos'].some(r => roles.includes(r));
+    
+    if (!veTodos) {
+      if (roles.includes('evaluador')) {
+        const [[evaluacionDb]] = await pool.query("SELECT evaluador_id FROM evaluaciones WHERE id = ?", [req.params.id]);
+        if (!evaluacionDb) return res.status(404).json({ error: "Evaluación no encontrada" });
+        if (evaluacionDb.evaluador_id !== usuario.id) {
+          return res.status(403).json({ error: "No tienes permiso para calificar esta evaluación" });
+        }
+      } else {
+        return res.status(403).json({ error: "No tienes permiso para calificar evaluaciones" });
+      }
+    }
+
     const { puntaje_total, observaciones, criterios } = req.body;
 
     await pool.query(

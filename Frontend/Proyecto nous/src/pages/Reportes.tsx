@@ -6,8 +6,8 @@ import {
 } from "recharts";
 import { KpiCard, Card, SectionTitle, Button, Tabs } from "@/components/ui";
 
-const GREEN = "#1E6B3C";
-const GOLD = "#F2A900";
+const GREEN = "var(--theme-primary)";
+const GOLD = "var(--theme-accent)";
 const BLUE = "#2563EB";
 const PURPLE = "#7C3AED";
 
@@ -71,9 +71,9 @@ export function Reportes() {
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>
-          <div className="text-xs text-[#637068] mb-1">NOUS / Reportes e Indicadores</div>
-          <h1 className="text-xl font-bold text-[#1A2B22]">Dashboard Institucional</h1>
-          <p className="text-sm text-[#637068]">Indicadores de investigación — Vicerrectoría 2025</p>
+          <div className="text-xs text-theme-text-muted mb-1">NOUS / Reportes e Indicadores</div>
+          <h1 className="text-xl font-bold text-theme-text-main">Dashboard Institucional</h1>
+          <p className="text-sm text-theme-text-muted">Indicadores de investigación — Vicerrectoría 2025</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm">Exportar Excel</Button>
@@ -114,8 +114,8 @@ export function Reportes() {
           {/* Proyectos por facultad */}
           <Card className="lg:col-span-2" padding={false}>
             <div className="px-5 pt-5 pb-3">
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Proyectos por Facultad</h3>
-              <p className="text-xs text-[#637068]">Activos vs. cerrados en 2025</p>
+              <h3 className="text-sm font-semibold text-theme-text-main">Proyectos por Facultad</h3>
+              <p className="text-xs text-theme-text-muted">Activos vs. cerrados en 2025</p>
             </div>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={proyectosPorFacultad} margin={{ left: -5, right: 10, top: 5, bottom: 5 }} barCategoryGap="30%">
@@ -133,8 +133,8 @@ export function Reportes() {
           {/* Radar */}
           <Card padding={false}>
             <div className="px-5 pt-5 pb-2">
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Índice por Dimensión</h3>
-              <p className="text-xs text-[#637068]">Desempeño institucional VRI</p>
+              <h3 className="text-sm font-semibold text-theme-text-main">Índice por Dimensión</h3>
+              <p className="text-xs text-theme-text-muted">Desempeño institucional VRI</p>
             </div>
             <ResponsiveContainer width="100%" height={260}>
               <RadarChart data={radarData} margin={{ top: 0, right: 20, bottom: 10, left: 20 }}>
@@ -150,8 +150,8 @@ export function Reportes() {
           {/* Presupuesto histórico */}
           <Card className="lg:col-span-3" padding={false}>
             <div className="px-5 pt-5 pb-3">
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Evolución Presupuestal 2021–2025</h3>
-              <p className="text-xs text-[#637068]">Millones COP — Tendencia de inversión en investigación</p>
+              <h3 className="text-sm font-semibold text-theme-text-main">Evolución Presupuestal 2021–2025</h3>
+              <p className="text-xs text-theme-text-muted">Millones COP — Tendencia de inversión en investigación</p>
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={presupuestoPorAnio} margin={{ left: -5, right: 20, top: 5, bottom: 5 }}>
@@ -175,7 +175,7 @@ export function Reportes() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card className="lg:col-span-2" padding={false}>
             <div className="px-5 pt-5 pb-3">
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Producción Científica por Tipo y Año</h3>
+              <h3 className="text-sm font-semibold text-theme-text-main">Producción Científica por Tipo y Año</h3>
             </div>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={productosPorAnio} margin={{ left: -5, right: 10, top: 5, bottom: 5 }} barCategoryGap="30%">
@@ -194,8 +194,8 @@ export function Reportes() {
 
           <Card padding={false}>
             <div className="px-5 pt-5 pb-2">
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Distribución 2025</h3>
-              <p className="text-xs text-[#637068]">89 productos registrados</p>
+              <h3 className="text-sm font-semibold text-theme-text-main">Distribución 2025</h3>
+              <p className="text-xs text-theme-text-muted">89 productos registrados</p>
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <PieChart>
@@ -210,9 +210,9 @@ export function Reportes() {
                 <div key={p.name} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                    <span className="text-[#637068]">{p.name}</span>
+                    <span className="text-theme-text-muted">{p.name}</span>
                   </div>
-                  <span className="font-semibold text-[#1A2B22]">{p.value}</span>
+                  <span className="font-semibold text-theme-text-main">{p.value}</span>
                 </div>
               ))}
             </div>
@@ -222,41 +222,41 @@ export function Reportes() {
 
       {tab === "grupos" && (
         <Card padding={false}>
-          <div className="px-5 py-4 border-b border-[#DDE4DF]">
-            <h3 className="text-sm font-semibold text-[#1A2B22]">Ranking de Grupos de Investigación</h3>
+          <div className="px-5 py-4 border-b border-theme-border">
+            <h3 className="text-sm font-semibold text-theme-text-main">Ranking de Grupos de Investigación</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#DDE4DF]">
-                  <th className="text-left py-3 px-5 text-xs font-semibold text-[#637068] uppercase tracking-wide">#</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide">Grupo</th>
-                  <th className="text-center py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide">Categoría</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide">Proyectos</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide">Productos</th>
+                <tr className="border-b border-theme-border">
+                  <th className="text-left py-3 px-5 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">#</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Grupo</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Categoría</th>
+                  <th className="text-right py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Proyectos</th>
+                  <th className="text-right py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Productos</th>
                 </tr>
               </thead>
               <tbody>
                 {grupoRanking.map((g, i) => (
-                  <tr key={g.grupo} className="border-b border-[#F2F5F3] hover:bg-[#FAFFFE]">
+                  <tr key={g.grupo} className="border-b border-theme-border hover:bg-theme-bg-main">
                     <td className="py-3 px-5">
                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
                         style={{ backgroundColor: i < 3 ? "#FFF8E6" : "#F2F5F3", color: i < 3 ? "#D4930B" : "#637068" }}>
                         {i + 1}
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-bold text-[#1A2B22]">{g.grupo}</td>
+                    <td className="py-3 px-4 font-bold text-theme-text-main">{g.grupo}</td>
                     <td className="py-3 px-4 text-center">
                       <span className="text-xs font-bold px-2.5 py-1 rounded-full"
                         style={{
                           backgroundColor: g.categoria === "B" ? "#EBF5EF" : g.categoria === "C" ? "#FFF8E6" : "#F2F5F3",
-                          color: g.categoria === "B" ? "#1E6B3C" : g.categoria === "C" ? "#D4930B" : "#637068",
+                          color: g.categoria === "B" ? "var(--theme-primary)" : g.categoria === "C" ? "#D4930B" : "#637068",
                         }}>
                         Cat. {g.categoria}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold text-[#1A2B22]">{g.proyectos}</td>
-                    <td className="py-3 px-4 text-right font-bold text-[#1E6B3C]">{g.productos}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-theme-text-main">{g.proyectos}</td>
+                    <td className="py-3 px-4 text-right font-bold text-theme-primary">{g.productos}</td>
                   </tr>
                 ))}
               </tbody>
@@ -269,8 +269,8 @@ export function Reportes() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card padding={false}>
             <div className="px-5 pt-5 pb-3">
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Ejecución Financiera por Facultad</h3>
-              <p className="text-xs text-[#637068]">Millones COP — 2025</p>
+              <h3 className="text-sm font-semibold text-theme-text-main">Ejecución Financiera por Facultad</h3>
+              <p className="text-xs text-theme-text-muted">Millones COP — 2025</p>
             </div>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={[
@@ -292,7 +292,7 @@ export function Reportes() {
             </ResponsiveContainer>
           </Card>
           <Card>
-            <h3 className="text-sm font-semibold text-[#1A2B22] mb-4">Disponibilidad Presupuestal por Rubro</h3>
+            <h3 className="text-sm font-semibold text-theme-text-main mb-4">Disponibilidad Presupuestal por Rubro</h3>
             <div className="space-y-3">
               {[
                 { rubro:"Personal", aprobado:380, ejecutado:260, color:GREEN },
@@ -306,10 +306,10 @@ export function Reportes() {
                 return (
                   <div key={r.rubro}>
                     <div className="flex justify-between mb-1">
-                      <span className="text-xs font-medium text-[#1A2B22]">{r.rubro}</span>
-                      <span className="text-xs text-[#637068]">${r.ejecutado}M / ${r.aprobado}M · <strong style={{color:r.color}}>{pct}%</strong></span>
+                      <span className="text-xs font-medium text-theme-text-main">{r.rubro}</span>
+                      <span className="text-xs text-theme-text-muted">${r.ejecutado}M / ${r.aprobado}M · <strong style={{color:r.color}}>{pct}%</strong></span>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-[#F2F5F3] overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-theme-bg-main overflow-hidden">
                       <div className="h-full rounded-full" style={{ width:`${pct}%`, backgroundColor:r.color }} />
                     </div>
                   </div>

@@ -45,13 +45,13 @@ function mapEstadoSem(estado: string): "active" | "inactive" | "pending" {
 
 function SemilleroModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (nombre: string) => void }) {
   const [nombre, setNombre] = useState("");
-  return <Modal open={open} onClose={onClose} title="Crear semillero" size="md"><div className="space-y-4"><Field label="Nombre del semillero" required><Input value={nombre} onChange={setNombre} placeholder="Ej: BIOINNOVA" /></Field><Field label="Descripción"><Textarea placeholder="Área y propósito del semillero" rows={3} /></Field><Field label="Grupo de investigación"><Select options={[{ value: "gidema", label: "GIDEMA" }, { value: "gicade", label: "GICADE" }, { value: "bioagro", label: "BIOAGRO" }]} placeholder="Seleccionar grupo" /></Field><div className="flex justify-end gap-2 pt-3 border-t border-[#DDE4DF]"><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { if (nombre.trim()) { onCreate(nombre.trim()); setNombre(""); } }}>Crear semillero</Button></div></div></Modal>;
+  return <Modal open={open} onClose={onClose} title="Crear semillero" size="md"><div className="space-y-4"><Field label="Nombre del semillero" required><Input value={nombre} onChange={setNombre} placeholder="Ej: BIOINNOVA" /></Field><Field label="Descripción"><Textarea placeholder="Área y propósito del semillero" rows={3} /></Field><Field label="Grupo de investigación"><Select options={[{ value: "gidema", label: "GIDEMA" }, { value: "gicade", label: "GICADE" }, { value: "bioagro", label: "BIOAGRO" }]} placeholder="Seleccionar grupo" /></Field><div className="flex justify-end gap-2 pt-3 border-t border-theme-border"><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { if (nombre.trim()) { onCreate(nombre.trim()); setNombre(""); } }}>Crear semillero</Button></div></div></Modal>;
 }
 
 function PlanModal({ open, onClose, onCreate, semillerosList }: { open: boolean; onClose: () => void; onCreate: (semillero: string, periodo: string) => void; semillerosList: string[] }) {
   const [semillero, setSemillero] = useState("");
   const [periodo, setPeriodo] = useState("");
-  return <Modal open={open} onClose={onClose} title="Crear plan de formación" size="md"><div className="space-y-4"><Field label="Semillero" required><Select options={semillerosList.map(s => ({ value: s, label: s }))} value={semillero} onChange={setSemillero} placeholder="Seleccionar semillero" /></Field><Field label="Período académico" required><Input value={periodo} onChange={setPeriodo} placeholder="Ej: 2025-II" /></Field><Field label="Primera actividad"><Input placeholder="Nombre de la actividad" /></Field><div className="flex justify-end gap-2 pt-3 border-t border-[#DDE4DF]"><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { if (semillero && periodo.trim()) { onCreate(semillero, periodo.trim()); setSemillero(""); setPeriodo(""); } }}>Crear plan</Button></div></div></Modal>;
+  return <Modal open={open} onClose={onClose} title="Crear plan de formación" size="md"><div className="space-y-4"><Field label="Semillero" required><Select options={semillerosList.map(s => ({ value: s, label: s }))} value={semillero} onChange={setSemillero} placeholder="Seleccionar semillero" /></Field><Field label="Período académico" required><Input value={periodo} onChange={setPeriodo} placeholder="Ej: 2025-II" /></Field><Field label="Primera actividad"><Input placeholder="Nombre de la actividad" /></Field><div className="flex justify-end gap-2 pt-3 border-t border-theme-border"><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { if (semillero && periodo.trim()) { onCreate(semillero, periodo.trim()); setSemillero(""); setPeriodo(""); } }}>Crear plan</Button></div></div></Modal>;
 }
 
 function DetalleSemillero({ id, onBack }: { id: number; onBack: () => void }) {
@@ -69,19 +69,19 @@ function DetalleSemillero({ id, onBack }: { id: number; onBack: () => void }) {
   if (!semillero) return <div className="p-8 text-center text-red-500">Error al cargar el semillero</div>;
 
   return <div className="p-6 max-w-[1200px] mx-auto space-y-5">
-    <button onClick={onBack} className="text-sm text-[#1E6B3C] font-medium">← Volver a semilleros</button>
+    <button onClick={onBack} className="text-sm text-theme-primary font-medium">← Volver a semilleros</button>
     <PageHeader title={semillero.nombre} subtitle={semillero.descripcion} breadcrumb={["NOUS", "Semilleros", semillero.nombre]} actions={<Button variant="primary">Editar semillero</Button>} />
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3"><Card><p className="text-xs text-[#637068]">Líder</p><p className="text-sm font-bold text-[#1A2B22]">{semillero.lider}</p></Card><Card><p className="text-xs text-[#637068]">Integrantes</p><p className="text-2xl font-bold text-[#1E6B3C]">{semillero.integrantes}</p></Card><Card><p className="text-xs text-[#637068]">Proyectos formativos</p><p className="text-2xl font-bold text-[#1E6B3C]">{semillero.proyectos}</p></Card></div>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Card><h2 className="text-sm font-semibold text-[#1A2B22] mb-4">Integrantes</h2>{semillero.integrantes_lista?.slice(0, 4).map((est, index) => <div key={est.nombre} className="flex items-center gap-3 py-3 border-b border-[#F2F5F3] last:border-0"><Avatar name={est.nombre} size="sm" /><div className="flex-1"><p className="text-sm font-medium text-[#1A2B22]">{est.nombre}</p><p className="text-xs text-[#637068]">{est.programa}</p></div><Badge variant="active">Activo</Badge></div>)}</Card><Card><h2 className="text-sm font-semibold text-[#1A2B22] mb-4">Proyectos Asociados</h2>{semillero.proyectos_lista?.map((p, index) => <div key={p.codigo} className="flex gap-3 py-3 border-b border-[#F2F5F3] last:border-0"><span className="text-xs font-bold text-[#1E6B3C]">{index + 1}</span><div><p className="text-sm font-medium text-[#1A2B22]">{p.titulo}</p><p className="text-xs text-[#637068]">{p.codigo} · {p.estado}</p></div></div>)}</Card></div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3"><Card><p className="text-xs text-theme-text-muted">Líder</p><p className="text-sm font-bold text-theme-text-main">{semillero.lider}</p></Card><Card><p className="text-xs text-theme-text-muted">Integrantes</p><p className="text-2xl font-bold text-theme-primary">{semillero.integrantes}</p></Card><Card><p className="text-xs text-theme-text-muted">Proyectos formativos</p><p className="text-2xl font-bold text-theme-primary">{semillero.proyectos}</p></Card></div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Card><h2 className="text-sm font-semibold text-theme-text-main mb-4">Integrantes</h2>{semillero.integrantes_lista?.slice(0, 4).map((est, index) => <div key={est.nombre} className="flex items-center gap-3 py-3 border-b border-theme-border last:border-0"><Avatar name={est.nombre} size="sm" /><div className="flex-1"><p className="text-sm font-medium text-theme-text-main">{est.nombre}</p><p className="text-xs text-theme-text-muted">{est.programa}</p></div><Badge variant="active">Activo</Badge></div>)}</Card><Card><h2 className="text-sm font-semibold text-theme-text-main mb-4">Proyectos Asociados</h2>{semillero.proyectos_lista?.map((p, index) => <div key={p.codigo} className="flex gap-3 py-3 border-b border-theme-border last:border-0"><span className="text-xs font-bold text-theme-primary">{index + 1}</span><div><p className="text-sm font-medium text-theme-text-main">{p.titulo}</p><p className="text-xs text-theme-text-muted">{p.codigo} · {p.estado}</p></div></div>)}</Card></div>
   </div>;
 }
 
 const tipoConfig: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-  ingreso: { color: "#1E6B3C", bg: "#EBF5EF", icon: "🎓", label: "Vinculación" },
+  ingreso: { color: "var(--theme-primary)", bg: "#EBF5EF", icon: "🎓", label: "Vinculación" },
   formacion: { color: "#2563EB", bg: "#EFF6FF", icon: "📚", label: "Formación" },
   participacion: { color: "#7C3AED", bg: "#F5F3FF", icon: "🔬", label: "Proyecto" },
   evento: { color: "#D97706", bg: "#FFFBEB", icon: "🎤", label: "Evento" },
-  certificado: { color: "#F2A900", bg: "#FFF8E6", icon: "🏆", label: "Certificado" },
+  certificado: { color: "var(--theme-accent)", bg: "#FFF8E6", icon: "🏆", label: "Certificado" },
   movilidad: { color: "#0891B2", bg: "#ECFEFF", icon: "✈️", label: "Movilidad" },
   producto: { color: "#BE185D", bg: "#FDF2F8", icon: "📄", label: "Producto" },
 };
@@ -97,8 +97,8 @@ function TrayectoriaTimeline() {
           <div className="flex items-start gap-3 mb-4">
             <Avatar name={ESTUDIANTE.nombre} size="lg" />
             <div>
-              <p className="font-bold text-sm text-[#1A2B22]">{ESTUDIANTE.nombre}</p>
-              <p className="text-xs text-[#637068]">{ESTUDIANTE.programa}</p>
+              <p className="font-bold text-sm text-theme-text-main">{ESTUDIANTE.nombre}</p>
+              <p className="text-xs text-theme-text-muted">{ESTUDIANTE.programa}</p>
               <Badge variant="active" className="mt-1">Semillero Activo</Badge>
             </div>
           </div>
@@ -110,15 +110,15 @@ function TrayectoriaTimeline() {
               { label: "Tiempo en semillero", value: "2 años 6 meses" },
             ].map((item) => (
               <div key={item.label}>
-                <p className="text-xs text-[#9BAD9F] font-medium uppercase tracking-wide">{item.label}</p>
-                <p className="text-sm text-[#1A2B22] font-medium">{item.value}</p>
+                <p className="text-xs text-theme-text-muted font-medium uppercase tracking-wide">{item.label}</p>
+                <p className="text-sm text-theme-text-main font-medium">{item.value}</p>
               </div>
             ))}
           </div>
         </Card>
 
         <Card>
-          <p className="text-sm font-semibold text-[#1A2B22] mb-3">Resumen de Trayectoria</p>
+          <p className="text-sm font-semibold text-theme-text-main mb-3">Resumen de Trayectoria</p>
           <div className="grid grid-cols-2 gap-2">
             {[
               { icon: "🔬", label: "Proyectos", value: 3 },
@@ -128,11 +128,11 @@ function TrayectoriaTimeline() {
               { icon: "✈️", label: "Movilidades", value: 1 },
               { icon: "🏆", label: "Certificados", value: 1 },
             ].map((s) => (
-              <div key={s.label} className="bg-[#F2F5F3] rounded-xl p-3 flex items-center gap-2">
+              <div key={s.label} className="bg-theme-bg-main rounded-xl p-3 flex items-center gap-2">
                 <span className="text-lg">{s.icon}</span>
                 <div>
-                  <p className="text-lg font-bold text-[#1A2B22] leading-none">{s.value}</p>
-                  <p className="text-xs text-[#637068]">{s.label}</p>
+                  <p className="text-lg font-bold text-theme-text-main leading-none">{s.value}</p>
+                  <p className="text-xs text-theme-text-muted">{s.label}</p>
                 </div>
               </div>
             ))}
@@ -143,8 +143,8 @@ function TrayectoriaTimeline() {
       {/* Timeline */}
       <div className="lg:col-span-2">
         <Card padding={false}>
-          <div className="px-5 py-4 border-b border-[#DDE4DF] flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#1A2B22]">Línea de Tiempo Investigativa</h3>
+          <div className="px-5 py-4 border-b border-theme-border flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-theme-text-main">Línea de Tiempo Investigativa</h3>
             <Button variant="primary" size="sm">Exportar Certificado</Button>
           </div>
           <div className="px-5 py-5">
@@ -169,7 +169,7 @@ function TrayectoriaTimeline() {
                       {/* Content */}
                       <div
                         className={`flex-1 p-3 rounded-xl border cursor-pointer transition-all ${
-                          item.estado === "pending" ? "border-dashed border-[#DDE4DF] bg-[#FAFAFA]" : "border-[#DDE4DF] bg-white hover:border-[#1E6B3C]/30 hover:shadow-sm"
+                          item.estado === "pending" ? "border-dashed border-theme-border bg-[#FAFAFA]" : "border-theme-border bg-theme-bg-card hover:border-theme-primary/30 hover:shadow-sm"
                         }`}
                         onClick={() => setExpandedItem(isExpanded ? null : i)}
                       >
@@ -184,12 +184,12 @@ function TrayectoriaTimeline() {
                               </span>
                               <Badge variant={item.estado} />
                             </div>
-                            <p className="text-sm font-semibold text-[#1A2B22]">{item.titulo}</p>
+                            <p className="text-sm font-semibold text-theme-text-main">{item.titulo}</p>
                             {isExpanded && (
-                              <p className="text-xs text-[#637068] mt-1 leading-relaxed">{item.desc}</p>
+                              <p className="text-xs text-theme-text-muted mt-1 leading-relaxed">{item.desc}</p>
                             )}
                           </div>
-                          <span className="text-xs text-[#9BAD9F] flex-shrink-0 mt-0.5">{item.fecha}</span>
+                          <span className="text-xs text-theme-text-muted flex-shrink-0 mt-0.5">{item.fecha}</span>
                         </div>
                       </div>
                     </div>
@@ -242,10 +242,10 @@ export function Semilleros({ user }: { user?: any }) {
           { label: "Proyectos de Semillero", value: semilleros.reduce((a, c) => a + c.proyectos, 0), sub: "En ejecución" },
           { label: "Jóvenes Investigadores", value: "23", sub: "Certificados" }, // Hardcoded static stat
         ].map((s) => (
-          <div key={s.label} className="bg-white border border-[#DDE4DF] rounded-xl p-4">
-            <p className="text-2xl font-bold text-[#1E6B3C]">{s.value}</p>
-            <p className="text-sm font-medium text-[#1A2B22]">{s.label}</p>
-            <p className="text-xs text-[#637068] mt-0.5">{s.sub}</p>
+          <div key={s.label} className="bg-theme-bg-card border border-theme-border rounded-xl p-4">
+            <p className="text-2xl font-bold text-theme-primary">{s.value}</p>
+            <p className="text-sm font-medium text-theme-text-main">{s.label}</p>
+            <p className="text-xs text-theme-text-muted mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
@@ -263,29 +263,29 @@ export function Semilleros({ user }: { user?: any }) {
       {tab === "grupos" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
           {loading ? (
-             <div className="p-8 text-center text-[#637068] col-span-3">Cargando semilleros...</div>
+             <div className="p-8 text-center text-theme-text-muted col-span-3">Cargando semilleros...</div>
           ) : semilleros.map((s) => (
             <Card key={s.id} onClick={() => setSelectedId(s.id)} className="hover:shadow-md transition-shadow cursor-pointer">
               <div className="flex items-start justify-between mb-3">
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center text-base font-bold text-white"
-                  style={{ backgroundColor: "#163D27" }}
+                  style={{ backgroundColor: "var(--theme-primary)" }}
                 >
                   🌱
                 </div>
                 <Badge variant={mapEstadoSem(s.estado)} />
               </div>
-              <h3 className="text-base font-bold text-[#1A2B22] mb-0.5">{s.nombre}</h3>
-              <p className="text-xs text-[#637068] mb-3 leading-snug">{s.descripcion}</p>
-              <div className="flex items-center gap-3 text-xs text-[#637068] mb-3">
+              <h3 className="text-base font-bold text-theme-text-main mb-0.5">{s.nombre}</h3>
+              <p className="text-xs text-theme-text-muted mb-3 leading-snug">{s.descripcion}</p>
+              <div className="flex items-center gap-3 text-xs text-theme-text-muted mb-3">
                 <div className="flex items-center gap-1">
                   <Avatar name={s.lider} size="sm" />
                   <span>{s.lider}</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-3 border-t border-[#F2F5F3]">
-                <span className="text-xs font-semibold text-[#1E6B3C] bg-[#EBF5EF] px-2 py-1 rounded-lg">{s.grupo}</span>
-                <div className="flex gap-3 text-xs text-[#637068]">
+              <div className="flex items-center justify-between pt-3 border-t border-theme-border">
+                <span className="text-xs font-semibold text-theme-primary bg-theme-primary/10 px-2 py-1 rounded-lg">{s.grupo}</span>
+                <div className="flex gap-3 text-xs text-theme-text-muted">
                   <span>👥 {s.integrantes} estudiantes</span>
                   <span>🔬 {s.proyectos} proyectos</span>
                 </div>
@@ -294,10 +294,10 @@ export function Semilleros({ user }: { user?: any }) {
           ))}
 
           {/* Add card */}
-          <button onClick={() => setShowSemilleroModal(true)} className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-[#DDE4DF] rounded-xl hover:border-[#1E6B3C] hover:bg-[#FAFFFE] cursor-pointer transition-all">
-            <div className="w-12 h-12 rounded-2xl bg-[#EBF5EF] flex items-center justify-center text-2xl mb-2">🌱</div>
-            <p className="text-sm font-semibold text-[#1A2B22]">Crear nuevo semillero</p>
-            <p className="text-xs text-[#637068] mt-0.5">Registrar grupo de investigación estudiantil</p>
+          <button onClick={() => setShowSemilleroModal(true)} className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-theme-border rounded-xl hover:border-theme-primary hover:bg-theme-bg-main cursor-pointer transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-theme-primary/10 flex items-center justify-center text-2xl mb-2">🌱</div>
+            <p className="text-sm font-semibold text-theme-text-main">Crear nuevo semillero</p>
+            <p className="text-xs text-theme-text-muted mt-0.5">Registrar grupo de investigación estudiantil</p>
           </button>
         </div>
       )}
@@ -311,25 +311,25 @@ export function Semilleros({ user }: { user?: any }) {
           </div>
           {planes.map((plan)=>(
             <Card key={plan.semillero} padding={false}>
-              <div className="px-5 py-4 border-b border-[#DDE4DF] flex items-center justify-between">
+              <div className="px-5 py-4 border-b border-theme-border flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#1A2B22]">Plan de Formación — Semillero {plan.semillero}</span>
+                    <span className="text-sm font-bold text-theme-text-main">Plan de Formación — Semillero {plan.semillero}</span>
                     <Badge variant={plan.estado} />
                   </div>
-                  <p className="text-xs text-[#637068]">Período {plan.periodo} · {plan.actividades.filter(a=>a.completada).length}/{plan.actividades.length} actividades completadas</p>
+                  <p className="text-xs text-theme-text-muted">Período {plan.periodo} · {plan.actividades.filter(a=>a.completada).length}/{plan.actividades.length} actividades completadas</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setShowPlanModal(true)}>Editar Plan</Button>
               </div>
               <div className="divide-y divide-[#F2F5F3]">
                 {plan.actividades.map((act,i)=>(
                   <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${act.completada?"bg-[#EBF5EF] text-[#1E6B3C]":"bg-[#F2F5F3] text-[#9BAD9F]"}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${act.completada?"bg-theme-primary/10 text-theme-primary":"bg-theme-bg-main text-theme-text-muted"}`}>
                       {act.completada ? "✓" : i+1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#1A2B22]">{act.nombre}</p>
-                      <p className="text-xs text-[#637068]">{act.fecha} · {act.duracion}</p>
+                      <p className="text-sm font-medium text-theme-text-main">{act.nombre}</p>
+                      <p className="text-xs text-theme-text-muted">{act.fecha} · {act.duracion}</p>
                     </div>
                     <Badge variant={act.completada ? "closed" : "pending"}>
                       {act.completada ? "Completada" : "Pendiente"}

@@ -10,8 +10,11 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "i18next": "^26.4.2",
+    "lucide-react": "^1.47.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^17.0.14",
     "recharts": "^3.10.1"
   },
   "devDependencies": {

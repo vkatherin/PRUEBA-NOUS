@@ -49,7 +49,7 @@ function GanttChart() {
           <div className="w-56 flex-shrink-0" />
           <div className="flex-1 grid gap-0" style={{ gridTemplateColumns: `repeat(${MESES.length}, 1fr)` }}>
             {MESES.map((m) => (
-              <div key={m} className="text-center text-xs font-semibold text-[#9BAD9F] py-1 border-l border-[#F2F5F3]">
+              <div key={m} className="text-center text-xs font-semibold text-theme-text-muted py-1 border-l border-theme-border">
                 {m}
               </div>
             ))}
@@ -61,22 +61,22 @@ function GanttChart() {
             {/* Project header row */}
             <div className="flex items-center mb-1">
               <div className="w-56 flex-shrink-0 pr-3">
-                <p className="text-xs font-bold text-[#1E6B3C] truncate">{proyecto.proyecto}</p>
+                <p className="text-xs font-bold text-theme-primary truncate">{proyecto.proyecto}</p>
               </div>
-              <div className="flex-1 h-px bg-[#EBF5EF]" />
+              <div className="flex-1 h-px bg-theme-primary/10" />
             </div>
 
             {/* Activity rows */}
             {proyecto.actividades.map((act, i) => (
               <div key={i} className="flex items-center mb-1.5 group">
                 <div className="w-56 flex-shrink-0 pr-3">
-                  <p className="text-xs text-[#637068] truncate group-hover:text-[#1A2B22]">{act.nombre}</p>
-                  <p className="text-xs text-[#9BAD9F] truncate">{act.responsable}</p>
+                  <p className="text-xs text-theme-text-muted truncate group-hover:text-theme-text-main">{act.nombre}</p>
+                  <p className="text-xs text-theme-text-muted truncate">{act.responsable}</p>
                 </div>
                 <div className="flex-1 relative h-7" style={{ display: "grid", gridTemplateColumns: `repeat(${MESES.length}, 1fr)` }}>
                   {/* Grid lines */}
                   {MESES.map((_, j) => (
-                    <div key={j} className="border-l border-[#F2F5F3] h-full" />
+                    <div key={j} className="border-l border-theme-border h-full" />
                   ))}
                   {/* Bar */}
                   <div
@@ -85,14 +85,14 @@ function GanttChart() {
                       left: `${(act.inicio / MESES.length) * 100}%`,
                       width: `${(act.duracion / MESES.length) * 100}%`,
                       backgroundColor: act.estado === "closed" ? "#DDE4DF" : act.estado === "active" ? "#EBF5EF" : "#F2F5F3",
-                      border: `1.5px solid ${act.estado === "closed" ? "#9BAD9F" : act.estado === "active" ? "#1E6B3C" : "#DDE4DF"}`,
+                      border: `1.5px solid ${act.estado === "closed" ? "#9BAD9F" : act.estado === "active" ? "var(--theme-primary)" : "#DDE4DF"}`,
                     }}
                   >
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${act.avance}%`,
-                        backgroundColor: act.estado === "closed" ? "#9BAD9F" : act.estado === "active" ? "#1E6B3C" : "#F2A900",
+                        backgroundColor: act.estado === "closed" ? "#9BAD9F" : act.estado === "active" ? "var(--theme-primary)" : "var(--theme-accent)",
                       }}
                     />
                     <span
@@ -109,15 +109,15 @@ function GanttChart() {
         ))}
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#DDE4DF]">
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-theme-border">
           {[
-            { color: "#1E6B3C", label: "Completado" },
-            { color: "#F2A900", label: "En progreso" },
+            { color: "var(--theme-primary)", label: "Completado" },
+            { color: "var(--theme-accent)", label: "En progreso" },
             { color: "#DDE4DF", label: "Pendiente" },
           ].map((l) => (
             <div key={l.label} className="flex items-center gap-1.5">
               <div className="w-3 h-2 rounded-sm" style={{ backgroundColor: l.color }} />
-              <span className="text-xs text-[#637068]">{l.label}</span>
+              <span className="text-xs text-theme-text-muted">{l.label}</span>
             </div>
           ))}
         </div>
@@ -142,7 +142,7 @@ function KanbanView() {
     {
       id: "active",
       label: "En Progreso",
-      color: "#F2A900",
+      color: "var(--theme-accent)",
       cards: [
         { nombre: "Modelación HEC-HMS cuencas", proyecto: "Modelación Hídrica", fecha: "Aug 2025" },
         { nombre: "Aplicación encuestas rurales", proyecto: "Inclusión Financiera", fecha: "Jul 2025" },
@@ -161,7 +161,7 @@ function KanbanView() {
     {
       id: "closed",
       label: "Completado",
-      color: "#1E6B3C",
+      color: "var(--theme-primary)",
       cards: [
         { nombre: "Revisión bibliográfica hídrica", proyecto: "Modelación Hídrica", fecha: "Mar 2025" },
         { nombre: "Diseño instrumento encuesta", proyecto: "Inclusión Financiera", fecha: "Mar 2025" },
@@ -176,8 +176,8 @@ function KanbanView() {
         <div key={col.id} className="w-64 flex-shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col.color }} />
-            <span className="text-xs font-bold text-[#1A2B22] uppercase tracking-wide">{col.label}</span>
-            <span className="ml-auto text-xs font-semibold text-[#637068] bg-[#F2F5F3] px-2 py-0.5 rounded-full">
+            <span className="text-xs font-bold text-theme-text-main uppercase tracking-wide">{col.label}</span>
+            <span className="ml-auto text-xs font-semibold text-theme-text-muted bg-theme-bg-main px-2 py-0.5 rounded-full">
               {col.cards.length}
             </span>
           </div>
@@ -185,12 +185,12 @@ function KanbanView() {
             {col.cards.map((card, i) => (
               <div
                 key={i}
-                className="bg-white border border-[#DDE4DF] rounded-xl p-3 cursor-pointer hover:border-[#1E6B3C]/30 hover:shadow-sm transition-all"
+                className="bg-theme-bg-card border border-theme-border rounded-xl p-3 cursor-pointer hover:border-theme-primary/30 hover:shadow-sm transition-all"
               >
-                <p className="text-xs font-semibold text-[#1A2B22] mb-1 leading-snug">{card.nombre}</p>
-                <p className="text-xs text-[#637068]">{card.proyecto}</p>
+                <p className="text-xs font-semibold text-theme-text-main mb-1 leading-snug">{card.nombre}</p>
+                <p className="text-xs text-theme-text-muted">{card.proyecto}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-[#9BAD9F]">Fin: {card.fecha}</span>
+                  <span className="text-xs text-theme-text-muted">Fin: {card.fecha}</span>
                   <div
                     className="w-1.5 h-1.5 rounded-full"
                     style={{ backgroundColor: col.color }}
@@ -235,8 +235,8 @@ export function Seguimiento() {
           >
             <span>{a.tipo === "warning" ? "⚠️" : "ℹ️"}</span>
             <div className="flex-1">
-              <span className="text-xs font-bold text-[#1A2B22]">{a.proyecto}: </span>
-              <span className="text-xs text-[#637068]">{a.msg}</span>
+              <span className="text-xs font-bold text-theme-text-main">{a.proyecto}: </span>
+              <span className="text-xs text-theme-text-muted">{a.msg}</span>
             </div>
             <button
               className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
@@ -263,7 +263,7 @@ export function Seguimiento() {
           {["Todos los proyectos", "Solo activos", "Con alertas"].map((opt) => (
             <button
               key={opt}
-              className="text-xs px-3 py-1.5 rounded-lg bg-white border border-[#DDE4DF] text-[#637068] hover:border-[#1E6B3C] hover:text-[#1E6B3C] transition-colors"
+              className="text-xs px-3 py-1.5 rounded-lg bg-theme-bg-card border border-theme-border text-theme-text-muted hover:border-theme-primary hover:text-theme-primary transition-colors"
             >
               {opt}
             </button>
@@ -273,16 +273,16 @@ export function Seguimiento() {
 
       {/* Chart area */}
       <Card padding={false}>
-        <div className="px-5 pt-5 pb-3 border-b border-[#DDE4DF] flex items-center justify-between">
+        <div className="px-5 pt-5 pb-3 border-b border-theme-border flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-[#1A2B22]">
+            <h3 className="text-sm font-semibold text-theme-text-main">
               {view === "gantt" ? "Diagrama de Gantt — Proyectos Activos 2025" : "Tablero de Actividades por Estado"}
             </h3>
-            <p className="text-xs text-[#637068]">
+            <p className="text-xs text-theme-text-muted">
               {view === "gantt" ? "Vista Feb 2025 — Nov 2025" : "Arrastrar tarjetas para actualizar estado"}
             </p>
           </div>
-          <span className="text-xs text-[#9BAD9F]">Actualizado: hace 2 hrs</span>
+          <span className="text-xs text-theme-text-muted">Actualizado: hace 2 hrs</span>
         </div>
         <div className="p-5">
           {view === "gantt" ? <GanttChart /> : <KanbanView />}
@@ -291,25 +291,25 @@ export function Seguimiento() {
 
       {/* Activity table */}
       <Card padding={false}>
-        <div className="px-5 py-4 border-b border-[#DDE4DF]">
-          <h3 className="text-sm font-semibold text-[#1A2B22]">Actividades en Progreso</h3>
+        <div className="px-5 py-4 border-b border-theme-border">
+          <h3 className="text-sm font-semibold text-theme-text-main">Actividades en Progreso</h3>
         </div>
         <div className="divide-y divide-[#F2F5F3]">
           {ACTIVIDADES.flatMap((p) =>
             p.actividades
               .filter((a) => a.estado === "active")
               .map((a, i) => (
-                <div key={`${p.id}-${i}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FAFFFE]">
-                  <div className="w-2 h-2 rounded-full bg-[#1E6B3C] flex-shrink-0" />
+                <div key={`${p.id}-${i}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-theme-bg-main">
+                  <div className="w-2 h-2 rounded-full bg-theme-primary flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#1A2B22]">{a.nombre}</p>
-                    <p className="text-xs text-[#637068]">{p.proyecto} · {a.responsable}</p>
+                    <p className="text-sm font-semibold text-theme-text-main">{a.nombre}</p>
+                    <p className="text-xs text-theme-text-muted">{p.proyecto} · {a.responsable}</p>
                   </div>
                   <Badge variant={a.estado} />
                   <div className="w-32">
                     <ProgressBar value={a.avance} color="green" />
                   </div>
-                  <span className="text-sm font-bold text-[#1E6B3C] w-10 text-right">{a.avance}%</span>
+                  <span className="text-sm font-bold text-theme-primary w-10 text-right">{a.avance}%</span>
                   <Button variant="ghost" size="sm">Actualizar</Button>
                 </div>
               ))

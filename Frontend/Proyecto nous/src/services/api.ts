@@ -57,8 +57,13 @@ export interface UsuarioMe {
   id: number;
   nombre_completo: string;
   correo_institucional: string;
+  nombre?: string;
+  correo?: string;
+  cedula?: string;
+  fecha_aceptacion_datos?: string;
   mfa_habilitado: boolean;
   activo: boolean;
+  tiene_password?: boolean;
   roles: string[];
   permisos: string[];
 }
@@ -66,6 +71,9 @@ export interface UsuarioMe {
 export interface LoginLocalResponse {
   token?: string;
   mfaRequired?: boolean;
+  datosPendientes?: boolean;
+  elegirRol?: boolean;
+  esDocente?: boolean;
   tempToken?: string;
   usuario?: { id: number; nombre: string; correo: string };
 }
@@ -128,12 +136,21 @@ export const authApi = {
     });
   },
 
+  /** Cambiar contraseña con sesión iniciada */
+  cambiarPassword(passwordActual: string, passwordNueva: string): Promise<{ mensaje: string }> {
+    return apiFetch<{ mensaje: string }>('/auth/cambiar-password', {
+      method: 'POST',
+      body: JSON.stringify({ passwordActual, passwordNueva }),
+    });
+  },
+
   /** Registra una cuenta nueva con correo institucional y contraseña */
   registro(data: {
     nombre_completo: string;
     correo: string;
     password: string;
     cedula?: string;
+    aceptaDatos: boolean;
   }): Promise<LoginLocalResponse> {
     return apiFetch<LoginLocalResponse>('/auth/registro', {
       method: 'POST',
@@ -149,6 +166,40 @@ export const authApi = {
       body: JSON.stringify({ rol }),
     });
   },
+
+  /**
+   * Registra la aceptación explícita de la Política de Tratamiento de Datos
+   * Personales (Ley 1581 de 2012). Usa el tempToken temporal como credencial.
+   * Retorna el siguiente paso del flujo (mfa / elegir_rol / token final).
+   */
+  aceptarDatos(tempToken: string): Promise<LoginLocalResponse> {
+    return apiFetch<LoginLocalResponse>('/auth/aceptar-datos', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tempToken}` },
+    });
+  },
+};
+
+// ── Preferencias ─────────────────────────────────────────────────────────────
+export interface PreferenciasNotificacion {
+  notif_convocatoria_nueva: boolean;
+  notif_convocatoria_por_vencer: boolean;
+  notif_evaluacion_asignada: boolean;
+  notif_cambio_estado: boolean;
+  notif_resumen_semanal: boolean;
+  idioma: string;
+}
+
+export const preferenciasApi = {
+  getPreferencias(): Promise<PreferenciasNotificacion> {
+    return apiFetch<PreferenciasNotificacion>('/preferencias');
+  },
+  updatePreferencias(data: Partial<PreferenciasNotificacion>): Promise<{ mensaje: string }> {
+    return apiFetch<{ mensaje: string }>('/preferencias', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 };
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
@@ -163,6 +214,7 @@ export interface DashboardKpis {
   presupuestoAprobado: number;
   presupuestoEjecutado: number;
   ejecucionPct: number;
+  investigadoresActivos?: number;
 }
 
 export interface EvolucionItem {
@@ -176,6 +228,7 @@ export interface EjecucionItem {
   mes: string;
   aprobado: number;
   ejecutado: number;
+  presupuesto?: number;
 }
 
 export interface ProductoTipo {
@@ -682,3 +735,45 @@ export async function enviarInscripcionExterna(
   return data;
 }
 
+// ─── Documentos Institucionales ───────────────────────────────────────────────
+export interface FormatoInstitucional {
+  id: number;
+  codigo: string;
+  nombre: string;
+  categoria: string;
+  version: string;
+  archivo_nombre_original: string;
+  archivo_ruta: string;
+  fecha_actualizacion: string;
+  subido_por: number | null;
+}
+
+export const documentosApi = {
+  obtenerFormatos: (categoria?: string): Promise<FormatoInstitucional[]> => {
+    const query = categoria && categoria !== "Todos" ? `?categoria=${encodeURIComponent(categoria)}` : "";
+    return apiFetch(`/documentos/formatos${query}`);
+  },
+
+  subirFormato: async (formData: FormData): Promise<{ mensaje: string }> => {
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/documentos/formatos`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error al subir formato");
+    return data;
+  },
+
+  eliminarFormato: (id: number): Promise<{ mensaje: string }> => {
+    return apiFetch(`/documentos/formatos/${id}`, { method: "DELETE" });
+  },
+
+  getDescargarUrl: (id: number): string => {
+    return `${BASE}/documentos/formatos/${id}/descargar`;
+  }
+};

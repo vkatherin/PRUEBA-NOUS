@@ -29,6 +29,7 @@ import {
   TIPOS_INVESTIGACION,
   MAPA_TIPO_INVESTIGACION,
   type Convocatoria,
+  type UsuarioMe,
   type ConvocatoriaExterna,
   type AlertasConvocatorias,
   type Inscripcion,
@@ -272,23 +273,23 @@ function WizardModal({
             <div className="flex items-center gap-2">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${s.id < step
-                    ? "bg-[#1E6B3C] text-white"
+                    ? "bg-theme-primary text-white"
                     : s.id === step
-                      ? "bg-[#1E6B3C] text-white ring-4 ring-[#EBF5EF]"
-                      : "bg-[#F2F5F3] text-[#9BAD9F]"
+                      ? "bg-theme-primary text-white ring-4 ring-[#EBF5EF]"
+                      : "bg-theme-bg-main text-theme-text-muted"
                   }`}
               >
                 {s.id < step ? "✓" : s.id}
               </div>
               <span
-                className={`text-xs font-medium hidden sm:block ${s.id === step ? "text-[#1E6B3C]" : s.id < step ? "text-[#1A2B22]" : "text-[#9BAD9F]"
+                className={`text-xs font-medium hidden sm:block ${s.id === step ? "text-theme-primary" : s.id < step ? "text-theme-text-main" : "text-theme-text-muted"
                   }`}
               >
                 {s.label}
               </span>
             </div>
             {i < WIZARD_STEPS.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 ${s.id < step ? "bg-[#1E6B3C]" : "bg-[#DDE4DF]"}`} />
+              <div className={`flex-1 h-0.5 mx-2 ${s.id < step ? "bg-theme-primary" : "bg-[#DDE4DF]"}`} />
             )}
           </React.Fragment>
         ))}
@@ -371,15 +372,15 @@ function WizardModal({
                     onClick={() => toggleDirigida(opcion.value)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${
                       isSelected
-                        ? "bg-[#1E6B3C] text-white border-[#1E6B3C] shadow-sm"
+                        ? "bg-theme-primary text-white border-theme-primary shadow-sm"
                         : isDisabled
-                        ? "bg-[#F2F5F3] text-[#9BAD9F] border-[#DDE4DF] cursor-not-allowed opacity-60"
-                        : "bg-white text-[#1A2B22] border-[#DDE4DF] hover:border-[#1E6B3C] hover:bg-[#F2F5F3]"
+                        ? "bg-theme-bg-main text-theme-text-muted border-theme-border cursor-not-allowed opacity-60"
+                        : "bg-theme-bg-card text-theme-text-main border-theme-border hover:border-theme-primary hover:bg-theme-bg-main"
                     }`}
                   >
                     <span
                       className={`w-4 h-4 rounded flex items-center justify-center text-xs ${
-                        isSelected ? "bg-white text-[#1E6B3C] font-bold" : "border border-[#9BAD9F]"
+                        isSelected ? "bg-theme-bg-card text-theme-primary font-bold" : "border border-[#9BAD9F]"
                       }`}
                     >
                       {isSelected ? "✓" : ""}
@@ -431,9 +432,9 @@ function WizardModal({
               />
             </Field>
           </div>
-          <div className="p-4 rounded-xl bg-[#EBF5EF] border border-[#C8E6D2]">
-            <p className="text-sm font-medium text-[#1E6B3C] mb-1">Cronograma oficial</p>
-            <p className="text-xs text-[#637068]">
+          <div className="p-4 rounded-xl bg-theme-primary/10 border border-[#C8E6D2]">
+            <p className="text-sm font-medium text-theme-primary mb-1">Cronograma oficial</p>
+            <p className="text-xs text-theme-text-muted">
               Asegúrate de que la fecha de cierre sea posterior a la de apertura para permitir el registro de propuestas.
             </p>
           </div>
@@ -450,15 +451,15 @@ function WizardModal({
           )}
           <div className="space-y-3">
             {REQUISITOS_DEFAULT.map((req) => (
-              <label key={req} className="flex items-center gap-3 p-3 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE] cursor-pointer hover:bg-[#F2F5F3] transition-colors">
+              <label key={req} className="flex items-center gap-3 p-3 rounded-xl border border-theme-border bg-theme-bg-main cursor-pointer hover:bg-theme-bg-main transition-colors">
                 <input
                   type="checkbox"
                   checked={data.requisitos.includes(req)}
                   onChange={() => toggleRequisito(req)}
-                  className="accent-[#1E6B3C] w-4 h-4 cursor-pointer"
+                  className="accent-[var(--theme-primary)] w-4 h-4 cursor-pointer"
                 />
-                <span className="text-sm text-[#1A2B22]">{req}</span>
-                <span className="ml-auto text-xs text-[#637068] bg-[#F2F5F3] px-2 py-1 rounded-lg">Obligatorio</span>
+                <span className="text-sm text-theme-text-main">{req}</span>
+                <span className="ml-auto text-xs text-theme-text-muted bg-theme-bg-main px-2 py-1 rounded-lg">Obligatorio</span>
               </label>
             ))}
           </div>
@@ -468,19 +469,19 @@ function WizardModal({
       {step === 4 && (
         <div className="space-y-4">
           <SectionTitle>Publicación y Difusión</SectionTitle>
-          <div className="p-5 rounded-xl bg-[#FFF8E6] border border-[#FFE5A0]">
+          <div className="p-5 rounded-xl bg-theme-accent/10 border border-[#FFE5A0]">
             <div className="flex items-start gap-3">
               <span className="text-xl">⚠️</span>
               <div>
                 <p className="text-sm font-semibold text-[#D4930B] mb-1">Revisión antes de publicar</p>
-                <p className="text-xs text-[#637068]">
+                <p className="text-xs text-theme-text-muted">
                   Verifica que todos los datos sean correctos. La convocatoria se registrará en el sistema.
                 </p>
               </div>
             </div>
           </div>
           <div className="space-y-3">
-            <p className="text-sm font-medium text-[#1A2B22]">Resumen de la convocatoria</p>
+            <p className="text-sm font-medium text-theme-text-main">Resumen de la convocatoria</p>
             {[
               { label: "ID",                 value: "CON (Se asignará automáticamente al guardar)" },
               { label: "Nombre",             value: data.titulo || "—" },
@@ -491,27 +492,27 @@ function WizardModal({
               { label: "Descripción",        value: data.descripcion ? (data.descripcion.length > 70 ? data.descripcion.slice(0, 70) + "..." : data.descripcion) : "—" },
               { label: "Requisitos",         value: `${data.requisitos.length} documentos obligatorios` },
             ].map((item) => (
-              <div key={item.label} className="flex justify-between py-2 border-b border-[#F2F5F3]">
-                <span className="text-xs text-[#637068] font-medium">{item.label}</span>
-                <span className="text-xs font-semibold text-[#1A2B22] text-right max-w-[60%] truncate">{item.value}</span>
+              <div key={item.label} className="flex justify-between py-2 border-b border-theme-border">
+                <span className="text-xs text-theme-text-muted font-medium">{item.label}</span>
+                <span className="text-xs font-semibold text-theme-text-main text-right max-w-[60%] truncate">{item.value}</span>
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-[#EBF5EF]">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-theme-primary/10">
             <input
               type="checkbox"
-              className="accent-[#1E6B3C] w-4 h-4 cursor-pointer"
+              className="accent-[var(--theme-primary)] w-4 h-4 cursor-pointer"
               checked={data.notificar_investigadores}
               onChange={(e) => set("notificar_investigadores", e.target.checked)}
             />
-            <span className="text-xs text-[#637068]">
+            <span className="text-xs text-theme-text-muted">
               Notificar automáticamente por correo a todos los investigadores activos
             </span>
           </div>
         </div>
       )}
 
-      <div className="flex justify-between mt-6 pt-4 border-t border-[#DDE4DF]">
+      <div className="flex justify-between mt-6 pt-4 border-t border-theme-border">
         <Button variant="ghost" onClick={step === 1 ? handleClose : () => { setStep(step - 1); setGeneralError(""); }}>
           {step === 1 ? "Cancelar" : "← Anterior"}
         </Button>
@@ -748,15 +749,15 @@ function EditModal({
                   onClick={() => toggleDirigidaEdit(opcion.value)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${
                     isSelected
-                      ? "bg-[#1E6B3C] text-white border-[#1E6B3C] shadow-sm"
+                      ? "bg-theme-primary text-white border-theme-primary shadow-sm"
                       : isDisabled
-                      ? "bg-[#F2F5F3] text-[#9BAD9F] border-[#DDE4DF] cursor-not-allowed opacity-60"
-                      : "bg-white text-[#1A2B22] border-[#DDE4DF] hover:border-[#1E6B3C] hover:bg-[#F2F5F3]"
+                      ? "bg-theme-bg-main text-theme-text-muted border-theme-border cursor-not-allowed opacity-60"
+                      : "bg-theme-bg-card text-theme-text-main border-theme-border hover:border-theme-primary hover:bg-theme-bg-main"
                   }`}
                 >
                   <span
                     className={`w-4 h-4 rounded flex items-center justify-center text-xs ${
-                      isSelected ? "bg-white text-[#1E6B3C] font-bold" : "border border-[#9BAD9F]"
+                      isSelected ? "bg-theme-bg-card text-theme-primary font-bold" : "border border-[#9BAD9F]"
                     }`}
                   >
                     {isSelected ? "✓" : ""}
@@ -807,7 +808,7 @@ function EditModal({
         </div>
 
         <div>
-          <p className="text-sm font-medium text-[#1A2B22] mb-2">Requisitos requeridos *</p>
+          <p className="text-sm font-medium text-theme-text-main mb-2">Requisitos requeridos *</p>
           {fieldErrors.requisitos && (
             <p className="text-xs text-red-600 font-medium flex items-center gap-1 mb-2">
               <span>⚠</span> {fieldErrors.requisitos}
@@ -815,21 +816,21 @@ function EditModal({
           )}
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {REQUISITOS_DEFAULT.map((req) => (
-              <label key={req} className="flex items-center gap-3 p-2.5 rounded-lg border border-[#DDE4DF] bg-[#FAFFFE] cursor-pointer hover:bg-[#F2F5F3] text-sm">
+              <label key={req} className="flex items-center gap-3 p-2.5 rounded-lg border border-theme-border bg-theme-bg-main cursor-pointer hover:bg-theme-bg-main text-sm">
                 <input
                   type="checkbox"
                   checked={formData.requisitos.includes(req)}
                   onChange={() => toggleRequisito(req)}
-                  className="accent-[#1E6B3C] w-4 h-4 cursor-pointer"
+                  className="accent-[var(--theme-primary)] w-4 h-4 cursor-pointer"
                 />
-                <span className="text-xs text-[#1A2B22]">{req}</span>
+                <span className="text-xs text-theme-text-main">{req}</span>
               </label>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[#DDE4DF]">
+      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-theme-border">
         <Button variant="ghost" onClick={onClose} disabled={saving}>Cancelar</Button>
         <Button variant="primary" onClick={handleGuardar} disabled={saving}>
           {saving ? "Guardando..." : "💾 Guardar Cambios"}
@@ -894,9 +895,9 @@ function DetailModal({
   return (
     <Modal open={!!conv} onClose={onClose} title={`Detalles de Convocatoria ${codigoDisplay}`} size="xl">
       <div className="space-y-5">
-        <div className="p-4 rounded-xl bg-[#EBF5EF] border border-[#C8E6D2]">
+        <div className="p-4 rounded-xl bg-theme-primary/10 border border-[#C8E6D2]">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-xs font-mono font-bold text-[#1E6B3C] bg-white px-2 py-0.5 rounded border border-[#C8E6D2]">
+            <span className="text-xs font-mono font-bold text-theme-primary bg-theme-bg-card px-2 py-0.5 rounded border border-[#C8E6D2]">
               {codigoDisplay}
             </span>
             {conv.tipo_investigacion && (
@@ -910,40 +911,40 @@ function DetailModal({
               </span>
             )}
           </div>
-          <h3 className="text-base font-bold text-[#1A2B22]">{conv.titulo}</h3>
-          {conv.descripcion && <p className="text-sm text-[#637068] mt-1">{conv.descripcion}</p>}
+          <h3 className="text-base font-bold text-theme-text-main">{conv.titulo}</h3>
+          {conv.descripcion && <p className="text-sm text-theme-text-muted mt-1">{conv.descripcion}</p>}
         </div>
         <div className="grid grid-cols-2 gap-3">
           {rows.map((r) => (
-            <div key={r.label} className="flex flex-col gap-0.5 p-3 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
-              <span className="text-xs text-[#637068] font-medium">{r.label}</span>
-              <span className="text-sm font-semibold text-[#1A2B22]">{r.value}</span>
+            <div key={r.label} className="flex flex-col gap-0.5 p-3 rounded-xl border border-theme-border bg-theme-bg-main">
+              <span className="text-xs text-theme-text-muted font-medium">{r.label}</span>
+              <span className="text-sm font-semibold text-theme-text-main">{r.value}</span>
             </div>
           ))}
         </div>
         {conv.observaciones_comite && (
-          <div className="p-4 rounded-xl bg-[#FFF8E6] border border-[#FFE5A0]">
+          <div className="p-4 rounded-xl bg-theme-accent/10 border border-[#FFE5A0]">
             <p className="text-xs font-semibold text-[#D4930B] mb-1">Observaciones del comité</p>
-            <p className="text-sm text-[#1A2B22]">{conv.observaciones_comite}</p>
+            <p className="text-sm text-theme-text-main">{conv.observaciones_comite}</p>
           </div>
         )}
 
-        <div className="mt-4 pt-4 border-t border-[#DDE4DF] space-y-3">
+        <div className="mt-4 pt-4 border-t border-theme-border space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold text-[#1A2B22] flex items-center gap-2">
+            <h4 className="text-sm font-bold text-theme-text-main flex items-center gap-2">
               <span>📋</span> Postulaciones / Anteproyectos inscritos
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#EBF5EF] text-[#1E6B3C] font-semibold border border-[#C8E6D2]">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary font-semibold border border-[#C8E6D2]">
                 {inscripciones.length} / 50 cupos
               </span>
             </h4>
           </div>
 
           {loadingInscripciones ? (
-            <div className="p-4 text-center text-xs text-[#637068] bg-[#FAFFFE] rounded-xl border border-[#DDE4DF]">
+            <div className="p-4 text-center text-xs text-theme-text-muted bg-theme-bg-main rounded-xl border border-theme-border">
               Cargando inscripciones...
             </div>
           ) : inscripciones.length === 0 ? (
-            <div className="p-4 text-center text-xs text-[#637068] bg-[#FAFFFE] rounded-xl border border-[#DDE4DF]">
+            <div className="p-4 text-center text-xs text-theme-text-muted bg-theme-bg-main rounded-xl border border-theme-border">
               No hay postulaciones registradas aún en esta convocatoria.
             </div>
           ) : (
@@ -951,14 +952,14 @@ function DetailModal({
               {inscripciones.map((ins) => (
                 <div
                   key={ins.id}
-                  className="p-3.5 rounded-xl border border-[#DDE4DF] bg-white hover:border-[#C8E6D2] transition-colors space-y-2.5"
+                  className="p-3.5 rounded-xl border border-theme-border bg-theme-bg-card hover:border-[#C8E6D2] transition-colors space-y-2.5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-sm font-bold text-[#1A2B22]">
+                      <p className="text-sm font-bold text-theme-text-main">
                         👤 {ins.usuario_nombre || `Usuario #${ins.usuario_id}`}
                       </p>
-                      <p className="text-xs text-[#637068]">
+                      <p className="text-xs text-theme-text-muted">
                         {ins.usuario_correo} · Postulado el{" "}
                         {new Date(ins.fecha_inscripcion).toLocaleDateString("es-CO", {
                           day: "2-digit",
@@ -974,26 +975,26 @@ function DetailModal({
                     </span>
                   </div>
 
-                  <div className="text-xs space-y-1 bg-[#FAFFFE] p-2.5 rounded-lg border border-[#E8EEEA]">
+                  <div className="text-xs space-y-1 bg-theme-bg-main p-2.5 rounded-lg border border-[#E8EEEA]">
                     {ins.tipo_investigacion && (
                       <div>
-                        <strong className="text-[#1A2B22]">Tipo de investigación: </strong>
-                        <span className="text-[#1E6B3C] font-semibold">🔬 {ins.tipo_investigacion}</span>
+                        <strong className="text-theme-text-main">Tipo de investigación: </strong>
+                        <span className="text-theme-primary font-semibold">🔬 {ins.tipo_investigacion}</span>
                       </div>
                     )}
                     <div>
-                      <strong className="text-[#1A2B22]">Resumen: </strong>
+                      <strong className="text-theme-text-main">Resumen: </strong>
                       <span className="text-[#4B5563]">{ins.resumen_proyecto}</span>
                     </div>
                     <div>
-                      <strong className="text-[#1A2B22]">Justificación: </strong>
+                      <strong className="text-theme-text-main">Justificación: </strong>
                       <span className="text-[#4B5563]">{ins.justificacion}</span>
                     </div>
                   </div>
 
                   {ins.documentos_adjuntos && ins.documentos_adjuntos.length > 0 ? (
                     <div className="space-y-1.5 pt-1">
-                      <p className="text-[11px] font-bold text-[#1A2B22] uppercase tracking-wider">
+                      <p className="text-[11px] font-bold text-theme-text-main uppercase tracking-wider">
                         Documentos adjuntos ({ins.documentos_adjuntos.length})
                       </p>
                       <div className="space-y-1.5">
@@ -1003,10 +1004,10 @@ function DetailModal({
                             className="flex items-center justify-between p-2 rounded-lg bg-[#F7FAF8] border border-[#E1EAE4] text-xs"
                           >
                             <div className="flex flex-col truncate max-w-[260px]">
-                              <span className="font-semibold text-[#1A2B22] text-[11px] truncate">
+                              <span className="font-semibold text-theme-text-main text-[11px] truncate">
                                 📋 {doc.requisito_nombre}
                               </span>
-                              <span className="text-[11px] text-[#637068] truncate">
+                              <span className="text-[11px] text-theme-text-muted truncate">
                                 {doc.documento_nombre_original} ({(doc.documento_peso_bytes / 1024).toFixed(1)} KB)
                               </span>
                             </div>
@@ -1015,7 +1016,7 @@ function DetailModal({
                                 href={doc.documento_ruta}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#1E6B3C] bg-[#EBF5EF] hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-md transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-md transition-colors"
                                 title="Ver documento PDF"
                               >
                                 <span>📄</span> Ver
@@ -1023,7 +1024,7 @@ function DetailModal({
                               <a
                                 href={doc.documento_ruta}
                                 download={doc.documento_nombre_original}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-[#1E6B3C] hover:bg-[#17563A] border border-[#1E6B3C] rounded-md transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-md transition-colors"
                                 title="Descargar documento PDF"
                               >
                                 <span>⬇️</span> Descargar
@@ -1035,7 +1036,7 @@ function DetailModal({
                     </div>
                   ) : (
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] text-[#9BAD9F] truncate max-w-[200px]">
+                      <span className="text-[11px] text-theme-text-muted truncate max-w-[200px]">
                         📎 {ins.documento_nombre_original} ({(ins.documento_peso_bytes / 1024).toFixed(1)} KB)
                       </span>
                       <div className="flex items-center gap-2">
@@ -1043,7 +1044,7 @@ function DetailModal({
                           href={ins.documento_ruta}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1E6B3C] bg-[#EBF5EF] hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-colors"
                           title="Ver anteproyecto en nueva pestaña"
                         >
                           <span>📄</span> Ver
@@ -1051,7 +1052,7 @@ function DetailModal({
                         <a
                           href={ins.documento_ruta}
                           download={ins.documento_nombre_original || "anteproyecto.pdf"}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#1E6B3C] hover:bg-[#17563A] border border-[#1E6B3C] rounded-lg transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-lg transition-colors"
                           title="Descargar anteproyecto PDF"
                         >
                           <span>⬇️</span> Descargar
@@ -1065,7 +1066,7 @@ function DetailModal({
           )}
         </div>
       </div>
-      <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#DDE4DF]">
+      <div className="flex justify-between items-center mt-6 pt-4 border-t border-theme-border">
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={onClose}>Cerrar</Button>
           {onEliminar && (
@@ -1288,12 +1289,12 @@ function InscripcionModal({
   return (
     <Modal open={!!conv} onClose={saving ? () => { } : onClose} title="INSCRIPCIÓN A LA CONVOCATORIA" size="lg">
       <form onSubmit={handleEnviar} className="space-y-5">
-        <div className="p-3.5 rounded-xl bg-[#EBF5EF] border border-[#C8E6D2] flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-theme-primary/10 border border-[#C8E6D2] flex items-center justify-between">
           <div>
-            <span className="text-xs font-mono font-bold text-[#1E6B3C] bg-white px-2 py-0.5 rounded border border-[#C8E6D2] mr-2">
+            <span className="text-xs font-mono font-bold text-theme-primary bg-theme-bg-card px-2 py-0.5 rounded border border-[#C8E6D2] mr-2">
               {conv.codigo_con || conv.codigo || `CON${conv.id}`}
             </span>
-            <span className="text-sm font-bold text-[#1A2B22]">{conv.titulo}</span>
+            <span className="text-sm font-bold text-theme-text-main">{conv.titulo}</span>
           </div>
           <div className="flex items-center gap-2">
             {conv.tipo_investigacion && (
@@ -1323,16 +1324,16 @@ function InscripcionModal({
           </div>
         )}
 
-        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#F4F6F5] border border-[#DDE4DF] text-xs text-[#526056]">
+        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#F4F6F5] border border-theme-border text-xs text-[#526056]">
           <span className="text-sm shrink-0">ℹ️</span>
           <span>
             Los formatos de documentación los encuentras en el apartado de{" "}
-            <strong className="text-[#1A2B22] font-semibold">Gestión Documental</strong>.
+            <strong className="text-theme-text-main font-semibold">Gestión Documental</strong>.
           </span>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#1A2B22] mb-1.5">
+          <label className="block text-xs font-semibold text-theme-text-main mb-1.5">
             Tipo de investigación <span className="text-red-500">*</span>
           </label>
           <select
@@ -1348,9 +1349,9 @@ function InscripcionModal({
               }
               setGeneralError("");
             }}
-            className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition-colors bg-[#FAFFFE] ${fieldErrors.tipo_investigacion
+            className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition-colors bg-theme-bg-main ${fieldErrors.tipo_investigacion
                 ? "border-red-400 focus:border-red-500"
-                : "border-[#DDE4DF] focus:border-[#1E6B3C]"
+                : "border-theme-border focus:border-theme-primary"
               }`}
           >
             <option value="">Selecciona el tipo de investigación...</option>
@@ -1367,14 +1368,14 @@ function InscripcionModal({
 
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold text-[#1A2B22]">
+            <label className="block text-xs font-semibold text-theme-text-main">
               Requisitos y Documentación requerida <span className="text-red-500">*</span>
             </label>
-            <span className="text-xs text-[#637068] font-medium">
+            <span className="text-xs text-theme-text-muted font-medium">
               {Object.keys(archivosRequisitos).length} de {listaRequisitos.length} adjuntos
             </span>
           </div>
-          <p className="text-[11px] text-[#637068]">
+          <p className="text-[11px] text-theme-text-muted">
             Adjunta en formato PDF cada uno de los documentos requeridos para postularte:
           </p>
 
@@ -1398,20 +1399,20 @@ function InscripcionModal({
                       ? "bg-[#F3F9F5] border-[#A7D7B5]"
                       : errorReq
                         ? "bg-red-50/50 border-red-300"
-                        : "bg-[#FAFFFE] border-[#DDE4DF] hover:border-[#B8C8BD]"
+                        : "bg-theme-bg-main border-theme-border hover:border-[#B8C8BD]"
                     }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${archivo ? "bg-[#1E6B3C] text-white" : "bg-[#E2ECE5] text-[#1E6B3C]"
+                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${archivo ? "bg-theme-primary text-white" : "bg-[#E2ECE5] text-theme-primary"
                           }`}
                       >
                         {archivo ? "✓" : idx + 1}
                       </span>
-                      <span className="text-xs font-semibold text-[#1A2B22]">{req}</span>
+                      <span className="text-xs font-semibold text-theme-text-main">{req}</span>
                     </div>
-                    <span className="text-[11px] font-medium text-[#637068] bg-[#EEF2F0] px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[11px] font-medium text-theme-text-muted bg-[#EEF2F0] px-2 py-0.5 rounded-full shrink-0">
                       Obligatorio
                     </span>
                   </div>
@@ -1421,7 +1422,7 @@ function InscripcionModal({
                       <div className="flex items-center gap-1.5 text-[#16512D] font-medium truncate max-w-[280px]">
                         <span>📄</span>
                         <span className="truncate">{archivo.name}</span>
-                        <span className="text-[11px] text-[#637068] font-normal">
+                        <span className="text-[11px] text-theme-text-muted font-normal">
                           ({(archivo.size / 1024).toFixed(1)} KB)
                         </span>
                       </div>
@@ -1429,7 +1430,7 @@ function InscripcionModal({
                         <button
                           type="button"
                           onClick={() => handleSelectFileClick(req)}
-                          className="px-2.5 py-1 text-xs font-semibold text-[#1E6B3C] bg-white border border-[#C8D6CD] rounded-lg hover:bg-[#FAFFFE] shadow-sm transition-colors"
+                          className="px-2.5 py-1 text-xs font-semibold text-theme-primary bg-theme-bg-card border border-[#C8D6CD] rounded-lg hover:bg-theme-bg-main shadow-sm transition-colors"
                         >
                           Cambiar
                         </button>
@@ -1445,11 +1446,11 @@ function InscripcionModal({
                     </div>
                   ) : (
                     <div className="flex items-center justify-between pl-7 pt-2">
-                      <span className="text-[11px] text-[#9BAD9F]">Solo formato PDF (máx. 15MB)</span>
+                      <span className="text-[11px] text-theme-text-muted">Solo formato PDF (máx. 15MB)</span>
                       <button
                         type="button"
                         onClick={() => handleSelectFileClick(req)}
-                        className="px-3 py-1.5 text-xs font-semibold text-[#1E6B3C] bg-white border border-[#C8D6CD] rounded-lg hover:bg-[#EBF5EF] shadow-sm transition-colors inline-flex items-center gap-1.5"
+                        className="px-3 py-1.5 text-xs font-semibold text-theme-primary bg-theme-bg-card border border-[#C8D6CD] rounded-lg hover:bg-theme-primary/10 shadow-sm transition-colors inline-flex items-center gap-1.5"
                       >
                         <span>📎</span> Seleccionar archivo
                       </button>
@@ -1474,7 +1475,7 @@ function InscripcionModal({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#1A2B22] mb-1.5">
+          <label className="block text-xs font-semibold text-theme-text-main mb-1.5">
             Resumen del proyecto <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -1498,17 +1499,17 @@ function InscripcionModal({
             }}
             className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition-colors resize-none ${fieldErrors.resumen
                 ? "border-red-400 bg-red-50/20 focus:border-red-500"
-                : "border-[#DDE4DF] bg-[#FAFFFE] focus:border-[#1E6B3C]"
+                : "border-theme-border bg-theme-bg-main focus:border-theme-primary"
               }`}
           />
           <div className="flex justify-between items-center mt-1 text-xs">
             {fieldErrors.resumen ? (
               <span className="text-red-600 font-medium">{fieldErrors.resumen}</span>
             ) : (
-              <span className="text-[#9BAD9F]">Síntesis del objetivo y alcance</span>
+              <span className="text-theme-text-muted">Síntesis del objetivo y alcance</span>
             )}
             <span
-              className={`font-mono font-medium ${resumen.length >= 500 ? "text-amber-600 font-bold" : "text-[#637068]"
+              className={`font-mono font-medium ${resumen.length >= 500 ? "text-amber-600 font-bold" : "text-theme-text-muted"
                 }`}
             >
               {resumen.length} / 500 caracteres
@@ -1517,7 +1518,7 @@ function InscripcionModal({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#1A2B22] mb-1.5">
+          <label className="block text-xs font-semibold text-theme-text-main mb-1.5">
             Justificación <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -1541,17 +1542,17 @@ function InscripcionModal({
             }}
             className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition-colors resize-none ${fieldErrors.justificacion
                 ? "border-red-400 bg-red-50/20 focus:border-red-500"
-                : "border-[#DDE4DF] bg-[#FAFFFE] focus:border-[#1E6B3C]"
+                : "border-theme-border bg-theme-bg-main focus:border-theme-primary"
               }`}
           />
           <div className="flex justify-between items-center mt-1 text-xs">
             {fieldErrors.justificacion ? (
               <span className="text-red-600 font-medium">{fieldErrors.justificacion}</span>
             ) : (
-              <span className="text-[#9BAD9F]">Motivos e impacto esperado</span>
+              <span className="text-theme-text-muted">Motivos e impacto esperado</span>
             )}
             <span
-              className={`font-mono font-medium ${justificacion.length >= 500 ? "text-amber-600 font-bold" : "text-[#637068]"
+              className={`font-mono font-medium ${justificacion.length >= 500 ? "text-amber-600 font-bold" : "text-theme-text-muted"
                 }`}
             >
               {justificacion.length} / 500 caracteres
@@ -1559,7 +1560,7 @@ function InscripcionModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#DDE4DF]">
+        <div className="flex justify-end gap-3 pt-4 border-t border-theme-border">
           <Button
             type="button"
             variant="ghost"
@@ -1659,7 +1660,7 @@ function ExternaModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
         </Field>
         {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">{error}</div>}
       </div>
-      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[#DDE4DF]">
+      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-theme-border">
         <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
         <Button variant="primary" onClick={handleGuardar} disabled={saving}>
           {saving ? "Guardando..." : "Guardar Externa"}
@@ -1670,7 +1671,7 @@ function ExternaModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
 }
 
 // ─── Tab: Alertas (RF-CON-03) ─────────────────────────────────────────────────
-function AlertasTab() {
+function AlertasTab({ user }: { user?: UsuarioMe | null }) {
   const [alertas, setAlertas] = useState<AlertasConvocatorias | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -1684,7 +1685,7 @@ function AlertasTab() {
   const formatDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-  if (loading) return <div className="text-center py-12 text-[#637068]">Cargando alertas...</div>;
+  if (loading) return <div className="text-center py-12 text-theme-text-muted">Cargando alertas...</div>;
   if (!alertas) return <div className="text-center py-12 text-red-500">Error al cargar alertas.</div>;
 
   const { resumen, proximas_a_cerrar, proximas_a_abrir, vencidas_pendientes_cierre } = alertas;
@@ -1695,30 +1696,30 @@ function AlertasTab() {
         {[
           { label: "Próximas a cerrar", value: resumen.proximas_a_cerrar_total, icon: "⏳", color: "#D97706", bg: "#FFF8E6" },
           { label: "Críticas (≤3 días)", value: resumen.criticas_3_dias, icon: "🚨", color: "#DC2626", bg: "#FEF2F2" },
-          { label: "Próximas a abrir", value: resumen.proximas_a_abrir_total, icon: "📢", color: "#1E6B3C", bg: "#EBF5EF" },
+          { label: "Próximas a abrir", value: resumen.proximas_a_abrir_total, icon: "📢", color: "var(--theme-primary)", bg: "#EBF5EF" },
           { label: "Vencidas pendientes", value: resumen.vencidas_pendientes_cierre, icon: "⚠️", color: "#7C3AED", bg: "#EDE9FE" },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-4 flex items-center gap-3 border" style={{ backgroundColor: s.bg, borderColor: s.color + "40" }}>
             <span className="text-2xl">{s.icon}</span>
             <div>
               <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-xs text-[#637068]">{s.label}</p>
+              <p className="text-xs text-theme-text-muted">{s.label}</p>
             </div>
           </div>
         ))}
       </div>
 
       {proximas_a_cerrar.length > 0 && (
-        <div className="bg-white border border-[#DDE4DF] rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-[#FFF8E6] border-b border-[#FFE5A0]">
+        <div className="bg-theme-bg-card border border-theme-border rounded-xl overflow-hidden">
+          <div className="px-4 py-3 bg-theme-accent/10 border-b border-[#FFE5A0]">
             <p className="text-sm font-semibold text-[#D4930B]">⏳ Próximas a cerrar</p>
           </div>
           <div className="divide-y divide-[#F2F5F3]">
             {proximas_a_cerrar.map((c) => (
               <div key={c.id} className="px-4 py-3 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[#1A2B22]">{c.titulo}</p>
-                  <p className="text-xs text-[#637068]">Cierre: {formatDate(c.fecha_cierre)}</p>
+                  <p className="text-sm font-semibold text-theme-text-main">{c.titulo}</p>
+                  <p className="text-xs text-theme-text-muted">Cierre: {formatDate(c.fecha_cierre)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {(c as any).nivel_alerta === "critica" && (
@@ -1728,7 +1729,7 @@ function AlertasTab() {
                     <span className="text-xs font-bold text-white bg-orange-500 px-2 py-1 rounded-full">⚡ Urgente</span>
                   )}
                   {(c as any).dias_restantes != null && (
-                    <span className="text-xs text-[#637068]">{(c as any).dias_restantes} días</span>
+                    <span className="text-xs text-theme-text-muted">{(c as any).dias_restantes} días</span>
                   )}
                 </div>
               </div>
@@ -1738,18 +1739,18 @@ function AlertasTab() {
       )}
 
       {proximas_a_abrir.length > 0 && (
-        <div className="bg-white border border-[#DDE4DF] rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-[#EBF5EF] border-b border-[#C8E6D2]">
-            <p className="text-sm font-semibold text-[#1E6B3C]">📢 Próximas a abrir</p>
+        <div className="bg-theme-bg-card border border-theme-border rounded-xl overflow-hidden">
+          <div className="px-4 py-3 bg-theme-primary/10 border-b border-[#C8E6D2]">
+            <p className="text-sm font-semibold text-theme-primary">📢 Próximas a abrir</p>
           </div>
           <div className="divide-y divide-[#F2F5F3]">
             {proximas_a_abrir.map((c) => (
               <div key={c.id} className="px-4 py-3 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[#1A2B22]">{c.titulo}</p>
-                  <p className="text-xs text-[#637068]">Apertura: {formatDate(c.fecha_apertura)}</p>
+                  <p className="text-sm font-semibold text-theme-text-main">{c.titulo}</p>
+                  <p className="text-xs text-theme-text-muted">Apertura: {formatDate(c.fecha_apertura)}</p>
                 </div>
-                <span className="text-xs bg-[#EBF5EF] text-[#1E6B3C] font-medium px-2 py-1 rounded-full">Próximamente</span>
+                <span className="text-xs bg-theme-primary/10 text-theme-primary font-medium px-2 py-1 rounded-full">Próximamente</span>
               </div>
             ))}
           </div>
@@ -1757,7 +1758,7 @@ function AlertasTab() {
       )}
 
       {vencidas_pendientes_cierre.length > 0 && (
-        <div className="bg-white border border-[#DDE4DF] rounded-xl overflow-hidden">
+        <div className="bg-theme-bg-card border border-theme-border rounded-xl overflow-hidden">
           <div className="px-4 py-3 bg-[#FEF2F2] border-b border-red-200">
             <p className="text-sm font-semibold text-red-600">⚠️ Vencidas pendientes de cierre</p>
           </div>
@@ -1765,8 +1766,8 @@ function AlertasTab() {
             {vencidas_pendientes_cierre.map((c) => (
               <div key={c.id} className="px-4 py-3 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[#1A2B22]">{c.titulo}</p>
-                  <p className="text-xs text-[#637068]">Cerró: {formatDate(c.fecha_cierre)}</p>
+                  <p className="text-sm font-semibold text-theme-text-main">{c.titulo}</p>
+                  <p className="text-xs text-theme-text-muted">Cerró: {formatDate(c.fecha_cierre)}</p>
                 </div>
                 <span className="text-xs font-bold text-white bg-red-500 px-2 py-1 rounded-full">Vencida</span>
               </div>
@@ -1776,7 +1777,7 @@ function AlertasTab() {
       )}
 
       {proximas_a_cerrar.length === 0 && proximas_a_abrir.length === 0 && vencidas_pendientes_cierre.length === 0 && (
-        <div className="text-center py-12 text-[#637068] bg-white rounded-xl border border-[#DDE4DF]">
+        <div className="text-center py-12 text-theme-text-muted bg-theme-bg-card rounded-xl border border-theme-border">
           ✅ No hay alertas activas en este momento.
         </div>
       )}
@@ -1785,7 +1786,7 @@ function AlertasTab() {
 }
 
 // ─── Tab: Externas (RF-CON-04) ────────────────────────────────────────────────
-function ExternasTab() {
+function ExternasTab({ user }: { user?: UsuarioMe | null }) {
   const [externas, setExternas] = useState<ConvocatoriaExterna[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -1817,30 +1818,32 @@ function ExternasTab() {
   });
 
   const vigenciaBadge = (e: ConvocatoriaExterna) => {
-    if (e.estado_vigencia === "vigente") return <span className="text-xs font-bold text-white bg-[#1E6B3C] px-2 py-1 rounded-full">Vigente</span>;
-    if (e.estado_vigencia === "cerrada") return <span className="text-xs font-bold text-[#637068] bg-[#F2F5F3] px-2 py-1 rounded-full">Cerrada</span>;
-    return <span className="text-xs font-bold text-[#D97706] bg-[#FFF8E6] px-2 py-1 rounded-full">Sin fecha</span>;
+    if (e.estado_vigencia === "vigente") return <span className="text-xs font-bold text-white bg-theme-primary px-2 py-1 rounded-full">Vigente</span>;
+    if (e.estado_vigencia === "cerrada") return <span className="text-xs font-bold text-theme-text-muted bg-theme-bg-main px-2 py-1 rounded-full">Cerrada</span>;
+    return <span className="text-xs font-bold text-[#D97706] bg-theme-accent/10 px-2 py-1 rounded-full">Sin fecha</span>;
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="flex-1 relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9BAD9F] text-sm">🔍</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-text-muted text-sm">🔍</span>
           <input
             type="text"
             placeholder="Buscar por título, código o entidad..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-sm border border-[#DDE4DF] rounded-xl bg-[#FAFFFE] focus:outline-none focus:border-[#1E6B3C] transition-colors"
+            className="w-full pl-8 pr-3 py-2 text-sm border border-theme-border rounded-xl bg-theme-bg-main focus:outline-none focus:border-theme-primary transition-colors"
           />
         </div>
-        <Button variant="primary" onClick={() => setShowModal(true)}>+ Agregar Externa</Button>
+        {(user?.permisos?.includes('convocatorias.crear') || user?.roles?.includes('administrador')) && (
+          <Button variant="primary" onClick={() => setShowModal(true)}>+ Agregar Externa</Button>
+        )}
       </div>
 
-      {loading && <div className="text-center py-12 text-[#637068]">Cargando convocatorias externas...</div>}
+      {loading && <div className="text-center py-12 text-theme-text-muted">Cargando convocatorias externas...</div>}
       {!loading && filtradas.length === 0 && (
-        <div className="text-center py-12 text-[#637068] bg-[#FAFFFE] rounded-xl border border-[#DDE4DF]">
+        <div className="text-center py-12 text-theme-text-muted bg-theme-bg-main rounded-xl border border-theme-border">
           {externas.length === 0
             ? "No hay convocatorias externas registradas aún."
             : "No se encontraron resultados."}
@@ -1851,7 +1854,7 @@ function ExternasTab() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-xs font-mono font-bold text-[#1E6B3C] bg-[#EBF5EF] px-2.5 py-0.5 rounded-md border border-[#C8E6D2]">
+                <span className="text-xs font-mono font-bold text-theme-primary bg-theme-primary/10 px-2.5 py-0.5 rounded-md border border-[#C8E6D2]">
                   {e.codigo || e.codigo_ext || `EXT${e.id}`}
                 </span>
                 {e.tipo_investigacion && (
@@ -1866,25 +1869,27 @@ function ExternasTab() {
                   </span>
                 )}
               </div>
-              <h3 className="text-base font-bold text-[#1A2B22] mb-1">{e.titulo}</h3>
-              {e.descripcion && <p className="text-xs text-[#637068] mb-2 line-clamp-2">{e.descripcion}</p>}
-              <div className="flex flex-wrap gap-4 text-xs text-[#637068]">
-                {e.fecha_apertura && <span>📅 Apertura: <strong className="text-[#1A2B22]">{formatDate(e.fecha_apertura)}</strong></span>}
-                {e.fecha_cierre && <span>🔒 Cierre: <strong className="text-[#1A2B22]">{formatDate(e.fecha_cierre)}</strong></span>}
+              <h3 className="text-base font-bold text-theme-text-main mb-1">{e.titulo}</h3>
+              {e.descripcion && <p className="text-xs text-theme-text-muted mb-2 line-clamp-2">{e.descripcion}</p>}
+              <div className="flex flex-wrap gap-4 text-xs text-theme-text-muted">
+                {e.fecha_apertura && <span>📅 Apertura: <strong className="text-theme-text-main">{formatDate(e.fecha_apertura)}</strong></span>}
+                {e.fecha_cierre && <span>🔒 Cierre: <strong className="text-theme-text-main">{formatDate(e.fecha_cierre)}</strong></span>}
                 {e.dias_restantes != null && e.dias_restantes > 0 && (
                   <span>⏱️ <strong className="text-[#D97706]">{e.dias_restantes} días restantes</strong></span>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                onClick={() => setDeletingExterna(e)}
-              >
-                🗑️ Eliminar
-              </Button>
+              {(user?.permisos?.includes('convocatorias.eliminar') || user?.roles?.includes('administrador')) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                  onClick={() => setDeletingExterna(e)}
+                >
+                  🗑️ Eliminar
+                </Button>
+              )}
             </div>
           </div>
         </Card>
@@ -1930,11 +1935,11 @@ function FilaIntegrante({
   eliminando?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-3 p-3 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+    <div className="flex items-start gap-3 p-3 rounded-xl border border-theme-border bg-theme-bg-main">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#1A2B22] truncate">{integrante.nombre_completo}</p>
-        <p className="text-xs text-[#637068]">{integrante.rol} · {integrante.tipo_documento} {integrante.numero_documento}</p>
-        <p className="text-xs text-[#637068]">{integrante.email}{integrante.telefono ? ` · ${integrante.telefono}` : ""}</p>
+        <p className="text-sm font-semibold text-theme-text-main truncate">{integrante.nombre_completo}</p>
+        <p className="text-xs text-theme-text-muted">{integrante.rol} · {integrante.tipo_documento} {integrante.numero_documento}</p>
+        <p className="text-xs text-theme-text-muted">{integrante.email}{integrante.telefono ? ` · ${integrante.telefono}` : ""}</p>
       </div>
       <button
         onClick={() => onEliminar(integrante.id)}
@@ -1974,18 +1979,18 @@ function StepperHeader({
               title={clickable ? `Ir al paso ${paso.id}: ${paso.label}` : undefined}
             >
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                completado ? "bg-[#1E6B3C] border-[#1E6B3C] text-white"
-                  : activo ? "border-[#1E6B3C] text-[#1E6B3C] bg-[#EBF5EF]"
-                  : "border-[#DDE4DF] text-[#9BAD9F] bg-[#F2F5F3]"
+                completado ? "bg-theme-primary border-theme-primary text-white"
+                  : activo ? "border-theme-primary text-theme-primary bg-theme-primary/10"
+                  : "border-theme-border text-theme-text-muted bg-theme-bg-main"
               }`}>
                 {completado ? "✓" : paso.id}
               </div>
               <span className={`text-xs font-medium hidden sm:block whitespace-nowrap ${
-                completado ? "text-[#1E6B3C]" : activo ? "text-[#1E6B3C] font-semibold" : "text-[#9BAD9F]"
+                completado ? "text-theme-primary" : activo ? "text-theme-primary font-semibold" : "text-theme-text-muted"
               }`}>{paso.label}</span>
             </div>
             {i < PASOS_SEMILLERO_EXTERNO.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1.5 min-w-[12px] ${completado ? "bg-[#1E6B3C]" : "bg-[#DDE4DF]"}`} />
+              <div className={`flex-1 h-0.5 mx-1.5 min-w-[12px] ${completado ? "bg-theme-primary" : "bg-[#DDE4DF]"}`} />
             )}
           </React.Fragment>
         );
@@ -2320,11 +2325,11 @@ function SemilleroExternoModal({
 
   // ── Banner convocatoria ───────────────────────────────────────────────────
   const Banner = () => (
-    <div className="p-3 rounded-xl bg-[#EBF5EF] border border-[#C8E6D2] flex items-center gap-2 mb-4">
-      <span className="text-xs font-mono font-bold text-[#1E6B3C] bg-white px-2 py-0.5 rounded border border-[#C8E6D2]">
+    <div className="p-3 rounded-xl bg-theme-primary/10 border border-[#C8E6D2] flex items-center gap-2 mb-4">
+      <span className="text-xs font-mono font-bold text-theme-primary bg-theme-bg-card px-2 py-0.5 rounded border border-[#C8E6D2]">
         {codigoDisplay}
       </span>
-      <span className="text-sm font-semibold text-[#1A2B22] truncate">{conv.titulo}</span>
+      <span className="text-sm font-semibold text-theme-text-main truncate">{conv.titulo}</span>
       <span className="ml-auto text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium border border-blue-200 flex-shrink-0">
         Externa
       </span>
@@ -2343,7 +2348,7 @@ function SemilleroExternoModal({
     nextLabel?: string;
     nextDisabled?: boolean;
   }) => (
-    <div className="flex justify-between pt-4 border-t border-[#DDE4DF] mt-4">
+    <div className="flex justify-between pt-4 border-t border-theme-border mt-4">
       <div className="flex gap-2">
         <Button variant="ghost" onClick={onClose} disabled={saving}>
           Cancelar
@@ -2397,9 +2402,9 @@ function SemilleroExternoModal({
             />
           </Field>
           <Field label="Procedencia" hint="Establecido automáticamente para convocatorias externas">
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#DDE4DF] bg-[#F2F5F3] text-sm cursor-not-allowed select-none">
-              <span className="text-[#1A2B22] font-medium">{PROCEDENCIA_FIJA}</span>
-              <span className="ml-auto text-[#9BAD9F]">🔒</span>
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-theme-border bg-theme-bg-main text-sm cursor-not-allowed select-none">
+              <span className="text-theme-text-main font-medium">{PROCEDENCIA_FIJA}</span>
+              <span className="ml-auto text-theme-text-muted">🔒</span>
             </div>
           </Field>
           <Field label="Institución de procedencia" required error={errores1.institucion_procedencia}>
@@ -2456,7 +2461,7 @@ function SemilleroExternoModal({
           </div>
 
           {integrantes.length === 0 && !mostrarFormIntegrante && (
-            <div className="text-center py-8 text-[#637068] bg-[#FAFFFE] rounded-xl border border-dashed border-[#DDE4DF]">
+            <div className="text-center py-8 text-theme-text-muted bg-theme-bg-main rounded-xl border border-dashed border-theme-border">
               <p className="text-sm">No hay integrantes agregados.</p>
               <p className="text-xs mt-1">Debes agregar al menos uno para continuar.</p>
             </div>
@@ -2474,8 +2479,8 @@ function SemilleroExternoModal({
           </div>
 
           {mostrarFormIntegrante && (
-            <div className="p-4 rounded-xl border border-[#C8E6D2] bg-[#EBF5EF] space-y-3">
-              <p className="text-sm font-semibold text-[#1A2B22]">Nuevo integrante</p>
+            <div className="p-4 rounded-xl border border-[#C8E6D2] bg-theme-primary/10 space-y-3">
+              <p className="text-sm font-semibold text-theme-text-main">Nuevo integrante</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Nombre completo" required error={erroresIntg.nombre_completo}>
                   <Input
@@ -2763,8 +2768,8 @@ function SemilleroExternoModal({
           {inscripcionEnviada ? (
             <div className="text-center py-8 space-y-4">
               <div className="text-5xl">🎉</div>
-              <h3 className="text-xl font-bold text-[#1E6B3C]">¡Inscripción enviada exitosamente!</h3>
-              <p className="text-sm text-[#637068] max-w-md mx-auto">
+              <h3 className="text-xl font-bold text-theme-primary">¡Inscripción enviada exitosamente!</h3>
+              <p className="text-sm text-theme-text-muted max-w-md mx-auto">
                 Tu solicitud de inscripción a la convocatoria externa ha sido registrada con toda la información
                 del semillero, integrantes y contenido.
               </p>
@@ -2780,114 +2785,114 @@ function SemilleroExternoModal({
 
               <div className="space-y-3 text-sm">
                 {/* Paso 1 summary */}
-                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                <div className="p-3.5 rounded-xl border border-theme-border bg-theme-bg-main">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-[#1E6B3C]">✓ Paso 1 — Semillero</p>
+                    <p className="text-xs font-bold text-theme-primary">✓ Paso 1 — Semillero</p>
                     <button
                       type="button"
                       onClick={() => setPaso(1)}
-                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                      className="text-xs text-theme-primary font-semibold hover:underline"
                     >
                       Editar
                     </button>
                   </div>
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-[#637068]">Tipo de institución:</span>
-                      <strong className="text-[#1A2B22]">{tipoInstitucion || "—"}</strong>
+                      <span className="text-theme-text-muted">Tipo de institución:</span>
+                      <strong className="text-theme-text-main">{tipoInstitucion || "—"}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#637068]">Procedencia:</span>
-                      <strong className="text-[#1A2B22]">{PROCEDENCIA_FIJA}</strong>
+                      <span className="text-theme-text-muted">Procedencia:</span>
+                      <strong className="text-theme-text-main">{PROCEDENCIA_FIJA}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#637068]">Institución:</span>
-                      <strong className="text-[#1A2B22]">{institucionProcedencia || "—"}</strong>
+                      <span className="text-theme-text-muted">Institución:</span>
+                      <strong className="text-theme-text-main">{institucionProcedencia || "—"}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#637068]">Semillero:</span>
-                      <strong className="text-[#1A2B22]">{semilleroNombre || "—"}</strong>
+                      <span className="text-theme-text-muted">Semillero:</span>
+                      <strong className="text-theme-text-main">{semilleroNombre || "—"}</strong>
                     </div>
                   </div>
                 </div>
 
                 {/* Paso 2 summary */}
-                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                <div className="p-3.5 rounded-xl border border-theme-border bg-theme-bg-main">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-[#1E6B3C]">
+                    <p className="text-xs font-bold text-theme-primary">
                       ✓ Paso 2 — Integrantes ({integrantes.length})
                     </p>
                     <button
                       type="button"
                       onClick={() => setPaso(2)}
-                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                      className="text-xs text-theme-primary font-semibold hover:underline"
                     >
                       Editar
                     </button>
                   </div>
                   <div className="space-y-1 text-xs">
                     {integrantes.map((intg, idx) => (
-                      <div key={intg.id || idx} className="flex justify-between py-0.5 border-b border-[#F2F5F3] last:border-none">
+                      <div key={intg.id || idx} className="flex justify-between py-0.5 border-b border-theme-border last:border-none">
                         <div>
-                          <span className="font-semibold text-[#1A2B22]">{intg.nombre_completo}</span>
-                          <span className="text-[#637068] ml-2">({intg.rol})</span>
+                          <span className="font-semibold text-theme-text-main">{intg.nombre_completo}</span>
+                          <span className="text-theme-text-muted ml-2">({intg.rol})</span>
                         </div>
-                        <span className="text-[#637068]">{intg.email}</span>
+                        <span className="text-theme-text-muted">{intg.email}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Paso 3 summary */}
-                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                <div className="p-3.5 rounded-xl border border-theme-border bg-theme-bg-main">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-[#1E6B3C]">✓ Paso 3 — Información general</p>
+                    <p className="text-xs font-bold text-theme-primary">✓ Paso 3 — Información general</p>
                     <button
                       type="button"
                       onClick={() => setPaso(3)}
-                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                      className="text-xs text-theme-primary font-semibold hover:underline"
                     >
                       Editar
                     </button>
                   </div>
                   <div className="space-y-1 text-xs">
                     <div>
-                      <span className="text-[#637068]">Título: </span>
-                      <strong className="text-[#1A2B22]">{tituloTrabajo}</strong>
+                      <span className="text-theme-text-muted">Título: </span>
+                      <strong className="text-theme-text-main">{tituloTrabajo}</strong>
                     </div>
                     {lineaInv && (
                       <div>
-                        <span className="text-[#637068]">Línea: </span>
-                        <span className="text-[#1A2B22] font-medium">{lineaInv}</span>
+                        <span className="text-theme-text-muted">Línea: </span>
+                        <span className="text-theme-text-main font-medium">{lineaInv}</span>
                       </div>
                     )}
                     <div>
-                      <span className="text-[#637068]">Palabras clave: </span>
-                      <span className="text-[#1A2B22]">{palabrasClave}</span>
+                      <span className="text-theme-text-muted">Palabras clave: </span>
+                      <span className="text-theme-text-main">{palabrasClave}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Paso 4 summary */}
-                <div className="p-3.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE]">
+                <div className="p-3.5 rounded-xl border border-theme-border bg-theme-bg-main">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-[#1E6B3C]">✓ Paso 4 — Contenido del trabajo</p>
+                    <p className="text-xs font-bold text-theme-primary">✓ Paso 4 — Contenido del trabajo</p>
                     <button
                       type="button"
                       onClick={() => setPaso(4)}
-                      className="text-xs text-[#1E6B3C] font-semibold hover:underline"
+                      className="text-xs text-theme-primary font-semibold hover:underline"
                     >
                       Editar
                     </button>
                   </div>
                   <div className="space-y-1 text-xs">
                     <div>
-                      <span className="text-[#637068]">Planteamiento: </span>
-                      <span className="text-[#1A2B22] line-clamp-2">{planteamiento}</span>
+                      <span className="text-theme-text-muted">Planteamiento: </span>
+                      <span className="text-theme-text-main line-clamp-2">{planteamiento}</span>
                     </div>
                     <div>
-                      <span className="text-[#637068]">Objetivo general: </span>
-                      <span className="text-[#1A2B22] line-clamp-2">{objetivoGral}</span>
+                      <span className="text-theme-text-muted">Objetivo general: </span>
+                      <span className="text-theme-text-main line-clamp-2">{objetivoGral}</span>
                     </div>
                   </div>
                 </div>
@@ -2896,8 +2901,8 @@ function SemilleroExternoModal({
               {/* Documento adjunto opcional */}
               <Field label="Documento adjunto (opcional)" hint="PDF con propuesta o aval institucional">
                 <div className="flex items-center gap-3">
-                  <label className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#DDE4DF] bg-[#FAFFFE] cursor-pointer hover:bg-[#EBF5EF] transition-colors">
-                    <span className="text-sm text-[#637068]">{docFinal ? docFinal.name : "Seleccionar PDF..."}</span>
+                  <label className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-theme-border bg-theme-bg-main cursor-pointer hover:bg-theme-primary/10 transition-colors">
+                    <span className="text-sm text-theme-text-muted">{docFinal ? docFinal.name : "Seleccionar PDF..."}</span>
                     <input
                       type="file"
                       accept=".pdf,application/pdf"
@@ -2920,8 +2925,8 @@ function SemilleroExternoModal({
                 </div>
               </Field>
 
-              <div className="p-3 rounded-xl bg-[#EBF5EF] border border-[#C8E6D2]">
-                <p className="text-xs text-[#1E6B3C] font-medium">
+              <div className="p-3 rounded-xl bg-theme-primary/10 border border-[#C8E6D2]">
+                <p className="text-xs text-theme-primary font-medium">
                   Al presionar "Guardar y Enviar inscripción" se registrará formalmente toda la información ingresada.
                 </p>
               </div>
@@ -2986,17 +2991,17 @@ function EliminarConvocatoriaModal({
           </div>
         </div>
 
-        <div className="p-3.5 bg-[#FAFFFE] border border-[#DDE4DF] rounded-xl text-xs space-y-1.5">
+        <div className="p-3.5 bg-theme-bg-main border border-theme-border rounded-xl text-xs space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold text-[#1E6B3C] bg-[#EBF5EF] px-2 py-0.5 rounded border border-[#C8E6D2]">
+            <span className="font-mono font-bold text-theme-primary bg-theme-primary/10 px-2 py-0.5 rounded border border-[#C8E6D2]">
               {codigo}
             </span>
-            <span className="font-semibold text-[#1A2B22] text-sm truncate">{conv.titulo}</span>
+            <span className="font-semibold text-theme-text-main text-sm truncate">{conv.titulo}</span>
           </div>
           {conv.descripcion && (
-            <p className="text-[#637068] line-clamp-2">{conv.descripcion}</p>
+            <p className="text-theme-text-muted line-clamp-2">{conv.descripcion}</p>
           )}
-          <div className="flex flex-wrap gap-3 text-[#637068] pt-1">
+          <div className="flex flex-wrap gap-3 text-theme-text-muted pt-1">
             <span>📅 Apertura: <strong>{conv.fecha_apertura ? new Date(conv.fecha_apertura).toLocaleDateString("es-CO") : "—"}</strong></span>
             <span>🔒 Cierre: <strong>{conv.fecha_cierre ? new Date(conv.fecha_cierre).toLocaleDateString("es-CO") : "—"}</strong></span>
             <span>🏷️ Estado: <strong className="capitalize">{conv.estado}</strong></span>
@@ -3009,7 +3014,7 @@ function EliminarConvocatoriaModal({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-[#DDE4DF]">
+        <div className="flex justify-end gap-2 pt-2 border-t border-theme-border">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={eliminando}>
             Cancelar
           </Button>
@@ -3072,15 +3077,15 @@ function EliminarExternaModal({
           </div>
         </div>
 
-        <div className="p-3.5 bg-[#FAFFFE] border border-[#DDE4DF] rounded-xl text-xs space-y-1.5">
+        <div className="p-3.5 bg-theme-bg-main border border-theme-border rounded-xl text-xs space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold text-[#1E6B3C] bg-[#EBF5EF] px-2 py-0.5 rounded border border-[#C8E6D2]">
+            <span className="font-mono font-bold text-theme-primary bg-theme-primary/10 px-2 py-0.5 rounded border border-[#C8E6D2]">
               {codigo}
             </span>
-            <span className="font-semibold text-[#1A2B22] text-sm truncate">{conv.titulo}</span>
+            <span className="font-semibold text-theme-text-main text-sm truncate">{conv.titulo}</span>
           </div>
           {conv.entidad_externa && (
-            <p className="text-[#637068]">🏛️ Entidad: <strong className="text-[#1A2B22]">{conv.entidad_externa}</strong></p>
+            <p className="text-theme-text-muted">🏛️ Entidad: <strong className="text-theme-text-main">{conv.entidad_externa}</strong></p>
           )}
         </div>
 
@@ -3090,7 +3095,7 @@ function EliminarExternaModal({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-[#DDE4DF]">
+        <div className="flex justify-end gap-2 pt-2 border-t border-theme-border">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={eliminando}>
             Cancelar
           </Button>
@@ -3173,31 +3178,33 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
         subtitle="Gestión de convocatorias internas y externas de investigación"
         breadcrumb={["NOUS", "Convocatorias"]}
         actions={
-          <Button variant="primary" onClick={() => setShowWizard(true)}>
-            + Nueva Convocatoria
-          </Button>
+          (user?.permisos?.includes('convocatorias.crear') || user?.roles?.includes('administrador')) && (
+            <Button variant="primary" onClick={() => setShowWizard(true)}>
+              + Nueva Convocatoria
+            </Button>
+          )
         }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Abiertas", value: convocatorias.filter(c => c.estado === "activa" || c.estado === "publicada").length, color: "#1E6B3C" },
+          { label: "Abiertas", value: convocatorias.filter(c => c.estado === "activa" || c.estado === "publicada").length, color: "var(--theme-primary)" },
           { label: "En evaluación", value: convocatorias.filter(c => c.estado === "evaluacion").length, color: "#D97706" },
           { label: "Cerradas", value: convocatorias.filter(c => c.estado === "cerrada").length, color: "#9CA3AF" },
           { label: "Total", value: convocatorias.length, color: "#2563EB" },
         ].map((s) => (
-          <div key={s.label} className="bg-white border border-[#DDE4DF] rounded-xl p-4 flex items-center gap-3">
+          <div key={s.label} className="bg-theme-bg-card border border-theme-border rounded-xl p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
               style={{ backgroundColor: s.color + "15", color: s.color }}>
               {s.value}
             </div>
-            <p className="text-sm text-[#637068] font-medium">{s.label}</p>
+            <p className="text-sm text-theme-text-muted font-medium">{s.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white border border-[#DDE4DF] rounded-xl overflow-hidden">
-        <div className="flex border-b border-[#DDE4DF] overflow-x-auto">
+      <div className="bg-theme-bg-card border border-theme-border rounded-xl overflow-hidden">
+        <div className="flex border-b border-theme-border overflow-x-auto">
           {([
             { id: "todas" as Tab, label: "Todas", icon: "📋" },
             { id: "internas" as Tab, label: "Internas", icon: "🏫" },
@@ -3209,8 +3216,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${activeTab === tab.id
-                  ? "border-[#1E6B3C] text-[#1E6B3C] bg-[#EBF5EF]"
-                  : "border-transparent text-[#637068] hover:text-[#1A2B22] hover:bg-[#F2F5F3]"
+                  ? "border-theme-primary text-theme-primary bg-theme-primary/10"
+                  : "border-transparent text-theme-text-muted hover:text-theme-text-main hover:bg-theme-bg-main"
                 }`}
             >
               <span>{tab.icon}</span>
@@ -3224,18 +3231,18 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
 
         <div className="p-4">
           {activeTab === "alertas" ? (
-            <AlertasTab />
+            <AlertasTab user={user} />
           ) : (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-3 items-center">
                 <div className="flex-1 min-w-[200px] relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9BAD9F] text-sm">🔍</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-text-muted text-sm">🔍</span>
                   <input
                     type="text"
                     placeholder="Buscar convocatoria por nombre, tipo o código CON..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 text-sm border border-[#DDE4DF] rounded-xl bg-[#FAFFFE] focus:outline-none focus:border-[#1E6B3C] transition-colors"
+                    className="w-full pl-8 pr-3 py-2 text-sm border border-theme-border rounded-xl bg-theme-bg-main focus:outline-none focus:border-theme-primary transition-colors"
                   />
                 </div>
                 <div className="flex gap-1 flex-wrap">
@@ -3250,8 +3257,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                       key={opt.value}
                       onClick={() => setFilterEstado(opt.value)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterEstado === opt.value
-                          ? "bg-[#1E6B3C] text-white"
-                          : "bg-[#F2F5F3] text-[#637068] hover:bg-[#DDE4DF]"
+                          ? "bg-theme-primary text-white"
+                          : "bg-theme-bg-main text-theme-text-muted hover:bg-[#DDE4DF]"
                         }`}
                     >
                       {opt.label}
@@ -3269,10 +3276,10 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
               </div>
 
               {loading && (
-                <div className="text-center py-12 text-[#637068]">Cargando convocatorias...</div>
+                <div className="text-center py-12 text-theme-text-muted">Cargando convocatorias...</div>
               )}
               {!loading && filtradas.length === 0 && (
-                <div className="text-center py-12 text-[#637068] bg-[#FAFFFE] rounded-xl border border-[#DDE4DF]">
+                <div className="text-center py-12 text-theme-text-muted bg-theme-bg-main rounded-xl border border-theme-border">
                   {convocatorias.length === 0
                     ? "No hay convocatorias registradas aún."
                     : "No hay convocatorias que coincidan con los filtros aplicados."}
@@ -3283,12 +3290,12 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-xs font-mono font-bold text-[#1E6B3C] bg-[#EBF5EF] px-2.5 py-0.5 rounded-md border border-[#C8E6D2]">
+                        <span className="text-xs font-mono font-bold text-theme-primary bg-theme-primary/10 px-2.5 py-0.5 rounded-md border border-[#C8E6D2]">
                           {c.codigo_con || c.codigo || `CON${c.id}`}
                         </span>
                         <Badge variant={estadoBadge(c.estado)} />
                         {c.tipo && (
-                          <span className="text-xs bg-[#EBF5EF] text-[#1E6B3C] px-2.5 py-0.5 rounded-full font-medium">
+                          <span className="text-xs bg-theme-primary/10 text-theme-primary px-2.5 py-0.5 rounded-full font-medium">
                             {c.tipo}
                           </span>
                         )}
@@ -3303,35 +3310,39 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-base font-bold text-[#1A2B22] mb-1">{c.titulo}</h3>
+                      <h3 className="text-base font-bold text-theme-text-main mb-1">{c.titulo}</h3>
                       {c.descripcion && (
-                        <p className="text-xs text-[#637068] mb-2 line-clamp-2 max-w-2xl">{c.descripcion}</p>
+                        <p className="text-xs text-theme-text-muted mb-2 line-clamp-2 max-w-2xl">{c.descripcion}</p>
                       )}
-                      <div className="flex flex-wrap gap-4 text-xs text-[#637068]">
-                        <span>📅 Apertura: <strong className="text-[#1A2B22]">{formatDate(c.fecha_apertura)}</strong></span>
-                        <span>🔒 Cierre: <strong className="text-[#1A2B22]">{formatDate(c.fecha_cierre)}</strong></span>
+                      <div className="flex flex-wrap gap-4 text-xs text-theme-text-muted">
+                        <span>📅 Apertura: <strong className="text-theme-text-main">{formatDate(c.fecha_apertura)}</strong></span>
+                        <span>🔒 Cierre: <strong className="text-theme-text-main">{formatDate(c.fecha_cierre)}</strong></span>
                         {c.creado_por_nombre && (
-                          <span>👤 Creado por: <strong className="text-[#1A2B22]">{c.creado_por_nombre}</strong></span>
+                          <span>👤 Creado por: <strong className="text-theme-text-main">{c.creado_por_nombre}</strong></span>
                         )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <div className="flex gap-2 flex-wrap justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingConv(c)}
-                        >
-                          ✏️ Editar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                          onClick={() => setDeletingConv(c)}
-                        >
-                          🗑️ Eliminar
-                        </Button>
+                        {(user?.permisos?.includes('convocatorias.editar') || user?.roles?.includes('administrador')) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingConv(c)}
+                          >
+                            ✏️ Editar
+                          </Button>
+                        )}
+                        {(user?.permisos?.includes('convocatorias.eliminar') || user?.roles?.includes('administrador')) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                            onClick={() => setDeletingConv(c)}
+                          >
+                            🗑️ Eliminar
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"

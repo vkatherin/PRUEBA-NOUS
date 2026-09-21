@@ -43,6 +43,17 @@ exports.verificarAutenticacion = (req, res, next) => {
       }
     }
 
+    // Bloquear tokens temporales de consentimiento de datos en rutas que no sean /aceptar-datos
+    if (payload.datosPendientes) {
+      const ruta = req.path;
+      if (!ruta.endsWith('/aceptar-datos')) {
+        return res.status(403).json({
+          error: 'Autorización de tratamiento de datos pendiente',
+          datosPendientes: true,
+        });
+      }
+    }
+
     req.usuario = { id: payload.id, correo: payload.correo };
     next();
   } catch (err) {

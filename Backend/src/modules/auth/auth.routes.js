@@ -63,8 +63,14 @@ router.post('/recuperar-password', ctrl.solicitarReset);
 // POST /api/auth/reset-password — aplica el nuevo password con el token
 router.post('/reset-password', ctrl.resetPassword);
 
+// POST /api/auth/cambiar-password — el usuario autenticado cambia su contraseña
+router.post('/cambiar-password', verificarAutenticacion, ctrl.cambiarPassword);
+
 // POST /api/auth/seleccionar-rol — el usuario elige su rol tras Google OAuth
 router.post('/seleccionar-rol', verificarAutenticacion, ctrl.seleccionarRol);
+
+// POST /api/auth/aceptar-datos — registra la aceptación de la Política de Datos (Ley 1581 de 2012)
+router.post('/aceptar-datos', verificarAutenticacion, ctrl.aceptarDatos);
 
 // ── RF-AU-03 — Registro local ─────────────────────────────────────────────────
 

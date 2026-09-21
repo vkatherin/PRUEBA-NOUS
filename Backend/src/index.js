@@ -13,6 +13,8 @@ const convocatoriasRoutes = require('./modules/convocatorias/convocatorias.route
 const semillerosRoutes = require('./modules/semilleros/semilleros.routes');
 const evaluacionRoutes = require('./modules/evaluacion/evaluacion.routes');
 const usuariosRoutes = require('./modules/usuarios/usuarios.routes');
+const preferenciasRoutes = require('./modules/preferencias/preferencias.routes');
+const documentosRoutes = require('./modules/documentos/documentos.routes');
 
 const path = require('path');
 const app = express();
@@ -55,6 +57,8 @@ app.use('/api/convocatorias', convocatoriasRoutes);
 app.use('/api/semilleros', semillerosRoutes);
 app.use('/api/evaluaciones', evaluacionRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/preferencias', preferenciasRoutes);
+app.use('/api/documentos', documentosRoutes);
 
 // Endpoint de salud
 app.get('/api/health', async (req, res) => {
@@ -65,6 +69,10 @@ app.get('/api/health', async (req, res) => {
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
+
+// ── Tareas programadas (Jobs) ──────────────────────────────────────────────────
+require('./jobs/notificarVencimientos');
+require('./jobs/resumenSemanal');
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Servidor NOUS corriendo en puerto ${PORT}`));

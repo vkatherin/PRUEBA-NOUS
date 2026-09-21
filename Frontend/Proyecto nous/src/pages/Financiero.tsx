@@ -4,8 +4,8 @@ import {
 } from "recharts";
 import { Badge, Button, Card, PageHeader, ProgressBar, Tabs, KpiCard } from "@/components/ui";
 
-const GREEN = "#1E6B3C";
-const GOLD = "#F2A900";
+const GREEN = "var(--theme-primary)";
+const GOLD = "var(--theme-accent)";
 
 const RUBROS_DATA = [
   { rubro: "Personal", aprobado: 142, ejecutado: 118, color: GREEN },
@@ -53,8 +53,8 @@ function PresupuestoTab() {
         {/* Bar chart */}
         <Card padding={false}>
           <div className="px-5 pt-5 pb-3">
-            <h3 className="text-sm font-semibold text-[#1A2B22]">Ejecución por Rubro Agregado</h3>
-            <p className="text-xs text-[#637068]">Millones COP — Todos los proyectos activos</p>
+            <h3 className="text-sm font-semibold text-theme-text-main">Ejecución por Rubro Agregado</h3>
+            <p className="text-xs text-theme-text-muted">Millones COP — Todos los proyectos activos</p>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={RUBROS_DATA} margin={{ left: -10, right: 10, top: 5, bottom: 5 }} barCategoryGap="35%">
@@ -78,18 +78,18 @@ function PresupuestoTab() {
 
         {/* Summary */}
         <Card>
-          <h3 className="text-sm font-semibold text-[#1A2B22] mb-4">Resumen Global de Ejecución</h3>
+          <h3 className="text-sm font-semibold text-theme-text-main mb-4">Resumen Global de Ejecución</h3>
           <div className="flex items-end gap-4 mb-4">
             <div>
-              <p className="text-xs text-[#637068]">Total aprobado</p>
-              <p className="text-2xl font-bold text-[#1A2B22]">{formatCOP(totalAprobado)}</p>
+              <p className="text-xs text-theme-text-muted">Total aprobado</p>
+              <p className="text-2xl font-bold text-theme-text-main">{formatCOP(totalAprobado)}</p>
             </div>
-            <div className="text-3xl font-bold text-[#1E6B3C]">{pctGlobal}%</div>
+            <div className="text-3xl font-bold text-theme-primary">{pctGlobal}%</div>
           </div>
           <ProgressBar value={pctGlobal} color="green" />
           <div className="flex justify-between text-xs mt-2 mb-5">
-            <span className="text-[#1E6B3C] font-semibold">Ejecutado: {formatCOP(totalEjecutado)}</span>
-            <span className="text-[#637068]">Disponible: {formatCOP(totalAprobado - totalEjecutado)}</span>
+            <span className="text-theme-primary font-semibold">Ejecutado: {formatCOP(totalEjecutado)}</span>
+            <span className="text-theme-text-muted">Disponible: {formatCOP(totalAprobado - totalEjecutado)}</span>
           </div>
 
           <div className="space-y-3">
@@ -98,8 +98,8 @@ function PresupuestoTab() {
               return (
                 <div key={p.nombre}>
                   <div className="flex justify-between mb-1">
-                    <span className="text-xs font-medium text-[#1A2B22] truncate max-w-[200px]">{p.nombre}</span>
-                    <span className="text-xs font-bold text-[#1E6B3C]">{pct}%</span>
+                    <span className="text-xs font-medium text-theme-text-main truncate max-w-[200px]">{p.nombre}</span>
+                    <span className="text-xs font-bold text-theme-primary">{pct}%</span>
                   </div>
                   <ProgressBar value={pct} color={pct >= 80 ? "green" : pct >= 50 ? "gold" : "blue"} />
                 </div>
@@ -111,36 +111,36 @@ function PresupuestoTab() {
 
       {/* Tabla proyectos */}
       <Card padding={false}>
-        <div className="px-5 py-4 border-b border-[#DDE4DF]">
-          <h3 className="text-sm font-semibold text-[#1A2B22]">Ejecución por Proyecto</h3>
+        <div className="px-5 py-4 border-b border-theme-border">
+          <h3 className="text-sm font-semibold text-theme-text-main">Ejecución por Proyecto</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#DDE4DF]">
-                <th className="text-left py-3 px-5 text-xs font-semibold text-[#637068] uppercase tracking-wide">Proyecto</th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide">Aprobado</th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide">Ejecutado</th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide">Disponible</th>
-                <th className="py-3 px-4 text-xs font-semibold text-[#637068] uppercase tracking-wide w-40">Ejecución</th>
+              <tr className="border-b border-theme-border">
+                <th className="text-left py-3 px-5 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Proyecto</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Aprobado</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Ejecutado</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Disponible</th>
+                <th className="py-3 px-4 text-xs font-semibold text-theme-text-muted uppercase tracking-wide w-40">Ejecución</th>
               </tr>
             </thead>
             <tbody>
               {PROYECTOS_FINANCIERO.map((p) => {
                 const pct = Math.round((p.ejecutado / p.aprobado) * 100);
                 return (
-                  <tr key={p.nombre} className="border-b border-[#F2F5F3] hover:bg-[#FAFFFE] cursor-pointer">
+                  <tr key={p.nombre} className="border-b border-theme-border hover:bg-theme-bg-main cursor-pointer">
                     <td className="py-3.5 px-5">
-                      <p className="text-sm font-semibold text-[#1A2B22]">{p.nombre}</p>
-                      <p className="text-xs text-[#637068]">{p.facultad} · {p.rubros} rubros</p>
+                      <p className="text-sm font-semibold text-theme-text-main">{p.nombre}</p>
+                      <p className="text-xs text-theme-text-muted">{p.facultad} · {p.rubros} rubros</p>
                     </td>
-                    <td className="py-3.5 px-4 text-right text-[#1A2B22]">{formatCOP(p.aprobado)}</td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-[#1E6B3C]">{formatCOP(p.ejecutado)}</td>
-                    <td className="py-3.5 px-4 text-right text-[#637068]">{formatCOP(p.aprobado - p.ejecutado)}</td>
+                    <td className="py-3.5 px-4 text-right text-theme-text-main">{formatCOP(p.aprobado)}</td>
+                    <td className="py-3.5 px-4 text-right font-semibold text-theme-primary">{formatCOP(p.ejecutado)}</td>
+                    <td className="py-3.5 px-4 text-right text-theme-text-muted">{formatCOP(p.aprobado - p.ejecutado)}</td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
                         <ProgressBar value={pct} color={pct >= 80 ? "green" : pct >= 50 ? "gold" : "blue"} />
-                        <span className="text-xs font-bold text-[#1E6B3C] w-8">{pct}%</span>
+                        <span className="text-xs font-bold text-theme-primary w-8">{pct}%</span>
                       </div>
                     </td>
                   </tr>
@@ -157,22 +157,22 @@ function PresupuestoTab() {
 function ComprasTab() {
   return (
     <Card padding={false}>
-      <div className="px-5 py-4 border-b border-[#DDE4DF] flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[#1A2B22]">Solicitudes de Compra</h3>
+      <div className="px-5 py-4 border-b border-theme-border flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-theme-text-main">Solicitudes de Compra</h3>
         <Button variant="primary" size="sm">+ Nueva Solicitud</Button>
       </div>
       <div className="divide-y divide-[#F2F5F3]">
         {COMPRAS.map((c) => (
-          <div key={c.id} className="flex items-center gap-4 px-5 py-4 hover:bg-[#FAFFFE]">
+          <div key={c.id} className="flex items-center gap-4 px-5 py-4 hover:bg-theme-bg-main">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-xs font-mono text-[#637068]">{c.id}</span>
+                <span className="text-xs font-mono text-theme-text-muted">{c.id}</span>
                 <Badge variant={c.estado} />
               </div>
-              <p className="text-sm font-semibold text-[#1A2B22]">{c.descripcion}</p>
-              <p className="text-xs text-[#637068]">{c.proyecto} · {c.fecha}</p>
+              <p className="text-sm font-semibold text-theme-text-main">{c.descripcion}</p>
+              <p className="text-xs text-theme-text-muted">{c.proyecto} · {c.fecha}</p>
             </div>
-            <span className="text-base font-bold text-[#1E6B3C]">{c.valor}</span>
+            <span className="text-base font-bold text-theme-primary">{c.valor}</span>
             <div className="flex gap-1">
               <Button variant="outline" size="sm">Ver</Button>
               {c.estado === "pending" && <Button variant="primary" size="sm">Aprobar</Button>}
@@ -187,23 +187,23 @@ function ComprasTab() {
 function MovilidadTab() {
   return (
     <Card padding={false}>
-      <div className="px-5 py-4 border-b border-[#DDE4DF] flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[#1A2B22]">Solicitudes de Movilidad Académica</h3>
+      <div className="px-5 py-4 border-b border-theme-border flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-theme-text-main">Solicitudes de Movilidad Académica</h3>
         <Button variant="primary" size="sm">+ Solicitar Movilidad</Button>
       </div>
       <div className="divide-y divide-[#F2F5F3]">
         {MOVILIDAD.map((m, i) => (
-          <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-[#FAFFFE]">
-            <div className="w-10 h-10 rounded-xl bg-[#EBF5EF] flex items-center justify-center text-xl flex-shrink-0">✈️</div>
+          <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-theme-bg-main">
+            <div className="w-10 h-10 rounded-xl bg-theme-primary/10 flex items-center justify-center text-xl flex-shrink-0">✈️</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-sm font-semibold text-[#1A2B22]">{m.investigador}</p>
+                <p className="text-sm font-semibold text-theme-text-main">{m.investigador}</p>
                 <Badge variant={m.estado} />
               </div>
-              <p className="text-xs text-[#637068]">{m.evento}</p>
-              <p className="text-xs text-[#9BAD9F]">{m.ciudad} · {m.fecha}</p>
+              <p className="text-xs text-theme-text-muted">{m.evento}</p>
+              <p className="text-xs text-theme-text-muted">{m.ciudad} · {m.fecha}</p>
             </div>
-            <span className="text-base font-bold text-[#1E6B3C]">{m.valor}</span>
+            <span className="text-base font-bold text-theme-primary">{m.valor}</span>
             <div className="flex gap-1">
               <Button variant="outline" size="sm">Ver detalle</Button>
               {m.estado === "pending" && <Button variant="primary" size="sm">Aprobar aval</Button>}
@@ -265,21 +265,21 @@ export function Financiero() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label:"Total Gastos Registrados", value:"$289.6M", sub:"312 comprobantes", color:"#1E6B3C" },
+              { label:"Total Gastos Registrados", value:"$289.6M", sub:"312 comprobantes", color:"var(--theme-primary)" },
               { label:"Gastos sin legalizar", value:"$22.4M", sub:"18 pendientes", color:"#D97706" },
               { label:"Alertas de saldo", value:"3", sub:"Rubros al límite", color:"#DC2626" },
               { label:"Última actualización", value:"Hoy", sub:"09:14 am", color:"#2563EB" },
             ].map(s=>(
-              <div key={s.label} className="bg-white border border-[#DDE4DF] rounded-xl p-4">
+              <div key={s.label} className="bg-theme-bg-card border border-theme-border rounded-xl p-4">
                 <p className="text-xl font-bold" style={{color:s.color}}>{s.value}</p>
-                <p className="text-sm font-medium text-[#1A2B22]">{s.label}</p>
-                <p className="text-xs text-[#637068] mt-0.5">{s.sub}</p>
+                <p className="text-sm font-medium text-theme-text-main">{s.label}</p>
+                <p className="text-xs text-theme-text-muted mt-0.5">{s.sub}</p>
               </div>
             ))}
           </div>
           <Card padding={false}>
-            <div className="px-5 py-4 border-b border-[#DDE4DF] flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Registro de Gastos y Comprobantes</h3>
+            <div className="px-5 py-4 border-b border-theme-border flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-theme-text-main">Registro de Gastos y Comprobantes</h3>
               <Button variant="primary" size="sm">+ Registrar Gasto</Button>
             </div>
             <div className="divide-y divide-[#F2F5F3]">
@@ -290,16 +290,16 @@ export function Financiero() {
                 { id:"GAS-2025-309", desc:"Pago encuestadores trabajo de campo rural", proyecto:"Inclusión Financiera", valor:"$1.200.000", rubro:"Personal", fecha:"22 Jul 2025", estado:"pending" as const },
                 { id:"GAS-2025-308", desc:"Insumos análisis suelos — kit muestras", proyecto:"Producción Cacao", valor:"$780.000", rubro:"Materiales", fecha:"18 Jul 2025", estado:"closed" as const },
               ].map((g,i)=>(
-                <div key={i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FAFFFE] group">
+                <div key={i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-theme-bg-main group">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-mono text-[#9BAD9F]">{g.id}</span>
+                      <span className="text-xs font-mono text-theme-text-muted">{g.id}</span>
                       <Badge variant={g.estado} />
                     </div>
-                    <p className="text-sm font-semibold text-[#1A2B22]">{g.desc}</p>
-                    <p className="text-xs text-[#637068]">{g.proyecto} · {g.rubro} · {g.fecha}</p>
+                    <p className="text-sm font-semibold text-theme-text-main">{g.desc}</p>
+                    <p className="text-xs text-theme-text-muted">{g.proyecto} · {g.rubro} · {g.fecha}</p>
                   </div>
-                  <span className="text-sm font-bold text-[#1E6B3C]">{g.valor}</span>
+                  <span className="text-sm font-bold text-theme-primary">{g.valor}</span>
                   <Button variant="ghost" size="sm">Ver soporte</Button>
                 </div>
               ))}

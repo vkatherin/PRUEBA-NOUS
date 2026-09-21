@@ -1,23 +1,59 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 @import 'tailwindcss';
 
-:root {
-  --green: #1E6B3C;
-  --green-light: #2A8A50;
-  --green-dark: #155230;
-  --green-xlight: #EBF5EF;
-  --gold: #F2A900;
-  --gold-light: #FFC433;
-  --gold-dark: #D4930B;
-  --sidebar-bg: #163D27;
-  --sidebar-hover: rgba(255, 255, 255, 0.08);
-  --sidebar-active: #F2A900;
-  --page-bg: #F2F5F3;
-  --card-bg: #FFFFFF;
-  --text-main: #1A2B22;
-  --text-muted: #637068;
-  --border: #DDE4DF;
-  --radius: 10px;
+@theme {
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-primary-hover: var(--theme-primary-hover);
+  --color-theme-accent: var(--theme-accent);
+  --color-theme-bg-main: var(--theme-bg-main);
+  --color-theme-bg-card: var(--theme-bg-card);
+  --color-theme-border: var(--theme-border);
+  --color-theme-text-main: var(--theme-text-main);
+  --color-theme-text-muted: var(--theme-text-muted);
+}
+
+:root, [data-theme="light"] {
+  --theme-primary: #16683B;
+  --theme-primary-hover: #125631;
+  --theme-accent: #DDA521;
+  --theme-bg-main: #F2F5F3;
+  --theme-bg-card: #FFFFFF;
+  --theme-border: #DDE4DF;
+  --theme-text-main: #1A2B22;
+  --theme-text-muted: #637068;
+}
+
+[data-theme="dark"] {
+  --theme-primary: #16683B;
+  --theme-primary-hover: #2A8A50;
+  --theme-accent: #DDA521;
+  --theme-bg-main: #111111;
+  --theme-bg-card: #1A1A1A;
+  --theme-border: #333333;
+  --theme-text-main: #F3F4F6;
+  --theme-text-muted: #9CA3AF;
+}
+
+[data-theme="slate"] {
+  --theme-primary: #64748B;
+  --theme-primary-hover: #475569;
+  --theme-accent: #94A3B8;
+  --theme-bg-main: #0F172A;
+  --theme-bg-card: #1E293B;
+  --theme-border: #334155;
+  --theme-text-main: #F8FAFC;
+  --theme-text-muted: #94A3B8;
+}
+
+[data-theme="executive"] {
+  --theme-primary: #0F172A;
+  --theme-primary-hover: #1E293B;
+  --theme-accent: #475569;
+  --theme-bg-main: #FAF9F6;
+  --theme-bg-card: #FFFFFF;
+  --theme-border: #E2E8F0;
+  --theme-text-main: #1E293B;
+  --theme-text-muted: #64748B;
 }
 
 * {
@@ -27,8 +63,9 @@
 
 body {
   margin: 0;
-  background-color: var(--page-bg);
-  color: var(--text-main);
+  background-color: var(--theme-bg-main);
+  color: var(--theme-text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Scrollbar styling */
@@ -93,12 +130,12 @@ main > * {
 }
 
 /* Gold accent glow on active buttons */
-button[style*="#F2A900"]:hover {
+button[style*="#DDA521"]:hover {
   box-shadow: 0 4px 14px rgba(242, 169, 0, 0.35);
 }
 
 /* Green primary glow */
-button[style*="#1E6B3C"]:hover,
+button[style*="#16683B"]:hover,
 .btn-primary:hover {
   box-shadow: 0 4px 14px rgba(30, 107, 60, 0.30);
 }

@@ -23,7 +23,7 @@ const PARAMETROS = [
 const rolColors: Record<string, string> = {
   "Super Administrador": "#DC2626",
   "Coordinador VRI": "#7C3AED",
-  "Investigador": "#1E6B3C",
+  "Investigador": "var(--theme-primary)",
   "Evaluador": "#2563EB",
   "Estudiante-Investigador": "#D97706",
   "Consulta": "#9CA3AF",
@@ -50,11 +50,11 @@ function EliminarUsuarioModal({
           </div>
         </div>
         <div className="p-4 rounded-xl" style={{ backgroundColor: "#F2F5F3", border: "1px solid #DDE4DF" }}>
-          <p className="text-xs text-[#637068] mb-1">Usuario a eliminar:</p>
-          <p className="text-sm font-bold text-[#1A2B22]">{usuario.nombre}</p>
-          <p className="text-xs text-[#637068]">{usuario.email}</p>
+          <p className="text-xs text-theme-text-muted mb-1">Usuario a eliminar:</p>
+          <p className="text-sm font-bold text-theme-text-main">{usuario.nombre}</p>
+          <p className="text-xs text-theme-text-muted">{usuario.email}</p>
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-[#DDE4DF]">
+        <div className="flex justify-end gap-3 pt-2 border-t border-theme-border">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <button
             onClick={onConfirm}
@@ -107,13 +107,13 @@ function NuevoUsuarioModal({ open, onClose }: { open: boolean; onClose: () => vo
             />
           </Field>
         </div>
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-[#EBF5EF]">
-          <input type="checkbox" defaultChecked className="accent-[#1E6B3C] w-4 h-4" />
-          <span className="text-xs text-[#637068]">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-theme-primary/10">
+          <input type="checkbox" defaultChecked className="accent-[var(--theme-primary)] w-4 h-4" />
+          <span className="text-xs text-theme-text-muted">
             Enviar credenciales de acceso al correo institucional
           </span>
         </div>
-        <div className="flex justify-end gap-3 pt-3 border-t border-[#DDE4DF]">
+        <div className="flex justify-end gap-3 pt-3 border-t border-theme-border">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button variant="primary" onClick={onClose}>Crear Usuario</Button>
         </div>
@@ -227,16 +227,16 @@ export function Administracion() {
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: "Total Usuarios", value: usuarios.length, color: "#1E6B3C" },
-              { label: "Con Rol", value: usuarios.filter(u => u.roles.length > 0).length, color: "#1E6B3C" },
+              { label: "Total Usuarios", value: usuarios.length, color: "var(--theme-primary)" },
+              { label: "Con Rol", value: usuarios.filter(u => u.roles.length > 0).length, color: "var(--theme-primary)" },
               { label: "Sin Rol", value: usuarios.filter(u => u.roles.length === 0).length, color: "#D97706" },
               { label: "Inactivos", value: usuarios.filter(u => u.estado === "inactive").length, color: "#9CA3AF" },
             ].map((s) => (
-              <div key={s.label} className="bg-white border border-[#DDE4DF] rounded-xl p-4 flex items-center gap-3">
+              <div key={s.label} className="bg-theme-bg-card border border-theme-border rounded-xl p-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: s.color + "15", color: s.color }}>
                   {s.value}
                 </div>
-                <p className="text-sm text-[#637068] font-medium">{s.label}</p>
+                <p className="text-sm text-theme-text-muted font-medium">{s.label}</p>
               </div>
             ))}
           </div>
@@ -256,17 +256,17 @@ export function Administracion() {
 
           <Card padding={false}>
             {loading ? (
-              <div className="p-8 text-center text-[#637068]">Cargando usuarios...</div>
+              <div className="p-8 text-center text-theme-text-muted">Cargando usuarios...</div>
             ) : displayedUsers.length === 0 ? (
-              <div className="p-8 text-center text-[#637068]">No se encontraron usuarios.</div>
+              <div className="p-8 text-center text-theme-text-muted">No se encontraron usuarios.</div>
             ) : (
               <div className="divide-y divide-[#F2F5F3]">
                 {displayedUsers.map((u, i) => (
-                  <div key={u.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FAFFFE] group">
+                  <div key={u.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-theme-bg-main group">
                     <Avatar name={u.nombre} size="md" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#1A2B22]">{u.nombre}</p>
-                      <p className="text-xs text-[#637068]">{u.email}</p>
+                      <p className="text-sm font-semibold text-theme-text-main">{u.nombre}</p>
+                      <p className="text-xs text-theme-text-muted">{u.email}</p>
                     </div>
                     <div className="flex gap-1 flex-wrap w-48">
                       {u.roles.length > 0 ? u.roles.map(r => (
@@ -284,7 +284,7 @@ export function Administracion() {
                       )}
                     </div>
                     <Badge variant={u.estado as any} />
-                    <span className="text-xs text-[#9BAD9F] hidden lg:block">{new Date(u.fecha_registro).toLocaleDateString()}</span>
+                    <span className="text-xs text-theme-text-muted hidden lg:block">{new Date(u.fecha_registro).toLocaleDateString()}</span>
                     
                     <div className="flex gap-2">
                       <select 
@@ -341,12 +341,12 @@ export function Administracion() {
                   >
                     <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: rolColors[rol.nombre] ?? "#9CA3AF" }} />
                   </div>
-                  <span className="text-xs text-[#9BAD9F]">{rol.permisos} permisos</span>
+                  <span className="text-xs text-theme-text-muted">{rol.permisos} permisos</span>
                 </div>
-                <h3 className="text-sm font-bold text-[#1A2B22] mb-1">{rol.nombre}</h3>
-                <p className="text-xs text-[#637068] mb-3">{rol.desc}</p>
-                <div className="flex items-center justify-between pt-3 border-t border-[#F2F5F3]">
-                  <span className="text-xs text-[#637068]">{rol.usuarios} usuarios</span>
+                <h3 className="text-sm font-bold text-theme-text-main mb-1">{rol.nombre}</h3>
+                <p className="text-xs text-theme-text-muted mb-3">{rol.desc}</p>
+                <div className="flex items-center justify-between pt-3 border-t border-theme-border">
+                  <span className="text-xs text-theme-text-muted">{rol.usuarios} usuarios</span>
                   <Button variant="outline" size="sm">Configurar</Button>
                 </div>
               </Card>
@@ -358,16 +358,16 @@ export function Administracion() {
       {tab === "parametros" && (
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-[#1A2B22]">Parámetros Institucionales</p>
+            <p className="text-sm font-semibold text-theme-text-main">Parámetros Institucionales</p>
             <Button variant="primary" size="sm">Guardar Cambios</Button>
           </div>
           <div className="space-y-4">
             {PARAMETROS.map((p) => (
-              <div key={p.clave} className="flex items-center gap-4 py-3 border-b border-[#F2F5F3]">
-                <span className="text-xs font-semibold text-[#637068] w-52 flex-shrink-0">{p.clave}</span>
+              <div key={p.clave} className="flex items-center gap-4 py-3 border-b border-theme-border">
+                <span className="text-xs font-semibold text-theme-text-muted w-52 flex-shrink-0">{p.clave}</span>
                 <input
                   defaultValue={p.valor}
-                  className="flex-1 px-3 py-2 text-sm border border-[#DDE4DF] rounded-lg bg-white text-[#1A2B22] focus:outline-none focus:border-[#1E6B3C]"
+                  className="flex-1 px-3 py-2 text-sm border border-theme-border rounded-lg bg-theme-bg-card text-theme-text-main focus:outline-none focus:border-theme-primary"
                 />
               </div>
             ))}
@@ -391,16 +391,16 @@ export function Administracion() {
             ].map((f)=>(
               <Card key={f.nombre} className="hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#EBF5EF] flex items-center justify-center text-xl flex-shrink-0">🏛️</div>
+                  <div className="w-10 h-10 rounded-xl bg-theme-primary/10 flex items-center justify-center text-xl flex-shrink-0">🏛️</div>
                   <Button variant="ghost" size="sm">Editar</Button>
                 </div>
-                <h3 className="text-sm font-bold text-[#1A2B22] mb-2">{f.nombre}</h3>
+                <h3 className="text-sm font-bold text-theme-text-main mb-2">{f.nombre}</h3>
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {f.programas.map((p)=>(
-                    <span key={p} className="text-xs bg-[#EBF5EF] text-[#1E6B3C] px-2 py-0.5 rounded-full font-medium">{p}</span>
+                    <span key={p} className="text-xs bg-theme-primary/10 text-theme-primary px-2 py-0.5 rounded-full font-medium">{p}</span>
                   ))}
                 </div>
-                <div className="flex items-center gap-4 pt-3 border-t border-[#F2F5F3] text-xs text-[#637068]">
+                <div className="flex items-center gap-4 pt-3 border-t border-theme-border text-xs text-theme-text-muted">
                   <span>👥 {f.docentes} docentes</span>
                   <span>🔬 {f.grupos} grupos</span>
                   <span>📌 {f.lineas} líneas</span>

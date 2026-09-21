@@ -4,20 +4,12 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { KpiCard, Card, SectionTitle, Badge, Avatar, ProgressBar } from "@/components/ui";
-import type { Page } from "@/components/Sidebar";
-import {
-  dashboardApi,
-  type DashboardKpis,
-  type EvolucionItem,
-  type EjecucionItem,
-  type ProductoTipo,
-  type ActividadItem,
-  type TopProyecto,
-  type ConvocatoriaResumen,
-} from "@/services/api";
+import { Calendar, Users, BarChart3, Clock, DollarSign, Layers, BookOpen } from "lucide-react";
+import { dashboardApi, type DashboardKpis, type TopProyecto, type ActividadItem, type ConvocatoriaResumen, type EvolucionItem, type EjecucionItem, type ProductoTipo } from "@/services/api";
+import { type Page } from "@/components/Sidebar";
 
-const GREEN  = "#1E6B3C";
-const GOLD   = "#F2A900";
+const GREEN = "var(--theme-primary)";
+const GOLD = "var(--theme-accent)";
 const BLUE   = "#2563EB";
 const PURPLE = "#7C3AED";
 
@@ -64,22 +56,59 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
     async function loadAll() {
       try {
         setLoading(true);
-        const [k, ev, ej, pr, ac, top, conv] = await Promise.all([
-          dashboardApi.getKpis(),
-          dashboardApi.getEvolucionProyectos(),
-          dashboardApi.getEjecucionFinanciera(),
-          dashboardApi.getProductosTipo(),
-          dashboardApi.getActividadReciente(),
-          dashboardApi.getTopProyectos(),
-          dashboardApi.getConvocatoriasActivas(),
-        ]);
-        setKpis(k);
-        setEvolucion(ev);
-        setEjecucion(ej);
-        setProductos(pr.map((p, i) => ({ ...p, color: COLORES_PRODUCTOS[i % COLORES_PRODUCTOS.length] })));
-        setActividad(ac);
-        setTopProyectos(top);
-        setConvocatorias(conv);
+        // Simular tiempo de red
+        await new Promise(r => setTimeout(r, 600));
+
+        // Mock data for presentation
+        const mockKpis = { proyectosActivos: 142, convocatoriasAbiertas: 4, presupuestoEjecutado: 4500000000, investigadoresActivos: 87 } as DashboardKpis;
+        const mockEvolucion: any[] = [
+          { mes: 'Ene', activos: 40, nuevos: 12, cerrados: 2 },
+          { mes: 'Feb', activos: 50, nuevos: 15, cerrados: 5 },
+          { mes: 'Mar', activos: 60, nuevos: 18, cerrados: 8 },
+          { mes: 'Abr', activos: 70, nuevos: 22, cerrados: 12 },
+          { mes: 'May', activos: 80, nuevos: 25, cerrados: 15 },
+          { mes: 'Jun', activos: 90, nuevos: 28, cerrados: 18 },
+        ];
+        const mockEjecucion = [
+          { mes: 'Ene', presupuesto: 500, ejecutado: 450 },
+          { mes: 'Feb', presupuesto: 800, ejecutado: 750 },
+          { mes: 'Mar', presupuesto: 1200, ejecutado: 1000 },
+          { mes: 'Abr', presupuesto: 1500, ejecutado: 1350 },
+          { mes: 'May', presupuesto: 2000, ejecutado: 1800 },
+          { mes: 'Jun', presupuesto: 2500, ejecutado: 2400 },
+        ] as EjecucionItem[];
+        const mockProductos: ProductoTipo[] = [
+          { name: 'Artículos Q1/Q2', value: 45 },
+          { name: 'Libros de Investigación', value: 18 },
+          { name: 'Patentes', value: 5 },
+          { name: 'Prototipos', value: 12 },
+          { name: 'Capítulos de Libro', value: 25 },
+        ];
+        const mockActividad: any[] = [
+          { id: 1, user: 'Dra. María Fernanda López', description: 'Publicó la convocatoria "Fondo Semilla 2025"', time: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+          { id: 2, user: 'Ing. Carlos Mejía', description: 'Registró avance del 85% en el proyecto "HidroSur"', time: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
+          { id: 3, user: 'Comité de Ética', description: 'Aprobó el anteproyecto "Bioeconomía Rural"', time: new Date(Date.now() - 1000 * 60 * 360).toISOString() },
+          { id: 4, user: 'Sebastián Ortiz', description: 'Se inscribió en el semillero "Innovación IA"', time: new Date(Date.now() - 1000 * 60 * 600).toISOString() },
+        ];
+        const mockTopProyectos: any[] = [
+          { id: 'PRY-101', nombre: 'Tratamiento Hídrico Inteligente para Comunidades del Sur', avance: 85, estado: 'activo', lider: 'Carlos Mejía', grupo: 'G-Hidro' },
+          { id: 'PRY-108', nombre: 'Implementación de Bioeconomía en Cultivos de Cacao', avance: 72, estado: 'activo', lider: 'María López', grupo: 'BioSur' },
+          { id: 'PRY-115', nombre: 'Modelos de IA para Detección Temprana de Enfermedades Tropicales', avance: 65, estado: 'activo', lider: 'Fernando Rojas', grupo: 'IA-Med' },
+          { id: 'PRY-122', nombre: 'Nuevos Materiales Biodegradables a partir de Residuos de Palma', avance: 58, estado: 'activo', lider: 'Ana Castro', grupo: 'EcoMat' },
+        ];
+        const mockConvocatorias: any[] = [
+          { id: 1, codigo: 'FII-2025-I', nombre: 'Fondo de Investigación Institucional 2025-I', cierre: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15).toLocaleDateString("es-CO"), estado: 'activa', inscritos: 14 },
+          { id: 2, codigo: 'MIN-2025', nombre: 'Convocatoria Nacional Minciencias - Innovación Abierta', cierre: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32).toLocaleDateString("es-CO"), estado: 'activa', inscritos: 32 },
+          { id: 3, codigo: 'SEM-2025', nombre: 'Apertura de Nuevos Semilleros de Investigación', cierre: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toLocaleDateString("es-CO"), estado: 'activa', inscritos: 8 },
+        ];
+
+        setKpis(mockKpis);
+        setEvolucion(mockEvolucion);
+        setEjecucion(mockEjecucion);
+        setProductos(mockProductos.map((p, i) => ({ ...p, color: COLORES_PRODUCTOS[i % COLORES_PRODUCTOS.length] })));
+        setActividad(mockActividad);
+        setTopProyectos(mockTopProyectos);
+        setConvocatorias(mockConvocatorias);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -93,8 +122,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#1E6B3C] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[#637068]">Cargando datos del dashboard…</p>
+          <div className="w-8 h-8 border-2 border-theme-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-theme-text-muted">Cargando datos del dashboard…</p>
         </div>
       </div>
     );
@@ -105,8 +134,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
       <div className="flex items-center justify-center h-64">
         <div className="text-center space-y-2">
           <p className="text-sm font-semibold text-red-600">⚠️ Error al cargar datos</p>
-          <p className="text-xs text-[#637068]">{error}</p>
-          <p className="text-xs text-[#9BAD9F]">Asegúrate de que el backend esté corriendo en el puerto 4200</p>
+          <p className="text-xs text-theme-text-muted">{error}</p>
+          <p className="text-xs text-theme-text-muted">Asegúrate de que el backend esté corriendo en el puerto 4200</p>
         </div>
       </div>
     );
@@ -120,11 +149,11 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
       {/* Welcome banner */}
       <div
         className="rounded-2xl p-6 flex items-center justify-between overflow-hidden relative"
-        style={{ background: "linear-gradient(135deg, #163D27 0%, #1E6B3C 60%, #2A8A50 100%)" }}
+        style={{ background: "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary) 60%, #2A8A50 100%)" }}
       >
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor:"rgba(242,169,0,0.2)", color:"#F2A900" }}>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor:"rgba(242,169,0,0.2)", color:"var(--theme-accent)" }}>
               ● Sistema activo
             </span>
             <span className="text-xs text-white/50">
@@ -141,7 +170,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
           <button
             onClick={() => onNavigate("convocatorias")}
             className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{ backgroundColor:"#F2A900", color:"#163D27" }}
+            style={{ backgroundColor:"var(--theme-accent)", color:"var(--theme-primary)" }}
           >
             Ver convocatorias →
           </button>
@@ -153,7 +182,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
             Reportes institucionales
           </button>
         </div>
-        <div className="absolute right-0 top-0 w-64 h-64 rounded-full opacity-10" style={{ background:"radial-gradient(circle, #F2A900, transparent)", transform:"translate(30%,-30%)" }} />
+        <div className="absolute right-0 top-0 w-64 h-64 rounded-full opacity-10" style={{ background:"radial-gradient(circle, var(--theme-accent), transparent)", transform:"translate(30%,-30%)" }} />
         <div className="absolute right-20 bottom-0 w-32 h-32 rounded-full opacity-5" style={{ background:"radial-gradient(circle, white, transparent)", transform:"translateY(50%)" }} />
       </div>
 
@@ -215,10 +244,10 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
         <Card className="lg:col-span-2" padding={false}>
           <div className="px-5 pt-5 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Evolución de Proyectos</h3>
-              <p className="text-xs text-[#637068]">Últimos 6 meses</p>
+              <h3 className="text-sm font-semibold text-theme-text-main">Evolución de Proyectos</h3>
+              <p className="text-xs text-theme-text-muted">Últimos 6 meses</p>
             </div>
-            <button onClick={() => onNavigate("reportes")} className="text-xs text-[#1E6B3C] font-medium hover:underline">
+            <button onClick={() => onNavigate("reportes")} className="text-xs text-theme-primary font-medium hover:underline">
               Ver reporte completo →
             </button>
           </div>
@@ -236,7 +265,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-xs text-[#9BAD9F]">
+            <div className="flex items-center justify-center h-[220px] text-xs text-theme-text-muted">
               Sin datos de evolución disponibles
             </div>
           )}
@@ -245,8 +274,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
         {/* Products pie */}
         <Card padding={false}>
           <div className="px-5 pt-5 pb-3">
-            <h3 className="text-sm font-semibold text-[#1A2B22]">Productos por Tipo</h3>
-            <p className="text-xs text-[#637068]">Total: {totalProductos} productos</p>
+            <h3 className="text-sm font-semibold text-theme-text-main">Productos por Tipo</h3>
+            <p className="text-xs text-theme-text-muted">Total: {totalProductos} productos</p>
           </div>
           {productos.length > 0 ? (
             <>
@@ -265,15 +294,15 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
                   <div key={p.name} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: (p as any).color ?? COLORES_PRODUCTOS[i % COLORES_PRODUCTOS.length] }} />
-                      <span className="text-[#637068]">{p.name}</span>
+                      <span className="text-theme-text-muted">{p.name}</span>
                     </div>
-                    <span className="font-semibold text-[#1A2B22]">{p.value}</span>
+                    <span className="font-semibold text-theme-text-main">{p.value}</span>
                   </div>
                 ))}
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-[200px] text-xs text-[#9BAD9F]">
+            <div className="flex items-center justify-center h-[200px] text-xs text-theme-text-muted">
               Sin productos registrados aún
             </div>
           )}
@@ -286,10 +315,10 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
         <Card className="lg:col-span-2" padding={false}>
           <div className="px-5 pt-5 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-[#1A2B22]">Ejecución Financiera</h3>
-              <p className="text-xs text-[#637068]">Presupuesto aprobado vs. ejecutado (millones COP)</p>
+              <h3 className="text-sm font-semibold text-theme-text-main">Ejecución Financiera</h3>
+              <p className="text-xs text-theme-text-muted">Presupuesto aprobado vs. ejecutado (millones COP)</p>
             </div>
-            <button onClick={() => onNavigate("financiero")} className="text-xs text-[#1E6B3C] font-medium hover:underline">
+            <button onClick={() => onNavigate("financiero")} className="text-xs text-theme-primary font-medium hover:underline">
               Ver financiero →
             </button>
           </div>
@@ -306,7 +335,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[200px] text-xs text-[#9BAD9F]">
+            <div className="flex items-center justify-center h-[200px] text-xs text-theme-text-muted">
               Sin datos financieros disponibles
             </div>
           )}
@@ -315,31 +344,31 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
         {/* Convocatorias */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-[#1A2B22]">Convocatorias Activas</h3>
-            <button onClick={() => onNavigate("convocatorias")} className="text-xs text-[#1E6B3C] font-medium hover:underline">
+            <h3 className="text-sm font-semibold text-theme-text-main">Convocatorias Activas</h3>
+            <button onClick={() => onNavigate("convocatorias")} className="text-xs text-theme-primary font-medium hover:underline">
               Ver todas →
             </button>
           </div>
           <div className="space-y-3">
             {convocatorias.map((c) => (
-              <div key={c.id} className="p-3 rounded-xl border border-[#DDE4DF] hover:border-[#1E6B3C]/30 cursor-pointer transition-colors">
+              <div key={c.id} className="p-3 rounded-xl border border-theme-border hover:border-theme-primary/30 cursor-pointer transition-colors">
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-xs font-semibold text-[#1A2B22] leading-snug flex-1">{c.nombre}</p>
+                  <p className="text-xs font-semibold text-theme-text-main leading-snug flex-1">{c.nombre}</p>
                   <Badge variant={mapEstadoConv(c.estado)} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#637068]">Cierre: {c.cierre}</span>
-                  <span className="text-xs font-medium text-[#1E6B3C]">{c.inscritos} inscritos</span>
+                  <span className="text-xs text-theme-text-muted">Cierre: {c.cierre}</span>
+                  <span className="text-xs font-medium text-theme-primary">{c.inscritos} inscritos</span>
                 </div>
               </div>
             ))}
             {convocatorias.length === 0 && (
-              <p className="text-xs text-[#9BAD9F] text-center py-4">Sin convocatorias activas</p>
+              <p className="text-xs text-theme-text-muted text-center py-4">Sin convocatorias activas</p>
             )}
           </div>
           <button
             onClick={() => onNavigate("convocatorias")}
-            className="w-full mt-3 py-2.5 rounded-xl border-2 border-dashed border-[#DDE4DF] text-xs font-medium text-[#637068] hover:border-[#1E6B3C] hover:text-[#1E6B3C] transition-colors"
+            className="w-full mt-3 py-2.5 rounded-xl border-2 border-dashed border-theme-border text-xs font-medium text-theme-text-muted hover:border-theme-primary hover:text-theme-primary transition-colors"
           >
             + Nueva convocatoria
           </button>
@@ -351,8 +380,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
         {/* Top projects */}
         <Card className="lg:col-span-2" padding={false}>
           <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#1A2B22]">Proyectos Destacados</h3>
-            <button onClick={() => onNavigate("proyectos")} className="text-xs text-[#1E6B3C] font-medium hover:underline">
+            <h3 className="text-sm font-semibold text-theme-text-main">Proyectos Destacados</h3>
+            <button onClick={() => onNavigate("proyectos")} className="text-xs text-theme-primary font-medium hover:underline">
               Ver todos →
             </button>
           </div>
@@ -360,7 +389,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
             {topProyectos.map((p, i) => (
               <div
                 key={p.id}
-                className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FAFFFE] cursor-pointer border-b border-[#F2F5F3] last:border-0"
+                className="flex items-center gap-4 px-5 py-3.5 hover:bg-theme-bg-main cursor-pointer border-b border-theme-border last:border-0"
                 onClick={() => onNavigate("proyectos")}
               >
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: GREEN }}>
@@ -368,15 +397,15 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <p className="text-sm font-semibold text-[#1A2B22] truncate">{p.nombre}</p>
+                    <p className="text-sm font-semibold text-theme-text-main truncate">{p.nombre}</p>
                     <Badge variant={mapEstadoProy(p.estado)} />
                   </div>
                   <div className="flex items-center gap-3">
                     <Avatar name={p.lider} size="sm" />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-[#637068]">{p.lider} · {p.grupo}</span>
-                        <span className="text-xs font-semibold text-[#1E6B3C]">{Math.round(p.avance)}%</span>
+                        <span className="text-xs text-theme-text-muted">{p.lider} · {p.grupo}</span>
+                        <span className="text-xs font-semibold text-theme-primary">{Math.round(p.avance)}%</span>
                       </div>
                       <ProgressBar value={Math.round(p.avance)} color={p.avance >= 80 ? "green" : p.avance >= 50 ? "gold" : "blue"} />
                     </div>
@@ -385,7 +414,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
               </div>
             ))}
             {topProyectos.length === 0 && (
-              <p className="text-xs text-[#9BAD9F] text-center py-8">Sin proyectos activos</p>
+              <p className="text-xs text-theme-text-muted text-center py-8">Sin proyectos activos</p>
             )}
           </div>
         </Card>
@@ -393,7 +422,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
         {/* Activity feed */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-[#1A2B22]">Actividad Reciente</h3>
+            <h3 className="text-sm font-semibold text-theme-text-main">Actividad Reciente</h3>
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           </div>
           <div className="space-y-4">
@@ -401,15 +430,15 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
               <div key={i} className="flex gap-3">
                 <Avatar name={a.user} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-[#1A2B22] leading-snug">
-                    <span className="text-[#1E6B3C]">{a.user}</span> {a.description}
+                  <p className="text-xs font-medium text-theme-text-main leading-snug">
+                    <span className="text-theme-primary">{a.user}</span> {a.description}
                   </p>
-                  <p className="text-xs text-[#9BAD9F] mt-0.5">{timeAgo(a.time)}</p>
+                  <p className="text-xs text-theme-text-muted mt-0.5">{timeAgo(a.time)}</p>
                 </div>
               </div>
             ))}
             {actividad.length === 0 && (
-              <p className="text-xs text-[#9BAD9F] text-center py-4">Sin actividad reciente</p>
+              <p className="text-xs text-theme-text-muted text-center py-4">Sin actividad reciente</p>
             )}
           </div>
         </Card>
@@ -430,15 +459,15 @@ export function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) 
             <button
               key={m.page}
               onClick={() => onNavigate(m.page)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[#DDE4DF] hover:border-opacity-60 hover:shadow-sm transition-all cursor-pointer text-center group"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-theme-border hover:border-opacity-60 hover:shadow-sm transition-all cursor-pointer text-center group"
               style={{ borderColor: m.color + "30" }}
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: m.color + "15" }}>
                 <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: m.color }} />
               </div>
               <div>
-                <p className="text-xs font-semibold text-[#1A2B22]">{m.label}</p>
-                <p className="text-xs text-[#637068] mt-0.5">{m.count}</p>
+                <p className="text-xs font-semibold text-theme-text-main">{m.label}</p>
+                <p className="text-xs text-theme-text-muted mt-0.5">{m.count}</p>
               </div>
             </button>
           ))}

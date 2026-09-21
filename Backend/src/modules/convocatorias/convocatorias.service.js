@@ -145,7 +145,29 @@ const convocatoriasService = {
       creado_por || null,
     ]);
 
-    return this.obtenerPorId(result.insertId);
+    const nuevaConvocatoria = await this.obtenerPorId(result.insertId);
+
+    // [Notificaciones]
+    try {
+      const { enviarCorreo } = require('../../shared/mailer');
+      const [users] = await pool.query(
+        `SELECT u.correo_institucional FROM usuarios u 
+         JOIN preferencias_notificacion p ON p.usuario_id = u.id 
+         WHERE u.activo = 1 AND p.notif_convocatoria_nueva = 1`
+      );
+      if (users.length > 0) {
+        await enviarCorreo({
+          destinatarios: users.map(u => u.correo_institucional),
+          asunto: 'Nueva convocatoria: ' + nuevaConvocatoria.titulo,
+          cuerpo: `<p>Se ha creado una nueva convocatoria: <strong>${nuevaConvocatoria.titulo}</strong>.</p>`,
+          tipo: 'CONVOCATORIA_NUEVA'
+        });
+      }
+    } catch (e) {
+      console.error('Error notificando convocatoria nueva:', e);
+    }
+
+    return nuevaConvocatoria;
   },
 
   /**
@@ -186,7 +208,9 @@ const convocatoriasService = {
       "UPDATE convocatorias SET estado = 'publicada' WHERE id = ?",
       [id]
     );
-    return this.obtenerPorId(id);
+    const updated = await this.obtenerPorId(id);
+    await this.notificarCambioEstado(updated, 'publicada');
+    return updated;
   },
 
   /**
@@ -357,7 +381,9 @@ const convocatoriasService = {
       WHERE id = ?
     `;
     await pool.query(sql, [fecha, id]);
-    return this.obtenerPorId(id);
+    const updated = await this.obtenerPorId(id);
+    await this.notificarCambioEstado(updated, 'aprobada_comite');
+    return updated;
   },
 
   /**
@@ -372,7 +398,32 @@ const convocatoriasService = {
       WHERE id = ?
     `;
     await pool.query(sql, [observaciones || "Objeción sin observaciones detalladas", id]);
-    return this.obtenerPorId(id);
+    const updated = await this.obtenerPorId(id);
+    await this.notificarCambioEstado(updated, 'objetada_comite');
+    return updated;
+  },
+
+  async notificarCambioEstado(convocatoria, evento) {
+    if (!convocatoria.creado_por) return;
+    try {
+      const { enviarCorreo } = require('../../shared/mailer');
+      const [[ownerInfo]] = await pool.query(
+        `SELECT u.correo_institucional FROM usuarios u
+         JOIN preferencias_notificacion p ON p.usuario_id = u.id
+         WHERE u.id = ? AND u.activo = 1 AND p.notif_cambio_estado = 1`,
+        [convocatoria.creado_por]
+      );
+      if (ownerInfo) {
+        await enviarCorreo({
+          destinatarios: [ownerInfo.correo_institucional],
+          asunto: 'Cambio de estado en convocatoria: ' + convocatoria.titulo,
+          cuerpo: `<p>Tu convocatoria <strong>${convocatoria.titulo}</strong> ha cambiado de estado o recibido una acción (${evento}). Nuevo estado: ${convocatoria.estado}.</p>`,
+          tipo: 'CAMBIO_ESTADO'
+        });
+      }
+    } catch (e) {
+      console.error('Error notificando cambio de estado:', e);
+    }
   },
 
   // ─── Inscripciones a Convocatorias ──────────────────────────────────────────

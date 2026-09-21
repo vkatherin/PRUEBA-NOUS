@@ -14,7 +14,9 @@ type Page =
   | "semilleros"
   | "movilidad"
   | "integraciones"
-  | "administracion";
+  | "administracion"
+  | "perfil"
+  | "preferencias";
 
 interface NavItem {
   id: Page;
@@ -112,12 +114,17 @@ export function Sidebar({
   activePage,
   onNavigate,
   user,
+  theme,
+  setTheme,
 }: {
   activePage: Page;
   onNavigate: (page: Page) => void;
   user?: UsuarioMe | null;
+  theme?: string;
+  setTheme?: (theme: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
 
   const permisos = user?.permisos || [];
   const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador");
@@ -132,7 +139,7 @@ export function Sidebar({
       case "evaluaciones": return hasPermiso("evaluaciones");
       case "seguimiento": return hasPermiso("proyectos"); // Asociado a proyectos
       case "financiero": return isAdmin; // Provisionalmente solo admin
-      case "documentos": return isAdmin || hasPermiso("proyectos");
+      case "documentos": return isAdmin || hasPermiso("proyectos") || hasPermiso("evaluaciones");
       case "productos": return isAdmin || hasPermiso("proyectos");
       default: return true;
     }
@@ -155,27 +162,31 @@ export function Sidebar({
       className="flex flex-col h-screen flex-shrink-0 transition-all duration-300"
       style={{
         width: collapsed ? "64px" : "256px",
-        backgroundColor: "#163D27",
+        backgroundColor: "var(--theme-primary)",
         borderRight: "1px solid rgba(255,255,255,0.06)",
       }}
     >
       {/* Logo area */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", minHeight: "72px" }}>
-        <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white flex items-center justify-center p-0.5">
+      <div className="flex items-center gap-3 px-4 py-5 border-b relative" style={{ borderColor: "rgba(255,255,255,0.08)", minHeight: "72px" }}>
+        <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-theme-bg-card flex items-center justify-center p-0.5">
           <img src="/logo.png" alt="CUS Logo" className="w-full h-full object-contain" />
         </div>
         {!collapsed && (
-          <div className="min-w-0">
+          <div className="min-w-0 pr-6">
             <p className="text-white font-bold text-sm leading-tight">NOUS</p>
-            <p className="text-xs leading-tight" style={{ color: "#F2A900" }}>
+            <p className="text-xs leading-tight" style={{ color: "var(--theme-accent)" }}>
               VRI · Católica del Sur
             </p>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="ml-auto w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ color: "rgba(255,255,255,0.4)", backgroundColor: "rgba(255,255,255,0.04)" }}
+          className="absolute -right-3.5 top-7 w-7 h-7 rounded-full flex items-center justify-center z-50 border shadow-sm transition-transform hover:scale-110"
+          style={{ 
+            backgroundColor: "var(--theme-primary)", 
+            borderColor: "rgba(255,255,255,0.2)",
+            color: "var(--theme-accent)" 
+          }}
         >
           <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
             <path d={collapsed ? "M9 18l6-6-6-6" : "M15 18l-6-6 6-6"} />
@@ -206,6 +217,57 @@ export function Sidebar({
         ))}
       </nav>
 
+      {/* Theme Selector Popover */}
+      {setTheme && (
+        <div className="px-3 pb-3 relative">
+          {showThemeMenu && (
+            <div className="absolute bottom-full left-0 mb-2 w-full px-3 z-50">
+              <div className="bg-[#1A2B22] border border-[#2A4232] rounded-xl shadow-xl overflow-hidden py-1">
+                <button
+                  onClick={() => { setTheme("light"); setShowThemeMenu(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-white/10 ${theme === 'light' ? 'text-white font-bold' : 'text-gray-300'}`}
+                >
+                  <span className="w-4 h-4 rounded-full bg-[#16683B] border border-white/20"></span>
+                  {!collapsed && "Institucional"}
+                </button>
+                <button
+                  onClick={() => { setTheme("dark"); setShowThemeMenu(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-white/10 ${theme === 'dark' ? 'text-white font-bold' : 'text-gray-300'}`}
+                >
+                  <span className="w-4 h-4 rounded-full bg-[#111111] border border-gray-600"></span>
+                  {!collapsed && "Oscuro"}
+                </button>
+                <button
+                  onClick={() => { setTheme("slate"); setShowThemeMenu(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-white/10 ${theme === 'slate' ? 'text-white font-bold' : 'text-gray-300'}`}
+                >
+                  <span className="w-4 h-4 rounded-full bg-[#0F172A] border border-gray-600"></span>
+                  {!collapsed && "Acero"}
+                </button>
+                <button
+                  onClick={() => { setTheme("executive"); setShowThemeMenu(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-white/10 ${theme === 'executive' ? 'text-white font-bold' : 'text-gray-300'}`}
+                >
+                  <span className="w-4 h-4 rounded-full bg-[#E2E8F0] border border-gray-400"></span>
+                  {!collapsed && "Marfil"}
+                </button>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setShowThemeMenu(!showThemeMenu)}
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3 px-3'} py-2 rounded-lg transition-all hover:bg-white/10`}
+            style={{ color: "rgba(255,255,255,0.7)", backgroundColor: "rgba(255,255,255,0.04)" }}
+            title="Cambiar apariencia"
+          >
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M12 2.69l5.66 4.2c3.27 2.42 4.09 7.02 1.83 10.45A8 8 0 0112 21.31 8 8 0 014.51 17.34c-2.26-3.43-1.44-8.03 1.83-10.45z" />
+            </svg>
+            {!collapsed && <span className="text-sm font-medium">Apariencia</span>}
+          </button>
+        </div>
+      )}
+
       {/* User area */}
       <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         <div
@@ -214,7 +276,7 @@ export function Sidebar({
         >
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-            style={{ backgroundColor: "#F2A900", color: "#163D27" }}
+            style={{ backgroundColor: "var(--theme-accent)", color: "var(--theme-primary)" }}
           >
             {user ? user.nombre_completo.substring(0,2).toUpperCase() : "US"}
           </div>
@@ -249,8 +311,8 @@ function NavLink({
       title={collapsed ? item.label : undefined}
       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-left transition-all duration-150 group relative"
       style={{
-        backgroundColor: active ? "#F2A900" : "transparent",
-        color: active ? "#163D27" : "rgba(255,255,255,0.72)",
+        backgroundColor: active ? "var(--theme-accent)" : "transparent",
+        color: active ? "var(--theme-primary)" : "rgba(255,255,255,0.72)",
       }}
       onMouseEnter={(e) => {
         if (!active) {
@@ -272,7 +334,7 @@ function NavLink({
           {item.badge && !active && (
             <span
               className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: "rgba(242,169,0,0.25)", color: "#F2A900" }}
+              style={{ backgroundColor: "rgba(242,169,0,0.25)", color: "var(--theme-accent)" }}
             >
               {item.badge}
             </span>

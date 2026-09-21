@@ -166,7 +166,29 @@ async function cambiarEstado(id, estado) {
   if (!validos.includes(estado)) throw new Error("Estado inválido: " + estado);
 
   await pool.query("UPDATE proyectos SET estado = ? WHERE id = ?", [estado, id]);
-  return obtenerProyecto(id);
+  const updated = await obtenerProyecto(id);
+  
+  try {
+    if (updated && updated.investigador_principal_id) {
+      const { enviarCorreo } = require('../../shared/mailer');
+      const [[ownerInfo]] = await pool.query(
+        `SELECT u.correo_institucional FROM usuarios u
+         JOIN preferencias_notificacion p ON p.usuario_id = u.id
+         WHERE u.id = ? AND u.activo = 1 AND p.notif_cambio_estado = 1`,
+        [updated.investigador_principal_id]
+      );
+      if (ownerInfo) {
+        await enviarCorreo({
+          destinatarios: [ownerInfo.correo_institucional],
+          asunto: 'Cambio de estado en tu proyecto: ' + updated.titulo,
+          cuerpo: `<p>Tu proyecto <strong>${updated.titulo}</strong> ha cambiado de estado a: ${estado}.</p>`,
+          tipo: 'CAMBIO_ESTADO_PROYECTO'
+        });
+      }
+    }
+  } catch(e) { console.error('Error notificando cambio de estado proyecto:', e); }
+
+  return updated;
 }
 
 // ─── Eliminar proyecto ────────────────────────────────────────────────────────
