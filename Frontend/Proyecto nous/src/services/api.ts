@@ -505,8 +505,13 @@ export interface Inscripcion {
   estado: string;
   usuario_nombre?: string;
   usuario_correo?: string;
+  usuario_cedula?: string;
   convocatoria_titulo?: string;
   documentos_adjuntos?: InscripcionDocumento[];
+  semillero?: SemilleroExterno | null;
+  integrantes?: IntegranteSemillero[];
+  info_general?: InfoGeneralSemillero | null;
+  contenido?: ContenidoSemillero | null;
 }
 
 export async function inscribirseConvocatoria(
