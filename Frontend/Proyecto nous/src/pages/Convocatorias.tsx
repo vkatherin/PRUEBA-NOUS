@@ -25,6 +25,9 @@ import {
   getContenidoSemillero,
   getResumenSemillero,
   enviarInscripcionExterna,
+  guardarBorradorSemillero,
+  getBorradorSemillero,
+  getMisBorradores,
   getUsuarioActual,
   TIPOS_INVESTIGACION,
   MAPA_TIPO_INVESTIGACION,
@@ -1134,6 +1137,7 @@ function InscripcionModal({
   const [generalError, setGeneralError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [autorizaDatos, setAutorizaDatos] = useState(false);
   const singleFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const listaRequisitos: string[] = useMemo(() => {
@@ -1156,6 +1160,7 @@ function InscripcionModal({
       setGeneralError("");
       setSuccessMessage("");
       setSaving(false);
+      setAutorizaDatos(false);
     }
   }, [conv]);
 
@@ -1236,6 +1241,10 @@ function InscripcionModal({
       errors.justificacion = "La justificación es obligatoria.";
     } else if (justificacionTrim.length > 500) {
       errors.justificacion = "El máximo permitido es de 500 caracteres.";
+    }
+
+    if (!autorizaDatos) {
+      errors.autoriza_datos = "Debes autorizar el tratamiento de datos personales para continuar.";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -1570,11 +1579,58 @@ function InscripcionModal({
               <span className="text-theme-text-muted">Motivos e impacto esperado</span>
             )}
             <span
-              className={`font-mono font-medium ${justificacion.length >= 500 ? "text-amber-600 font-bold" : "text-theme-text-muted"
+              className={`font-mono font-medium ${resumen.length >= 500 ? "text-amber-600 font-bold" : "text-theme-text-muted"
                 }`}
             >
               {justificacion.length} / 500 caracteres
             </span>
+          </div>
+        </div>
+
+        {/* ── Aviso y Autorización de Tratamiento de Datos Personales ── */}
+        <div
+          className={`p-4 rounded-xl border transition-all ${
+            fieldErrors.autoriza_datos
+              ? "bg-red-50/60 border-red-300"
+              : "bg-[#F4F9F6] border-[#C8E6D2]"
+          }`}
+        >
+          <div className="flex items-start gap-2.5">
+            <span className="text-base text-theme-primary shrink-0 mt-0.5">🛡️</span>
+            <div className="space-y-1.5 text-xs">
+              <p className="font-bold text-theme-text-main">
+                Aviso de Privacidad y Tratamiento de Datos Personales
+              </p>
+              <p className="text-[#4B5563] leading-relaxed text-[11px]">
+                En cumplimiento de la Ley Estatutaria 1581 de 2012 y normas concordantes de Protección de Datos Personales (Habeas Data), le informamos que los datos y documentos suministrados serán tratados exclusivamente para el registro, validación, evaluación académica, seguimiento y trazabilidad institucional en el sistema NOUS.
+              </p>
+              <label className="flex items-start gap-2 pt-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={autorizaDatos}
+                  onChange={(e) => {
+                    setAutorizaDatos(e.target.checked);
+                    if (e.target.checked && fieldErrors.autoriza_datos) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.autoriza_datos;
+                        return next;
+                      });
+                      setGeneralError("");
+                    }
+                  }}
+                  className="mt-0.5 w-4 h-4 rounded text-theme-primary border-gray-300 focus:ring-theme-primary accent-theme-primary shrink-0"
+                />
+                <span className="text-xs font-semibold text-theme-text-main leading-tight">
+                  Autorizo de manera previa, libre, expresa e informada el tratamiento de mis datos personales para la postulación a esta convocatoria. <span className="text-red-500">*</span>
+                </span>
+              </label>
+              {fieldErrors.autoriza_datos && (
+                <p className="text-xs text-red-600 font-semibold pt-1">
+                  ⚠️ {fieldErrors.autoriza_datos}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -2080,9 +2136,15 @@ function SemilleroExternoModal({
 
   // ── Estado Paso 5: Envío final ────────────────────────────────────────────
   const [docFinal, setDocFinal] = useState<File | null>(null);
+  const [comprobantePago, setComprobantePago] = useState<File | null>(null);
+  const [autorizaDatos, setAutorizaDatos] = useState(false);
+  const [guardandoBorrador, setGuardandoBorrador] = useState(false);
+  const [borradorGuardadoMensaje, setBorradorGuardadoMensaje] = useState("");
+  const [borradorRecuperado, setBorradorRecuperado] = useState(false);
 
   const PROCEDENCIA_FIJA = "Semillero externo";
   const user = getUsuarioActual();
+  const usuarioId = user?.id || 1;
 
   // ── Carga inicial de catálogos y datos previos si existen ─────────────────
   useEffect(() => {
@@ -2092,6 +2154,10 @@ function SemilleroExternoModal({
     setSaving(false);
     setGeneralError("");
     setInscripcionEnviada(false);
+    setAutorizaDatos(false);
+    setGuardandoBorrador(false);
+    setBorradorGuardadoMensaje("");
+    setBorradorRecuperado(false);
     setTipoInstitucion("");
     setInstitucionProcedencia("");
     setSemilleroNombre("");
@@ -2112,6 +2178,7 @@ function SemilleroExternoModal({
     setResultados("");
     setErrores4({});
     setDocFinal(null);
+    setComprobantePago(null);
 
     // Cargar catálogos
     getCatalogosSemillero(conv.id)
@@ -2120,52 +2187,54 @@ function SemilleroExternoModal({
       })
       .catch(() => {});
 
-    // Cargar datos previos si ya existía una inscripción previa
+    // Cargar tipos de institución
     getSemilleroExterno(conv.id, user?.id)
       .then((semData) => {
         if (semData.tipos_institucion && semData.tipos_institucion.length > 0) {
           setTiposInstitucion(semData.tipos_institucion);
         }
-        if (semData.semillero) {
-          setTipoInstitucion(semData.semillero.tipo_institucion || "");
-          setInstitucionProcedencia(semData.semillero.institucion_procedencia || "");
-          setSemilleroNombre(semData.semillero.semillero_nombre || "");
-          setPasosCompletados((p) => new Set([...p, 1]));
-        }
       })
       .catch(() => {});
 
-    if (user?.id) {
-      getIntegrantesSemillero(conv.id, user.id)
-        .then((res) => {
-          if (res.integrantes && res.integrantes.length > 0) {
-            setIntegrantes(res.integrantes);
-            setPasosCompletados((p) => new Set([...p, 2]));
-          }
-        })
-        .catch(() => {});
+    // Recuperar borrador activo si existe
+    if (usuarioId) {
+      getBorradorSemillero(conv.id, usuarioId)
+        .then((bData) => {
+          if (bData.ok && bData.tiene_borrador) {
+            const completados = new Set<number>();
 
-      getInfoGeneralSemillero(conv.id, user.id)
-        .then((res) => {
-          if (res.info_general) {
-            setTituloTrabajo(res.info_general.titulo_trabajo || "");
-            setLineaInv(res.info_general.linea_investigacion || "");
-            setPalabrasClave(res.info_general.palabras_clave || "");
-            setResumenInfo(res.info_general.resumen || "");
-            setPasosCompletados((p) => new Set([...p, 3]));
-          }
-        })
-        .catch(() => {});
+            if (bData.semillero) {
+              setTipoInstitucion(bData.semillero.tipo_institucion || "");
+              setInstitucionProcedencia(bData.semillero.institucion_procedencia || "");
+              setSemilleroNombre(bData.semillero.semillero_nombre || "");
+              if (bData.semillero.semillero_nombre) completados.add(1);
+            }
 
-      getContenidoSemillero(conv.id, user.id)
-        .then((res) => {
-          if (res.contenido) {
-            setPlanteamiento(res.contenido.planteamiento_problema || "");
-            setObjetivoGral(res.contenido.objetivo_general || "");
-            setObjetivosEsp(res.contenido.objetivos_especificos || "");
-            setMetodologia(res.contenido.metodologia || "");
-            setResultados(res.contenido.resultados_esperados || "");
-            setPasosCompletados((p) => new Set([...p, 4]));
+            if (bData.integrantes && bData.integrantes.length > 0) {
+              setIntegrantes(bData.integrantes);
+              completados.add(2);
+            }
+
+            if (bData.info_general) {
+              setTituloTrabajo(bData.info_general.titulo_trabajo || "");
+              setLineaInv(bData.info_general.linea_investigacion || "");
+              setPalabrasClave(bData.info_general.palabras_clave || "");
+              setResumenInfo(bData.info_general.resumen || "");
+              if (bData.info_general.titulo_trabajo) completados.add(3);
+            }
+
+            if (bData.contenido) {
+              setPlanteamiento(bData.contenido.planteamiento_problema || "");
+              setObjetivoGral(bData.contenido.objetivo_general || "");
+              setObjetivosEsp(bData.contenido.objetivos_especificos || "");
+              setMetodologia(bData.contenido.metodologia || "");
+              setResultados(bData.contenido.resultados_esperados || "");
+              if (bData.contenido.planteamiento_problema) completados.add(4);
+            }
+
+            setPasosCompletados(completados);
+            setPaso(bData.ultimo_paso || 1);
+            setBorradorRecuperado(true);
           }
         })
         .catch(() => {});
@@ -2174,7 +2243,6 @@ function SemilleroExternoModal({
 
   if (!conv) return null;
   const codigoDisplay = conv.codigo_con || conv.codigo || `CON${conv.id}`;
-  const usuarioId = user?.id || 1;
 
   // ── Avanzar Paso 1 (Solo validación local) ──────────────────────────────────
   const avanzarPaso1 = () => {
@@ -2293,6 +2361,10 @@ function SemilleroExternoModal({
 
   // ── Guardar y Enviar Final (Paso 5: Guarda todo en la BD) ───────────────────
   const enviarFinal = async () => {
+    if (!autorizaDatos) {
+      setGeneralError("Debes aceptar la autorización de tratamiento de datos personales para continuar.");
+      return;
+    }
     setSaving(true);
     setGeneralError("");
     try {
@@ -2326,6 +2398,9 @@ function SemilleroExternoModal({
           resultados_esperados: resultados.trim(),
         })
       );
+      if (comprobantePago) {
+        fd.append("comprobante_pago", comprobantePago, comprobantePago.name);
+      }
       if (docFinal) {
         fd.append("documento", docFinal, docFinal.name);
       }
@@ -2338,6 +2413,44 @@ function SemilleroExternoModal({
       setGeneralError(e.message || "Error al enviar la inscripción.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ── Guardar Borrador Parcial ─────────────────────────────────────────────
+  const guardarBorradorActual = async () => {
+    setGuardandoBorrador(true);
+    setGeneralError("");
+    try {
+      await guardarBorradorSemillero(conv.id, {
+        usuario_id: usuarioId,
+        paso_actual: paso,
+        semillero: {
+          tipo_institucion: tipoInstitucion.trim(),
+          institucion_procedencia: institucionProcedencia.trim(),
+          semillero_nombre: semilleroNombre.trim(),
+        },
+        integrantes,
+        info_general: {
+          titulo_trabajo: tituloTrabajo.trim(),
+          linea_investigacion: lineaInv || "",
+          palabras_clave: palabrasClave.trim(),
+          resumen: resumenInfo.trim(),
+        },
+        contenido: {
+          planteamiento_problema: planteamiento.trim(),
+          objetivo_general: objetivoGral.trim(),
+          objetivos_especificos: objetivosEsp.trim(),
+          metodologia: metodologia.trim(),
+          resultados_esperados: resultados.trim(),
+        },
+      });
+      setBorradorGuardadoMensaje("✓ Borrador guardado exitosamente. Podrás continuar tu inscripción cuando desees.");
+      setTimeout(() => setBorradorGuardadoMensaje(""), 4500);
+      onGuardado();
+    } catch (e: any) {
+      setGeneralError(e.message || "Error al guardar el borrador.");
+    } finally {
+      setGuardandoBorrador(false);
     }
   };
 
@@ -2366,20 +2479,32 @@ function SemilleroExternoModal({
     nextLabel?: string;
     nextDisabled?: boolean;
   }) => (
-    <div className="flex justify-between pt-4 border-t border-theme-border mt-4">
-      <div className="flex gap-2">
-        <Button variant="ghost" onClick={onClose} disabled={saving}>
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-theme-border mt-4">
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <Button variant="ghost" onClick={onClose} disabled={saving || guardandoBorrador}>
           Cancelar
         </Button>
         {onBack && (
-          <Button variant="outline" onClick={onBack} disabled={saving}>
+          <Button variant="outline" onClick={onBack} disabled={saving || guardandoBorrador}>
             ← Volver
           </Button>
         )}
       </div>
-      <Button variant="primary" onClick={onNext} disabled={saving || nextDisabled}>
-        {saving ? "Guardando y enviando..." : nextLabel}
-      </Button>
+
+      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <Button
+          variant="outline"
+          onClick={guardarBorradorActual}
+          disabled={saving || guardandoBorrador}
+          className="border-amber-300 text-amber-900 bg-amber-50/70 hover:bg-amber-100 transition-colors"
+        >
+          {guardandoBorrador ? "Guardando..." : "💾 Guardar borrador"}
+        </Button>
+
+        <Button variant="primary" onClick={onNext} disabled={saving || guardandoBorrador || nextDisabled}>
+          {saving ? "Guardando y enviando..." : nextLabel}
+        </Button>
+      </div>
     </div>
   );
 
@@ -2396,6 +2521,59 @@ function SemilleroExternoModal({
     <Modal open={!!conv} onClose={saving ? () => {} : onClose} title="INSCRIPCIÓN — CONVOCATORIA EXTERNA" size="xl">
       <StepperHeader pasoActual={paso} pasosCompletados={pasosCompletados} onSelectPaso={setPaso} />
       <Banner />
+
+      {/* ── Aviso de Pago de Inscripción para Convocatorias Externas ── */}
+      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 text-lg shadow-sm">
+            💳
+          </div>
+          <div>
+            <p className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+              Pago de inscripción
+            </p>
+            <p className="text-xs text-emerald-800">
+              Para postulaciones a convocatorias externas, realiza tu pago en el portal de extensión institucional.
+            </p>
+          </div>
+        </div>
+        <a
+          href="https://extension.unicatolicadelsur.edu.co/register"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition-all hover:shadow hover:scale-[1.02] shrink-0"
+        >
+          <span>AQUÍ PUEDES PAGAR LA INSCRIPCIÓN</span>
+          <span className="text-xs">↗</span>
+        </a>
+      </div>
+
+      {/* ── Aviso de Borrador Recuperado o Guardado ── */}
+      {borradorGuardadoMensaje && (
+        <div className="p-3 rounded-xl bg-green-50 border border-green-300 text-green-800 text-xs font-medium flex items-center gap-2 mb-3 shadow-sm animate-fade-in">
+          <span>💾</span>
+          <span>{borradorGuardadoMensaje}</span>
+        </div>
+      )}
+
+      {borradorRecuperado && !borradorGuardadoMensaje && (
+        <div className="p-3 rounded-xl bg-purple-50 border border-purple-300 text-purple-900 text-xs font-medium flex items-center justify-between gap-2 mb-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">📂</span>
+            <span>
+              <strong>Borrador recuperado:</strong> Se han cargado tus datos guardados previamente. Continúas en el <strong>Paso {paso}</strong>.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBorradorRecuperado(false)}
+            className="text-purple-600 hover:text-purple-800 text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <ErrorBanner />
 
       {/* ── PASO 1: SEMILLERO ────────────────────────────────────────────── */}
@@ -2916,32 +3094,139 @@ function SemilleroExternoModal({
                 </div>
               </div>
 
-              {/* Documento adjunto opcional */}
-              <Field label="Documento adjunto (opcional)" hint="PDF con propuesta o aval institucional">
-                <div className="flex items-center gap-3">
-                  <label className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-theme-border bg-theme-bg-main cursor-pointer hover:bg-theme-primary/10 transition-colors">
-                    <span className="text-sm text-theme-text-muted">{docFinal ? docFinal.name : "Seleccionar PDF..."}</span>
-                    <input
-                      type="file"
-                      accept=".pdf,application/pdf"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) setDocFinal(f);
-                      }}
-                    />
-                  </label>
-                  {docFinal && (
-                    <button
-                      type="button"
-                      onClick={() => setDocFinal(null)}
-                      className="text-red-400 hover:text-red-600 text-sm"
+              {/* Documentos Adjuntos: Comprobante de Pago y Propuesta */}
+              <div className="space-y-3.5 pt-1">
+                <SectionTitle>Documentación y Comprobantes</SectionTitle>
+
+                {/* Comprobante de Pago */}
+                <div className="p-3.5 rounded-xl border border-[#C8E6D2] bg-[#F7FAF8] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-theme-text-main flex items-center gap-1.5">
+                      <span>💳</span> Comprobante de Pago de Inscripción
+                    </label>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      Recomendado / Requerido
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-theme-text-muted">
+                    Adjunta el recibo o comprobante de pago emitido por la plataforma institucional (PDF, JPG, PNG o WEBP, máx. 15MB).
+                  </p>
+
+                  <div className="flex items-center gap-2.5">
+                    <label className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl border border-[#BBDDC7] bg-white cursor-pointer hover:bg-emerald-50/50 transition-colors">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-sm">📎</span>
+                        <span className="text-xs font-medium text-theme-text-main truncate">
+                          {comprobantePago ? comprobantePago.name : "Seleccionar archivo de comprobante..."}
+                        </span>
+                      </div>
+                      {comprobantePago && (
+                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2">
+                          ({(comprobantePago.size / 1024).toFixed(1)} KB)
+                        </span>
+                      )}
+                      <input
+                        type="file"
+                        accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setComprobantePago(f);
+                        }}
+                      />
+                    </label>
+                    {comprobantePago && (
+                      <button
+                        type="button"
+                        onClick={() => setComprobantePago(null)}
+                        className="px-2.5 py-2 text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors"
+                        title="Quitar archivo"
+                      >
+                        ✕ Quitar
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-[#4B5563] pt-0.5 flex items-center justify-between">
+                    <span>¿Aún no has cancelado la inscripción?</span>
+                    <a
+                      href="https://extension.unicatolicadelsur.edu.co/register"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-theme-primary hover:underline inline-flex items-center gap-1"
                     >
-                      ✕
-                    </button>
-                  )}
+                      <span>💳</span> Pagar aquí en línea &rarr;
+                    </a>
+                  </div>
                 </div>
-              </Field>
+
+                {/* Documento adjunto opcional: Propuesta de investigación */}
+                <Field label="Propuesta de Investigación o Aval (opcional)" hint="PDF con propuesta detallada o carta de aval">
+                  <div className="flex items-center gap-2.5">
+                    <label className="flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl border border-theme-border bg-theme-bg-main cursor-pointer hover:bg-theme-primary/10 transition-colors">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-sm">📄</span>
+                        <span className="text-xs text-theme-text-muted truncate">
+                          {docFinal ? docFinal.name : "Seleccionar archivo PDF..."}
+                        </span>
+                      </div>
+                      {docFinal && (
+                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2">
+                          ({(docFinal.size / 1024).toFixed(1)} KB)
+                        </span>
+                      )}
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setDocFinal(f);
+                        }}
+                      />
+                    </label>
+                    {docFinal && (
+                      <button
+                        type="button"
+                        onClick={() => setDocFinal(null)}
+                        className="px-2.5 py-2 text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors"
+                        title="Quitar archivo"
+                      >
+                        ✕ Quitar
+                      </button>
+                    )}
+                  </div>
+                </Field>
+              </div>
+
+              {/* ── Aviso y Autorización de Tratamiento de Datos Personales (Semillero Externo) ── */}
+              <div className="p-4 rounded-xl border bg-[#F4F9F6] border-[#C8E6D2] space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-base text-theme-primary shrink-0 mt-0.5">🛡️</span>
+                  <div className="space-y-1.5 text-xs">
+                    <p className="font-bold text-theme-text-main">
+                      Aviso de Privacidad y Tratamiento de Datos Personales
+                    </p>
+                    <p className="text-[#4B5563] leading-relaxed text-[11px]">
+                      En cumplimiento de la Ley Estatutaria 1581 de 2012 y el régimen general de Protección de Datos Personales, los datos suministrados sobre la institución, integrantes del semillero y propuesta serán almacenados y tratados exclusivamente para la gestión, evaluación, seguimiento y contacto institucional en el marco de las convocatorias NOUS.
+                    </p>
+                    <label className="flex items-start gap-2 pt-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={autorizaDatos}
+                        onChange={(e) => {
+                          setAutorizaDatos(e.target.checked);
+                          if (e.target.checked) setGeneralError("");
+                        }}
+                        className="mt-0.5 w-4 h-4 rounded text-theme-primary border-gray-300 focus:ring-theme-primary accent-theme-primary shrink-0"
+                      />
+                      <span className="text-xs font-semibold text-theme-text-main leading-tight">
+                        Autorizo de manera previa, expresa e informada el tratamiento de los datos personales e institucionales suministrados. <span className="text-red-500">*</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
 
               <div className="p-3 rounded-xl bg-theme-primary/10 border border-[#C8E6D2]">
                 <p className="text-xs text-theme-primary font-medium">
@@ -2953,7 +3238,7 @@ function SemilleroExternoModal({
                 onBack={() => setPaso(4)}
                 onNext={enviarFinal}
                 nextLabel="🚀 Guardar y Enviar inscripción"
-                nextDisabled={saving}
+                nextDisabled={saving || !autorizaDatos}
               />
             </>
           )}
@@ -3131,7 +3416,7 @@ function EliminarExternaModal({
   );
 }
 
-type Tab = "todas" | "internas" | "externas" | "conjunta" | "alertas";
+type Tab = "todas" | "internas" | "externas" | "conjunta" | "borrador" | "alertas";
 export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
   const [activeTab, setActiveTab] = useState<Tab>("todas");
   const [showWizard, setShowWizard] = useState(false);
@@ -3143,14 +3428,22 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
   const [inscribiendoConv, setInscribiendoConv] = useState<Convocatoria | null>(null);
   // Estado para flujo de inscripción en convocatorias externas (Paso 1: Semillero)
   const [semilleroExternoConv, setSemilleroExternoConv] = useState<Convocatoria | null>(null);
+  const [misBorradores, setMisBorradores] = useState<any[]>([]);
 
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
 
   const cargar = useCallback(() => {
     setLoading(true);
-    getConvocatorias()
-      .then(setConvocatorias)
+    const u = getUsuarioActual();
+    Promise.all([
+      getConvocatorias(),
+      getMisBorradores(u?.id).catch(() => ({ borradores: [] })),
+    ])
+      .then(([convs, borrsData]) => {
+        setConvocatorias(convs);
+        setMisBorradores(borrsData?.borradores || []);
+      })
       .catch((e) => console.error("Error cargando convocatorias:", e))
       .finally(() => setLoading(false));
   }, []);
@@ -3166,7 +3459,12 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
       c.titulo.toLowerCase().includes(search.toLowerCase()) ||
       cod.includes(search.toLowerCase()) ||
       (c.tipo_investigacion ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchEstado = filterEstado === "todos" || c.estado === filterEstado;
+    
+    const tieneBorrador = misBorradores.some((b) => b.convocatoria_id === c.id);
+    const matchEstado =
+      filterEstado === "todos" ||
+      c.estado === filterEstado ||
+      (filterEstado === "borrador" && (c.estado === "borrador" || tieneBorrador));
 
     let matchTipo = true;
     const tipoLower = (c.tipo ?? "").toLowerCase();
@@ -3176,6 +3474,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
       matchTipo = tipoLower === "externa" || tipoLower === "externas";
     } else if (activeTab === "conjunta") {
       matchTipo = tipoLower === "conjunta" || tipoLower === "conjuntas";
+    } else if (activeTab === "borrador") {
+      matchTipo = c.estado === "borrador" || tieneBorrador;
     }
 
     const matchRole = !isEstudiante || (c.dirigida_a && c.dirigida_a.toLowerCase().includes("estudiante"));
@@ -3232,6 +3532,7 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
             { id: "internas" as Tab, label: "Internas", icon: "🏫" },
             { id: "externas" as Tab, label: "Externas", icon: "🌐" },
             { id: "conjunta" as Tab, label: "Conjunta", icon: "🤝" },
+            { id: "borrador" as Tab, label: "Borradores", icon: "📝" },
             { id: "alertas" as Tab, label: "Alertas", icon: "🔔" },
           ]).map((tab) => (
             <button
@@ -3307,89 +3608,98 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                     : "No hay convocatorias que coincidan con los filtros aplicados."}
                 </div>
               )}
-              {filtradas.map((c) => (
-                <Card key={c.id} className="hover:shadow-md transition-shadow">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-xs font-mono font-bold text-theme-primary bg-theme-primary/10 px-2.5 py-0.5 rounded-md border border-[#C8E6D2]">
-                          {c.codigo_con || c.codigo || `CON${c.id}`}
-                        </span>
-                        <Badge variant={estadoBadge(c.estado)} />
-                        {c.tipo && (
-                          <span className="text-xs bg-theme-primary/10 text-theme-primary px-2.5 py-0.5 rounded-full font-medium">
-                            {c.tipo}
+              {filtradas.map((c) => {
+                const borrador = misBorradores.find((b) => b.convocatoria_id === c.id);
+                return (
+                  <Card key={c.id} className="hover:shadow-md transition-shadow">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="text-xs font-mono font-bold text-theme-primary bg-theme-primary/10 px-2.5 py-0.5 rounded-md border border-[#C8E6D2]">
+                            {c.codigo_con || c.codigo || `CON${c.id}`}
                           </span>
+                          <Badge variant={estadoBadge(c.estado)} />
+                          {borrador && (
+                            <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-semibold border border-purple-200 flex items-center gap-1">
+                              <span>🟣</span> Borrador guardado
+                            </span>
+                          )}
+                          {c.tipo && (
+                            <span className="text-xs bg-theme-bg-main text-theme-text-muted px-2 py-0.5 rounded font-medium">
+                              {c.tipo}
+                            </span>
+                          )}
+                          {c.tipo_investigacion && (
+                            <span className="text-xs bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full font-medium border border-purple-200">
+                              🔬 {c.tipo_investigacion}
+                            </span>
+                          )}
+                          {c.dirigida_a && (
+                            <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-medium border border-blue-200">
+                              🎯 {c.dirigida_a}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-base font-bold text-theme-text-main mb-1">{c.titulo}</h3>
+                        {c.descripcion && (
+                          <p className="text-xs text-theme-text-muted mb-2 line-clamp-2 max-w-2xl">{c.descripcion}</p>
                         )}
-                        {c.tipo_investigacion && (
-                          <span className="text-xs bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full font-medium border border-purple-200">
-                            🔬 {c.tipo_investigacion}
-                          </span>
-                        )}
-                        {c.dirigida_a && (
-                          <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-medium border border-blue-200">
-                            🎯 {c.dirigida_a}
-                          </span>
-                        )}
+                        <div className="flex flex-wrap gap-4 text-xs text-theme-text-muted">
+                          <span>📅 Apertura: <strong className="text-theme-text-main">{formatDate(c.fecha_apertura)}</strong></span>
+                          <span>🔒 Cierre: <strong className="text-theme-text-main">{formatDate(c.fecha_cierre)}</strong></span>
+                          {c.creado_por_nombre && (
+                            <span>👤 Creado por: <strong className="text-theme-text-main">{c.creado_por_nombre}</strong></span>
+                          )}
+                        </div>
                       </div>
-                      <h3 className="text-base font-bold text-theme-text-main mb-1">{c.titulo}</h3>
-                      {c.descripcion && (
-                        <p className="text-xs text-theme-text-muted mb-2 line-clamp-2 max-w-2xl">{c.descripcion}</p>
-                      )}
-                      <div className="flex flex-wrap gap-4 text-xs text-theme-text-muted">
-                        <span>📅 Apertura: <strong className="text-theme-text-main">{formatDate(c.fecha_apertura)}</strong></span>
-                        <span>🔒 Cierre: <strong className="text-theme-text-main">{formatDate(c.fecha_cierre)}</strong></span>
-                        {c.creado_por_nombre && (
-                          <span>👤 Creado por: <strong className="text-theme-text-main">{c.creado_por_nombre}</strong></span>
-                        )}
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        <div className="flex gap-2 flex-wrap justify-end">
+                          {(user?.permisos?.includes('convocatorias.editar') || user?.roles?.includes('administrador')) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingConv(c)}
+                            >
+                              ✏️ Editar
+                            </Button>
+                          )}
+                          {(user?.permisos?.includes('convocatorias.eliminar') || user?.roles?.includes('administrador')) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                              onClick={() => setDeletingConv(c)}
+                            >
+                              🗑️ Eliminar
+                            </Button>
+                          )}
+                          <Button
+                            variant={borrador ? "secondary" : "ghost"}
+                            size="sm"
+                            className={borrador ? "border-purple-300 bg-purple-50 text-purple-800 font-semibold hover:bg-purple-100" : ""}
+                            onClick={() => {
+                              if (c.tipo === "Externa") {
+                                setSemilleroExternoConv(c);
+                              } else {
+                                setInscribiendoConv(c);
+                              }
+                            }}
+                          >
+                            {borrador ? "✏️ Continuar inscripción" : "📝 Inscribirse"}
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => setSelected(c)}
+                          >
+                            Ver detalles
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <div className="flex gap-2 flex-wrap justify-end">
-                        {(user?.permisos?.includes('convocatorias.editar') || user?.roles?.includes('administrador')) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingConv(c)}
-                          >
-                            ✏️ Editar
-                          </Button>
-                        )}
-                        {(user?.permisos?.includes('convocatorias.eliminar') || user?.roles?.includes('administrador')) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                            onClick={() => setDeletingConv(c)}
-                          >
-                            🗑️ Eliminar
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (c.tipo === "Externa") {
-                              setSemilleroExternoConv(c);
-                            } else {
-                              setInscribiendoConv(c);
-                            }
-                          }}
-                        >
-                          📝 Inscribirse
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => setSelected(c)}
-                        >
-                          Ver detalles
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

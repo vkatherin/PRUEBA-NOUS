@@ -21,6 +21,9 @@ router.get("/externas/:id", verificarPermiso('convocatorias.leer'), convocatoria
 router.put("/externas/:id", verificarPermiso('convocatorias.editar'), convocatoriasController.actualizarExterna);
 router.delete("/externas/:id", verificarPermiso('convocatorias.eliminar'), convocatoriasController.eliminarExterna);
 
+// ─── Borradores de Inscripción (Debe ir antes de /:id) ──────────────────────
+router.get("/mis-borradores", verificarPermiso('convocatorias.leer'), pasosSemilleroController.listarBorradores);
+
 // ─── RF-CON-01 y RF-CON-02: Convocatorias Internas ──────────────────────────
 router.get("/", verificarPermiso('convocatorias.leer'), convocatoriasController.listar);
 router.post("/", verificarPermiso('convocatorias.crear'), convocatoriasController.crear);
@@ -62,6 +65,10 @@ router.post(
   pasosSemilleroController.uploadEnvioMiddleware,
   pasosSemilleroController.enviarFinal
 );
+
+// ─── Inscripción Externa: Borradores por Convocatoria ───────────────────────
+router.get("/:id/mi-borrador", verificarPermiso('convocatorias.leer'), pasosSemilleroController.obtenerBorrador);
+router.post("/:id/guardar-borrador", verificarPermiso('convocatorias.leer'), pasosSemilleroController.guardarBorrador);
 
 // ─── Inscripciones Generales (internas) ─────────────────────────────────────
 router.post(

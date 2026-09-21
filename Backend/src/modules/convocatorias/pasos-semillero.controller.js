@@ -344,9 +344,233 @@ const pasosSemilleroController = {
     }
   },
 
+  // ─── GESTIÓN DE BORRADORES (Guardar y Continuar) ──────────────────────────
+
+  // POST /:id/guardar-borrador — guarda el estado parcial del formulario (Paso 1..5)
+  async guardarBorrador(req, res) {
+    try {
+      const convId = parseInt(req.params.id, 10);
+      const usuarioId = parseInt(req.body.usuario_id, 10);
+      const pasoActual = parseInt(req.body.paso_actual, 10) || 1;
+
+      if (!convId || !usuarioId) {
+        return res.status(400).json({ error: "Parámetros incompletos (convocatoria o usuario)." });
+      }
+
+      // Parsear datos
+      let semilleroData = req.body.semillero;
+      if (typeof semilleroData === "string") {
+        try { semilleroData = JSON.parse(semilleroData); } catch (_) {}
+      }
+      let integrantesData = req.body.integrantes;
+      if (typeof integrantesData === "string") {
+        try { integrantesData = JSON.parse(integrantesData); } catch (_) {}
+      }
+      let infoGeneralData = req.body.info_general;
+      if (typeof infoGeneralData === "string") {
+        try { infoGeneralData = JSON.parse(infoGeneralData); } catch (_) {}
+      }
+      let contenidoData = req.body.contenido;
+      if (typeof contenidoData === "string") {
+        try { contenidoData = JSON.parse(contenidoData); } catch (_) {}
+      }
+
+      // Buscar si ya tiene un borrador en proceso
+      const [draftRows] = await pool.query(
+        "SELECT id FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ? AND estado = 'en_proceso' LIMIT 1",
+        [convId, usuarioId]
+      );
+
+      let inscId;
+      if (draftRows.length > 0) {
+        inscId = draftRows[0].id;
+        await pool.query(
+          "UPDATE convocatoria_inscripciones SET fecha_inscripcion = NOW() WHERE id = ?",
+          [inscId]
+        );
+      } else {
+        const [insRes] = await pool.query(
+          `INSERT INTO convocatoria_inscripciones
+           (convocatoria_id, usuario_id, tipo_investigacion, resumen_proyecto, justificacion,
+            documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes, estado, fecha_inscripcion)
+           VALUES (?, ?, 'Investigación formativa (Semillero)', '', '', '', '', '', 0, 'en_proceso', NOW())`,
+          [convId, usuarioId]
+        );
+        inscId = insRes.insertId;
+      }
+
+      // Guardar Semillero si viene información
+      if (semilleroData) {
+        const tipoInst = (semilleroData.tipo_institucion || "").trim();
+        const instProc = (semilleroData.institucion_procedencia || "").trim();
+        const semNombre = (semilleroData.semillero_nombre || "").trim();
+        if (tipoInst || instProc || semNombre) {
+          const [existSem] = await pool.query("SELECT id FROM inscripcion_semillero_externo WHERE inscripcion_id = ? LIMIT 1", [inscId]);
+          if (existSem.length > 0) {
+            await pool.query(
+              `UPDATE inscripcion_semillero_externo SET tipo_institucion = ?, procedencia = 'Semillero externo', institucion_procedencia = ?, semillero_nombre = ? WHERE inscripcion_id = ?`,
+              [tipoInst, instProc, semNombre, inscId]
+            );
+          } else {
+            await pool.query(
+              `INSERT INTO inscripcion_semillero_externo (inscripcion_id, tipo_institucion, procedencia, institucion_procedencia, semillero_nombre) VALUES (?, ?, 'Semillero externo', ?, ?)`,
+              [inscId, tipoInst, instProc, semNombre]
+            );
+          }
+        }
+      }
+
+      // Guardar Integrantes si vienen
+      if (Array.isArray(integrantesData)) {
+        await pool.query("DELETE FROM inscripcion_semillero_integrantes WHERE inscripcion_id = ?", [inscId]);
+        for (const intg of integrantesData) {
+          if (intg.nombre_completo || intg.numero_documento || intg.email) {
+            await pool.query(
+              `INSERT INTO inscripcion_semillero_integrantes
+               (inscripcion_id, nombre_completo, tipo_documento, numero_documento, rol, email, telefono)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [
+                inscId,
+                (intg.nombre_completo || "").trim(),
+                (intg.tipo_documento || "CC").trim(),
+                (intg.numero_documento || "").trim(),
+                (intg.rol || "Estudiante").trim(),
+                (intg.email || "").trim(),
+                (intg.telefono || "").trim() || null,
+              ]
+            );
+          }
+        }
+      }
+
+      // Guardar Info General si viene
+      if (infoGeneralData) {
+        const titTrabajo = (infoGeneralData.titulo_trabajo || "").trim();
+        const linInvest = (infoGeneralData.linea_investigacion || "").trim() || null;
+        const palClave = (infoGeneralData.palabras_clave || "").trim();
+        const resumen = (infoGeneralData.resumen || "").trim();
+        if (titTrabajo || linInvest || palClave || resumen) {
+          const [existInfo] = await pool.query("SELECT id FROM inscripcion_semillero_info_general WHERE inscripcion_id = ? LIMIT 1", [inscId]);
+          if (existInfo.length > 0) {
+            await pool.query(
+              `UPDATE inscripcion_semillero_info_general SET titulo_trabajo = ?, linea_investigacion = ?, palabras_clave = ?, resumen = ? WHERE inscripcion_id = ?`,
+              [titTrabajo, linInvest, palClave, resumen, inscId]
+            );
+          } else {
+            await pool.query(
+              `INSERT INTO inscripcion_semillero_info_general (inscripcion_id, titulo_trabajo, linea_investigacion, palabras_clave, resumen) VALUES (?, ?, ?, ?, ?)`,
+              [inscId, titTrabajo, linInvest, palClave, resumen]
+            );
+          }
+        }
+      }
+
+      // Guardar Contenido si viene
+      if (contenidoData) {
+        const plantProb = (contenidoData.planteamiento_problema || "").trim();
+        const objGral = (contenidoData.objetivo_general || "").trim();
+        const objEsp = (contenidoData.objetivos_especificos || "").trim();
+        const metodo = (contenidoData.metodologia || "").trim();
+        const resEsp = (contenidoData.resultados_esperados || "").trim();
+        if (plantProb || objGral || objEsp || metodo || resEsp) {
+          const [existCont] = await pool.query("SELECT id FROM inscripcion_semillero_contenido WHERE inscripcion_id = ? LIMIT 1", [inscId]);
+          if (existCont.length > 0) {
+            await pool.query(
+              `UPDATE inscripcion_semillero_contenido SET planteamiento_problema = ?, objetivo_general = ?, objetivos_especificos = ?, metodologia = ?, resultados_esperados = ? WHERE inscripcion_id = ?`,
+              [plantProb, objGral, objEsp, metodo, resEsp, inscId]
+            );
+          } else {
+            await pool.query(
+              `INSERT INTO inscripcion_semillero_contenido (inscripcion_id, planteamiento_problema, objetivo_general, objetivos_especificos, metodologia, resultados_esperados) VALUES (?, ?, ?, ?, ?, ?)`,
+              [inscId, plantProb, objGral, objEsp, metodo, resEsp]
+            );
+          }
+        }
+      }
+
+      return res.json({
+        ok: true,
+        mensaje: "Borrador guardado exitosamente.",
+        inscripcion_id: inscId,
+        paso_actual: pasoActual,
+      });
+    } catch (err) {
+      console.error("Error al guardar borrador:", err);
+      return res.status(500).json({ error: "Error al guardar el borrador." });
+    }
+  },
+
+  // GET /:id/mi-borrador?usuario_id=X — recupera el borrador en proceso
+  async obtenerBorrador(req, res) {
+    try {
+      const convId = parseInt(req.params.id, 10);
+      const usuarioId = parseInt(req.query.usuario_id, 10);
+      if (!convId || !usuarioId) return res.status(400).json({ error: "Parámetros incompletos." });
+
+      const [draftRows] = await pool.query(
+        "SELECT * FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ? AND estado = 'en_proceso' ORDER BY id DESC LIMIT 1",
+        [convId, usuarioId]
+      );
+
+      if (draftRows.length === 0) {
+        return res.json({ ok: true, tiene_borrador: false });
+      }
+
+      const inscripcion = draftRows[0];
+      const datos = await cargarTodosPasos(inscripcion.id);
+
+      // Calcular último paso alcanzado
+      let ultimoPaso = 1;
+      if (datos.semillero && datos.semillero.semillero_nombre) ultimoPaso = 2;
+      if (datos.integrantes && datos.integrantes.length > 0) ultimoPaso = 3;
+      if (datos.info_general && datos.info_general.titulo_trabajo) ultimoPaso = 4;
+      if (datos.contenido && datos.contenido.planteamiento_problema) ultimoPaso = 5;
+
+      return res.json({
+        ok: true,
+        tiene_borrador: true,
+        inscripcion,
+        ultimo_paso: ultimoPaso,
+        ...datos,
+      });
+    } catch (err) {
+      console.error("Error al obtener borrador:", err);
+      return res.status(500).json({ error: "Error al consultar borrador." });
+    }
+  },
+
+  // GET /mis-borradores?usuario_id=X — lista todas las convocatorias con borradores del usuario
+  async listarBorradores(req, res) {
+    try {
+      const usuarioId = parseInt(req.query.usuario_id, 10) || req.user?.id;
+      if (!usuarioId) return res.status(400).json({ error: "Usuario requerido." });
+
+      const [rows] = await pool.query(
+        `SELECT ci.id as inscripcion_id, ci.convocatoria_id, ci.fecha_inscripcion as fecha_borrador, ci.estado,
+                c.titulo as convocatoria_titulo, c.codigo, c.tipo, c.estado as estado_convocatoria, c.fecha_cierre,
+                ise.semillero_nombre, isig.titulo_trabajo
+         FROM convocatoria_inscripciones ci
+         JOIN convocatorias c ON c.id = ci.convocatoria_id
+         LEFT JOIN inscripcion_semillero_externo ise ON ise.inscripcion_id = ci.id
+         LEFT JOIN inscripcion_semillero_info_general isig ON isig.inscripcion_id = ci.id
+         WHERE ci.usuario_id = ? AND ci.estado = 'en_proceso'
+         ORDER BY ci.fecha_inscripcion DESC`,
+        [usuarioId]
+      );
+
+      return res.json({ ok: true, borradores: rows });
+    } catch (err) {
+      console.error("Error al listar borradores:", err);
+      return res.status(500).json({ error: "Error al listar borradores." });
+    }
+  },
+
   // ─── PASO 5: ENVÍO FINAL ──────────────────────────────────────────────────
 
-  uploadEnvioMiddleware: uploadEnvio.single("documento"),
+  uploadEnvioMiddleware: uploadEnvio.fields([
+    { name: "documento", maxCount: 1 },
+    { name: "comprobante_pago", maxCount: 1 },
+  ]),
 
   // GET /:id/semillero-resumen?usuario_id=X — obtiene TODOS los pasos para revisión
   async getResumen(req, res) {
@@ -372,12 +596,23 @@ const pasosSemilleroController = {
 
   // POST /:id/semillero-enviar — guarda todos los datos y realiza el envío final
   async enviarFinal(req, res) {
-    const archivo = req.file;
+    const archivoDoc = req.files?.documento?.[0] || (req.file?.fieldname === "documento" ? req.file : null);
+    const archivoPago = req.files?.comprobante_pago?.[0] || (req.file?.fieldname === "comprobante_pago" ? req.file : null);
+    const subidos = [archivoDoc, archivoPago].filter(Boolean);
+
+    const limpiarArchivos = () => {
+      subidos.forEach((f) => {
+        if (f && f.path && fs.existsSync(f.path)) {
+          try { fs.unlinkSync(f.path); } catch (_) {}
+        }
+      });
+    };
+
     try {
       const convId = parseInt(req.params.id, 10);
       const usuarioId = parseInt(req.body.usuario_id, 10);
       if (!convId || !usuarioId) {
-        if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+        limpiarArchivos();
         return res.status(400).json({ error: "Parámetros incompletos (convocatoria o usuario)." });
       }
 
@@ -387,11 +622,11 @@ const pasosSemilleroController = {
         [convId]
       );
       if (convRows.length === 0) {
-        if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+        limpiarArchivos();
         return res.status(404).json({ error: "Convocatoria no encontrada." });
       }
       if (convRows[0].estado === "cerrada") {
-        if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+        limpiarArchivos();
         return res.status(400).json({ error: "La convocatoria se encuentra cerrada." });
       }
 
@@ -421,12 +656,12 @@ const pasosSemilleroController = {
       const procFija = "Semillero externo";
 
       if (!tipoInst.trim() || !instProc.trim() || !semNombre.trim()) {
-        if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+        limpiarArchivos();
         return res.status(400).json({ error: "Paso 1 (Semillero): Todos los campos son obligatorios." });
       }
 
       if (!Array.isArray(integrantesData) || integrantesData.length === 0) {
-        if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+        limpiarArchivos();
         return res.status(400).json({ error: "Paso 2 (Integrantes): Debes agregar al menos un integrante." });
       }
 
@@ -436,7 +671,7 @@ const pasosSemilleroController = {
       const resumenTexto = infoGeneralData?.resumen || "";
 
       if (!titTrabajo.trim() || !palClave.trim() || !resumenTexto.trim()) {
-        if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+        limpiarArchivos();
         return res.status(400).json({ error: "Paso 3 (Información general): Todos los campos requeridos deben ser completados." });
       }
 
@@ -447,75 +682,115 @@ const pasosSemilleroController = {
       const resEsp = contenidoData?.resultados_esperados || "";
 
       if (!plantProb.trim() || !objGral.trim() || !objEsp.trim() || !metodo.trim() || !resEsp.trim()) {
-        if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+        limpiarArchivos();
         return res.status(400).json({ error: "Paso 4 (Contenido del trabajo): Todos los campos son obligatorios." });
       }
 
-      // Validar PDF si se adjuntó
-      let docInfo = { nombre: "", ruta: "", mime: "", peso: 0 };
-      if (archivo) {
-        if (archivo.mimetype !== "application/pdf") {
-          fs.unlinkSync(archivo.path);
-          return res.status(400).json({ error: "El documento adjunto debe ser un archivo PDF.", campo: "documento" });
+      // Validar PDF de propuesta si se adjuntó
+      let docInfo = null;
+      if (archivoDoc) {
+        if (archivoDoc.mimetype !== "application/pdf") {
+          limpiarArchivos();
+          return res.status(400).json({ error: "La propuesta de investigación debe ser un archivo PDF.", campo: "documento" });
         }
         docInfo = {
-          nombre: archivo.originalname,
-          ruta: `/uploads/inscripciones/${archivo.filename}`,
-          mime: archivo.mimetype,
-          peso: archivo.size,
+          nombre: archivoDoc.originalname,
+          ruta: `/uploads/inscripciones/${archivoDoc.filename}`,
+          mime: archivoDoc.mimetype,
+          peso: archivoDoc.size,
         };
       }
 
-      // ── 1. Crear o actualizar inscripción en convocatoria_inscripciones
-      let inscripcion = await getInscripcion(convId, usuarioId);
-      if (inscripcion) {
-        if (archivo) {
-          await pool.query(
-            `UPDATE convocatoria_inscripciones
-             SET estado='registrada', tipo_investigacion=COALESCE(NULLIF(?, ''), tipo_investigacion), documento_nombre_original=?, documento_ruta=?, documento_mime=?, documento_peso_bytes=?, fecha_inscripcion=NOW()
-             WHERE id=?`,
-            [tipoInv, docInfo.nombre, docInfo.ruta, docInfo.mime, docInfo.peso, inscripcion.id]
-          );
-        } else {
-          await pool.query(
-            "UPDATE convocatoria_inscripciones SET estado='registrada', tipo_investigacion=COALESCE(NULLIF(?, ''), tipo_investigacion), fecha_inscripcion=NOW() WHERE id=?",
-            [tipoInv, inscripcion.id]
-          );
+      // Validar Comprobante de pago si se adjuntó
+      let pagoInfo = null;
+      if (archivoPago) {
+        const permitidos = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"];
+        if (!permitidos.includes(archivoPago.mimetype)) {
+          limpiarArchivos();
+          return res.status(400).json({
+            error: "El comprobante de pago debe ser PDF o una imagen (JPG, PNG, WEBP).",
+            campo: "comprobante_pago",
+          });
         }
+        pagoInfo = {
+          nombre: archivoPago.originalname,
+          ruta: `/uploads/inscripciones/${archivoPago.filename}`,
+          mime: archivoPago.mimetype,
+          peso: archivoPago.size,
+        };
+      }
+
+      // ── Validar límite de hasta 50 inscripciones por convocatoria
+      const [conteoRows] = await pool.query(
+        "SELECT COUNT(*) as total FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND estado != 'en_proceso'",
+        [convId]
+      );
+      if (conteoRows[0].total >= 50) {
+        limpiarArchivos();
+        return res.status(400).json({
+          error: "Esta convocatoria ya ha alcanzado el límite máximo permitido de 50 inscripciones.",
+        });
+      }
+
+      const archivoPrincipalInfo = docInfo || pagoInfo || { nombre: null, ruta: null, mime: null, peso: 0 };
+
+      // ── 1. Reutilizar borrador existente si había uno en proceso, o insertar nueva inscripción
+      const [draftRows] = await pool.query(
+        "SELECT id FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ? AND estado = 'en_proceso' LIMIT 1",
+        [convId, usuarioId]
+      );
+
+      let inscId;
+      if (draftRows.length > 0) {
+        inscId = draftRows[0].id;
+        await pool.query(
+          `UPDATE convocatoria_inscripciones
+           SET estado = 'registrada', tipo_investigacion = ?, resumen_proyecto = ?, justificacion = ?,
+               documento_nombre_original = ?, documento_ruta = ?, documento_mime = ?, documento_peso_bytes = ?, fecha_inscripcion = NOW()
+           WHERE id = ?`,
+          [
+            tipoInv || "Investigación formativa (Semillero)",
+            resumenTexto,
+            `Inscripción semillero: ${semNombre} - ${instProc}`,
+            archivoPrincipalInfo.nombre,
+            archivoPrincipalInfo.ruta,
+            archivoPrincipalInfo.mime,
+            archivoPrincipalInfo.peso,
+            inscId,
+          ]
+        );
       } else {
         const [insRes] = await pool.query(
           `INSERT INTO convocatoria_inscripciones
            (convocatoria_id, usuario_id, tipo_investigacion, resumen_proyecto, justificacion,
             documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes, estado, fecha_inscripcion)
-           VALUES (?, ?, ?, '', '', ?, ?, ?, ?, 'registrada', NOW())`,
-          [convId, usuarioId, tipoInv, docInfo.nombre, docInfo.ruta, docInfo.mime, docInfo.peso]
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'registrada', NOW())`,
+          [
+            convId,
+            usuarioId,
+            tipoInv || "Investigación formativa (Semillero)",
+            resumenTexto,
+            `Inscripción semillero: ${semNombre} - ${instProc}`,
+            archivoPrincipalInfo.nombre,
+            archivoPrincipalInfo.ruta,
+            archivoPrincipalInfo.mime,
+            archivoPrincipalInfo.peso,
+          ]
         );
-        const [newInsc] = await pool.query("SELECT * FROM convocatoria_inscripciones WHERE id=?", [insRes.insertId]);
-        inscripcion = newInsc[0];
+        inscId = insRes.insertId;
       }
-
-      const inscId = inscripcion.id;
 
       // ── 2. Guardar Paso 1: Semillero Externo
-      const [semExist] = await pool.query("SELECT id FROM inscripcion_semillero_externo WHERE inscripcion_id=? LIMIT 1", [inscId]);
-      if (semExist.length > 0) {
-        await pool.query(
-          `UPDATE inscripcion_semillero_externo
-           SET tipo_institucion=?, procedencia=?, institucion_procedencia=?, semillero_nombre=?
-           WHERE inscripcion_id=?`,
-          [tipoInst.trim(), procFija, instProc.trim(), semNombre.trim(), inscId]
-        );
-      } else {
-        await pool.query(
-          `INSERT INTO inscripcion_semillero_externo
-           (inscripcion_id, tipo_institucion, procedencia, institucion_procedencia, semillero_nombre)
-           VALUES (?, ?, ?, ?, ?)`,
-          [inscId, tipoInst.trim(), procFija, instProc.trim(), semNombre.trim()]
-        );
-      }
+      await pool.query(
+        `INSERT INTO inscripcion_semillero_externo
+         (inscripcion_id, tipo_institucion, procedencia, institucion_procedencia, semillero_nombre)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE tipo_institucion = VALUES(tipo_institucion), institucion_procedencia = VALUES(institucion_procedencia), semillero_nombre = VALUES(semillero_nombre)`,
+        [inscId, tipoInst.trim(), procFija, instProc.trim(), semNombre.trim()]
+      );
 
       // ── 3. Guardar Paso 2: Integrantes
-      await pool.query("DELETE FROM inscripcion_semillero_integrantes WHERE inscripcion_id=?", [inscId]);
+      await pool.query("DELETE FROM inscripcion_semillero_integrantes WHERE inscripcion_id = ?", [inscId]);
       for (const intg of integrantesData) {
         if (intg.nombre_completo && intg.tipo_documento && intg.numero_documento && intg.rol && intg.email) {
           await pool.query(
@@ -536,39 +811,71 @@ const pasosSemilleroController = {
       }
 
       // ── 4. Guardar Paso 3: Información General
-      const [infoExist] = await pool.query("SELECT id FROM inscripcion_semillero_info_general WHERE inscripcion_id=? LIMIT 1", [inscId]);
-      if (infoExist.length > 0) {
-        await pool.query(
-          `UPDATE inscripcion_semillero_info_general
-           SET titulo_trabajo=?, linea_investigacion=?, palabras_clave=?, resumen=?
-           WHERE inscripcion_id=?`,
-          [titTrabajo.trim(), linInvest || null, palClave.trim(), resumenTexto.trim(), inscId]
-        );
-      } else {
-        await pool.query(
-          `INSERT INTO inscripcion_semillero_info_general
-           (inscripcion_id, titulo_trabajo, linea_investigacion, palabras_clave, resumen)
-           VALUES (?, ?, ?, ?, ?)`,
-          [inscId, titTrabajo.trim(), linInvest || null, palClave.trim(), resumenTexto.trim()]
-        );
-      }
+      await pool.query(
+        `INSERT INTO inscripcion_semillero_info_general
+         (inscripcion_id, titulo_trabajo, linea_investigacion, palabras_clave, resumen)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE titulo_trabajo = VALUES(titulo_trabajo), linea_investigacion = VALUES(linea_investigacion), palabras_clave = VALUES(palabras_clave), resumen = VALUES(resumen)`,
+        [inscId, titTrabajo.trim(), linInvest || null, palClave.trim(), resumenTexto.trim()]
+      );
 
       // ── 5. Guardar Paso 4: Contenido
-      const [contExist] = await pool.query("SELECT id FROM inscripcion_semillero_contenido WHERE inscripcion_id=? LIMIT 1", [inscId]);
-      if (contExist.length > 0) {
-        await pool.query(
-          `UPDATE inscripcion_semillero_contenido
-           SET planteamiento_problema=?, objetivo_general=?, objetivos_especificos=?, metodologia=?, resultados_esperados=?
-           WHERE inscripcion_id=?`,
-          [plantProb.trim(), objGral.trim(), objEsp.trim(), metodo.trim(), resEsp.trim(), inscId]
-        );
-      } else {
-        await pool.query(
-          `INSERT INTO inscripcion_semillero_contenido
-           (inscripcion_id, planteamiento_problema, objetivo_general, objetivos_especificos, metodologia, resultados_esperados)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [inscId, plantProb.trim(), objGral.trim(), objEsp.trim(), metodo.trim(), resEsp.trim()]
-        );
+      await pool.query(
+        `INSERT INTO inscripcion_semillero_contenido
+         (inscripcion_id, planteamiento_problema, objetivo_general, objetivos_especificos, metodologia, resultados_esperados)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE planteamiento_problema = VALUES(planteamiento_problema), objetivo_general = VALUES(objetivo_general), objetivos_especificos = VALUES(objetivos_especificos), metodologia = VALUES(metodologia), resultados_esperados = VALUES(resultados_esperados)`,
+        [inscId, plantProb.trim(), objGral.trim(), objEsp.trim(), metodo.trim(), resEsp.trim()]
+      );
+
+      // ── 6. Guardar documento de propuesta si existe
+      if (docInfo) {
+        try {
+          await pool.query(
+            `INSERT INTO convocatoria_inscripcion_documentos
+              (inscripcion_id, requisito_nombre, documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [inscId, "Propuesta de investigación", docInfo.nombre, docInfo.ruta, docInfo.mime, docInfo.peso]
+          );
+        } catch (errDoc) {
+          console.warn("Aviso al guardar propuesta de semillero:", errDoc.message);
+        }
+
+        try {
+          await pool.query(
+            `INSERT INTO documentos 
+              (convocatoria_id, nombre, tipo, url, version, fecha_creacion, subido_por)
+             VALUES (?, ?, ?, ?, 1, CURDATE(), ?)`,
+            [convId, docInfo.nombre, docInfo.mime, docInfo.ruta, usuarioId]
+          );
+        } catch (docErr) {
+          console.warn("Aviso al registrar en documentos institucional:", docErr.message);
+        }
+      }
+
+      // ── 7. Guardar comprobante de pago si existe
+      if (pagoInfo) {
+        try {
+          await pool.query(
+            `INSERT INTO convocatoria_inscripcion_documentos
+              (inscripcion_id, requisito_nombre, documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [inscId, "Comprobante de Pago", pagoInfo.nombre, pagoInfo.ruta, pagoInfo.mime, pagoInfo.peso]
+          );
+        } catch (errPago) {
+          console.warn("Aviso al guardar comprobante de pago:", errPago.message);
+        }
+
+        try {
+          await pool.query(
+            `INSERT INTO documentos 
+              (convocatoria_id, nombre, tipo, url, version, fecha_creacion, subido_por)
+             VALUES (?, ?, ?, ?, 1, CURDATE(), ?)`,
+            [convId, `Comprobante de Pago - ${pagoInfo.nombre}`, pagoInfo.mime, pagoInfo.ruta, usuarioId]
+          );
+        } catch (docErr) {
+          console.warn("Aviso al registrar comprobante en documentos institucional:", docErr.message);
+        }
       }
 
       const [updRows] = await pool.query("SELECT * FROM convocatoria_inscripciones WHERE id = ? LIMIT 1", [inscId]);
@@ -578,7 +885,7 @@ const pasosSemilleroController = {
         inscripcion: updRows[0],
       });
     } catch (err) {
-      if (archivo && fs.existsSync(archivo.path)) fs.unlinkSync(archivo.path);
+      limpiarArchivos();
       console.error("Error al enviar inscripción:", err);
       return res.status(500).json({ error: "Error al registrar y enviar la inscripción." });
     }

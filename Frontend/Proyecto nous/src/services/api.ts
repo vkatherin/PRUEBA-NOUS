@@ -743,6 +743,39 @@ export async function enviarInscripcionExterna(
   return data;
 }
 
+export async function guardarBorradorSemillero(
+  convocatoriaId: number,
+  data: any
+): Promise<{ ok: boolean; mensaje: string; inscripcion_id: number; paso_actual: number }> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/guardar-borrador`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getBorradorSemillero(
+  convocatoriaId: number,
+  usuarioId: number
+): Promise<{
+  ok: boolean;
+  tiene_borrador: boolean;
+  inscripcion?: Inscripcion;
+  ultimo_paso?: number;
+  semillero?: any;
+  integrantes?: any[];
+  info_general?: any;
+  contenido?: any;
+}> {
+  return apiFetch(`/convocatorias/${convocatoriaId}/mi-borrador?usuario_id=${usuarioId}`);
+}
+
+export async function getMisBorradores(
+  usuarioId?: number
+): Promise<{ ok: boolean; borradores: any[] }> {
+  const query = usuarioId ? `?usuario_id=${usuarioId}` : "";
+  return apiFetch(`/convocatorias/mis-borradores${query}`);
+}
+
 // ─── Documentos Institucionales ───────────────────────────────────────────────
 export interface FormatoInstitucional {
   id: number;
