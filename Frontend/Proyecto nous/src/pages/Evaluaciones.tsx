@@ -71,6 +71,19 @@ function Rubrica({ evaluacionId, onBack }: { evaluacionId: number; onBack: () =>
   return <div className="p-6 max-w-[1000px] mx-auto space-y-5">
     <button onClick={onBack} className="text-sm text-theme-primary font-medium">← Volver a evaluaciones</button>
     <PageHeader title="Rúbrica de evaluación" subtitle={`EVA-${evaluacion.id.toString().padStart(3, '0')} · ${evaluacion.proyecto}`} breadcrumb={["NOUS", "Evaluaciones", "Rúbrica"]} />
+    
+    <div className="mb-2">
+      {evaluacion.documento_url ? (
+        <a href={evaluacion.documento_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-theme-border rounded-lg text-sm text-theme-primary font-medium hover:bg-white/10 transition-colors">
+          📄 Ver Documento: {evaluacion.documento_nombre || "Anexo del Proyecto"}
+        </a>
+      ) : (
+        <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-theme-border rounded-lg text-sm text-theme-text-muted">
+          📄 El proyecto aún no tiene un documento anexo subido
+        </span>
+      )}
+    </div>
+
     <Card>
       <div className="flex items-center justify-between mb-5">
         <div><SectionTitle>Evaluación técnica</SectionTitle><p className="text-xs text-theme-text-muted">Asigna una calificación de 0 a 100 en cada criterio.</p></div>

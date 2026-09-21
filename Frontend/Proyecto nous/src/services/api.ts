@@ -828,6 +828,8 @@ export interface Evaluacion {
 }
 export interface EvaluacionDetalle extends Evaluacion {
   criterios: { id: number; criterio: string; puntaje_maximo: number; puntaje_obtenido: number }[];
+  documento_url?: string;
+  documento_nombre?: string;
 }
 export interface EvaluadorDisponible { id: number; nombre_completo: string; correo_institucional: string; }
 export interface ProyectoSinEvaluador { id: number; titulo: string; codigo_unico: string; estado: string; }

@@ -3451,8 +3451,15 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
   useEffect(() => { cargar(); }, [cargar]);
 
   const isEstudiante = user?.roles?.some(r => r.toLowerCase().includes("estudiante"));
+  const isExternoRestrictivo = user?.roles?.includes("externo") && !user?.roles?.some(r => ["administrador", "directivos", "director_investigacion", "coordinador_investigacion", "docente"].includes(r));
 
-  const filtradas = convocatorias.filter((c) => {
+  const convocatoriasPermitidas = convocatorias.filter(c => {
+    const isConvExterna = (c.tipo ?? "").toLowerCase() === "externa" || (c.tipo ?? "").toLowerCase() === "externas";
+    return (!isEstudiante || (c.dirigida_a && c.dirigida_a.toLowerCase().includes("estudiante"))) &&
+           (!isExternoRestrictivo || isConvExterna);
+  });
+
+  const filtradas = convocatoriasPermitidas.filter((c) => {
     const cod = (c.codigo_con || c.codigo || "").toLowerCase();
     const matchSearch =
       !search ||
@@ -3468,19 +3475,19 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
 
     let matchTipo = true;
     const tipoLower = (c.tipo ?? "").toLowerCase();
+    const isConvExterna = tipoLower === "externa" || tipoLower === "externas";
+
     if (activeTab === "internas") {
       matchTipo = tipoLower === "interna" || tipoLower === "internas";
     } else if (activeTab === "externas") {
-      matchTipo = tipoLower === "externa" || tipoLower === "externas";
+      matchTipo = isConvExterna;
     } else if (activeTab === "conjunta") {
       matchTipo = tipoLower === "conjunta" || tipoLower === "conjuntas";
     } else if (activeTab === "borrador") {
       matchTipo = c.estado === "borrador" || tieneBorrador;
     }
 
-    const matchRole = !isEstudiante || (c.dirigida_a && c.dirigida_a.toLowerCase().includes("estudiante"));
-
-    return matchSearch && matchEstado && matchTipo && matchRole;
+    return matchSearch && matchEstado && matchTipo;
   });
 
   const estadoBadge = (estado: string): "active" | "evaluation" | "closed" | "draft" => {
@@ -3510,10 +3517,10 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Abiertas", value: convocatorias.filter(c => c.estado === "activa" || c.estado === "publicada").length, color: "var(--theme-primary)" },
-          { label: "En evaluación", value: convocatorias.filter(c => c.estado === "evaluacion").length, color: "#D97706" },
-          { label: "Cerradas", value: convocatorias.filter(c => c.estado === "cerrada").length, color: "#9CA3AF" },
-          { label: "Total", value: convocatorias.length, color: "#2563EB" },
+          { label: "Abiertas", value: convocatoriasPermitidas.filter(c => c.estado === "activa" || c.estado === "publicada").length, color: "var(--theme-primary)" },
+          { label: "En evaluación", value: convocatoriasPermitidas.filter(c => c.estado === "evaluacion").length, color: "#D97706" },
+          { label: "Cerradas", value: convocatoriasPermitidas.filter(c => c.estado === "cerrada").length, color: "#9CA3AF" },
+          { label: "Total", value: convocatoriasPermitidas.length, color: "#2563EB" },
         ].map((s) => (
           <div key={s.label} className="bg-theme-bg-card border border-theme-border rounded-xl p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"

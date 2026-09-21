@@ -42,19 +42,16 @@ const NAV_ITEMS: NavItem[] = [
     id: "convocatorias",
     label: "Convocatorias",
     icon: <Icon path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />,
-    badge: "3",
   },
   {
     id: "proyectos",
     label: "Gestión de Proyectos",
     icon: <Icon path="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />,
-    badge: "12",
   },
   {
     id: "evaluaciones",
     label: "Evaluaciones",
     icon: <Icon path="M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />,
-    badge: "4",
   },
   {
     id: "seguimiento",
@@ -109,6 +106,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 import type { UsuarioMe } from "../services/api";
+import { useEffect } from "react";
+import { getConvocatorias, proyectosApi, evaluacionesApi } from "../services/api";
 
 export function Sidebar({
   activePage,
@@ -125,17 +124,73 @@ export function Sidebar({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [counts, setCounts] = useState({ convocatorias: 0, proyectos: 0, evaluaciones: 0 });
 
   const permisos = user?.permisos || [];
-  const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador");
+  const isAdmin = user?.roles?.some(r => {
+    const lower = r.toLowerCase();
+    return lower === "administrador" || lower === "super administrador";
+  });
   const isEstudiante = user?.roles?.some(r => r.toLowerCase().includes("estudiante"));
   const isExterno = user?.roles?.some(r => r.toLowerCase().includes("externo"));
-
   const hasPermiso = (modulo: string) => permisos.includes(`${modulo}.leer`) || isAdmin;
+  const isSoloEvaluador = user?.roles?.includes("evaluador") && !isAdmin && !user?.roles?.some(r => r.toLowerCase().includes("coordinador") || r.toLowerCase().includes("director"));
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCounts = async () => {
+      let convCount = 0;
+      let proyCount = 0;
+      let evalCount = 0;
+      const isExternoRestrictivo = user?.roles?.some(r => r.toLowerCase() === "externo") && !user?.roles?.some(r => {
+        const l = r.toLowerCase();
+        return ["administrador", "directivos", "director_investigacion", "coordinador_investigacion", "docente"].includes(l);
+      });
+
+      if (hasPermiso("convocatorias") || isEstudiante) {
+        try {
+          const convs = await getConvocatorias();
+          const permitidas = convs.filter(c => {
+            const isConvExterna = (c.tipo ?? "").toLowerCase() === "externa" || (c.tipo ?? "").toLowerCase() === "externas";
+            return (!isEstudiante || (c.dirigida_a && c.dirigida_a.toLowerCase().includes("estudiante"))) &&
+                   (!isExternoRestrictivo || isConvExterna);
+          });
+          convCount = permitidas.length;
+        } catch (e) { console.error("Error convocatorias sidebar", e); }
+      }
+
+      if (hasPermiso("proyectos") && !isEstudiante && !isExternoRestrictivo) {
+        try {
+          const proys = await proyectosApi.listar();
+          proyCount = proys.length;
+        } catch (e) { console.error("Error proyectos sidebar", e); }
+      }
+
+      if (hasPermiso("evaluaciones") || user?.roles?.some(r => r.toLowerCase() === "evaluador")) {
+        try {
+          const evals = await evaluacionesApi.listar();
+          evalCount = evals.length;
+        } catch (e) { console.error("Error evaluaciones sidebar", e); }
+      }
+
+      setCounts({ convocatorias: convCount, proyectos: proyCount, evaluaciones: evalCount });
+    };
+    fetchCounts();
+  }, [user]);
+
+  const getBadge = (id: Page) => {
+    if (id === "convocatorias" && counts.convocatorias >= 0) return counts.convocatorias.toString();
+    if (id === "proyectos" && counts.proyectos >= 0) return counts.proyectos.toString();
+    if (id === "evaluaciones" && counts.evaluaciones >= 0) return counts.evaluaciones.toString();
+    return undefined;
+  };
 
   const topItems = NAV_ITEMS.slice(0, 8).filter(item => {
     if (isEstudiante || isExterno) {
       return item.id === "convocatorias" || item.id === "documentos";
+    }
+    if (isSoloEvaluador) {
+      return item.id === "evaluaciones" || item.id === "documentos";
     }
     switch (item.id) {
       case "dashboard": return hasPermiso("dashboard");
@@ -148,7 +203,7 @@ export function Sidebar({
       case "productos": return isAdmin || hasPermiso("proyectos");
       default: return true;
     }
-  });
+  }).map(item => ({ ...item, badge: getBadge(item.id) }));
 
   let bottomItems = NAV_ITEMS.slice(8).filter(item => {
     if (isEstudiante || isExterno) return false;

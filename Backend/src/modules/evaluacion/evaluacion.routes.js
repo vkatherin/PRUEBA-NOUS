@@ -10,8 +10,9 @@ router.use(verificarAutenticacion);
 router.get("/", verificarPermiso('evaluaciones.leer'), async (req, res) => {
   try {
     const usuario = req.usuario;
-    const roles = usuario.roles || [];
-    const veTodos = ['administrador', 'directivos'].some(r => roles.includes(r));
+    const [rolesResult] = await pool.query('SELECT r.nombre FROM roles r JOIN usuario_rol ur ON r.id = ur.rol_id WHERE ur.usuario_id = ?', [req.usuario.id]);
+    const roles = rolesResult.map(r => r.nombre);
+    const veTodos = ['administrador', 'directivos', 'director_investigacion', 'coordinador_investigacion'].some(r => roles.includes(r));
     
     let whereClause = "1=1";
     let queryParams = [];
@@ -40,7 +41,14 @@ router.get("/", verificarPermiso('evaluaciones.leer'), async (req, res) => {
       WHERE ${whereClause}
       ORDER BY e.fecha_asignacion DESC
     `, queryParams);
-    res.json(rows);
+
+    // Anonymize evaluator name for applicants or non-admins if needed, though they don't see it yet
+    const resultados = rows.map(r => ({
+      ...r,
+      evaluador_nombre: veTodos || r.evaluador_id === usuario.id ? r.evaluador_nombre : 'Par Evaluador Anónimo'
+    }));
+
+    res.json(resultados);
   } catch (err) {
     console.error("Error al listar evaluaciones:", err);
     res.status(500).json({ error: "Error al listar evaluaciones" });
@@ -51,8 +59,9 @@ router.get("/", verificarPermiso('evaluaciones.leer'), async (req, res) => {
 router.get("/:id", verificarPermiso('evaluaciones.leer'), async (req, res) => {
   try {
     const usuario = req.usuario;
-    const roles = usuario.roles || [];
-    const veTodos = ['administrador', 'directivos'].some(r => roles.includes(r));
+    const [rolesResult] = await pool.query('SELECT r.nombre FROM roles r JOIN usuario_rol ur ON r.id = ur.rol_id WHERE ur.usuario_id = ?', [req.usuario.id]);
+    const roles = rolesResult.map(r => r.nombre);
+    const veTodos = ['administrador', 'directivos', 'director_investigacion', 'coordinador_investigacion'].some(r => roles.includes(r));
     
     let whereClause = "e.id = ?";
     let queryParams = [req.params.id];
@@ -86,7 +95,18 @@ router.get("/:id", verificarPermiso('evaluaciones.leer'), async (req, res) => {
       [req.params.id]
     );
 
-    res.json({ ...evaluacion, criterios });
+    const [[documento]] = await pool.query(
+      "SELECT nombre, url FROM documentos WHERE proyecto_id = ? LIMIT 1",
+      [evaluacion.proyecto_id]
+    );
+
+    res.json({ 
+      ...evaluacion, 
+      evaluador_nombre: veTodos || evaluacion.evaluador_id === usuario.id ? evaluacion.evaluador_nombre : 'Par Evaluador Anónimo',
+      criterios,
+      documento_url: documento ? documento.url : null,
+      documento_nombre: documento ? documento.nombre : null
+    });
   } catch (err) {
     console.error("Error al obtener evaluación:", err);
     res.status(500).json({ error: "Error al obtener evaluación" });
@@ -97,8 +117,9 @@ router.get("/:id", verificarPermiso('evaluaciones.leer'), async (req, res) => {
 router.post("/:id/calificar", verificarPermiso('evaluaciones.evaluar'), async (req, res) => {
   try {
     const usuario = req.usuario;
-    const roles = usuario.roles || [];
-    const veTodos = ['administrador', 'directivos'].some(r => roles.includes(r));
+    const [rolesResult] = await pool.query('SELECT r.nombre FROM roles r JOIN usuario_rol ur ON r.id = ur.rol_id WHERE ur.usuario_id = ?', [req.usuario.id]);
+    const roles = rolesResult.map(r => r.nombre);
+    const veTodos = ['administrador', 'directivos', 'director_investigacion', 'coordinador_investigacion'].some(r => roles.includes(r));
     
     if (!veTodos) {
       if (roles.includes('evaluador')) {
