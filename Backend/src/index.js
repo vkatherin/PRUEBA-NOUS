@@ -70,9 +70,13 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// ── Tareas programadas (Jobs) ──────────────────────────────────────────────────
+// ── Tareas programadas (Jobs) y Migraciones automáticas ────────────────────────
 require('./jobs/notificarVencimientos');
 require('./jobs/resumenSemanal');
+const autoMigrate = require('./db/auto_migrate');
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Servidor NOUS corriendo en puerto ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`🚀 Servidor NOUS corriendo en puerto ${PORT}`);
+  await autoMigrate();
+});

@@ -206,9 +206,22 @@ exports.getMe = async (req, res) => {
     }
 
     // JSON_ARRAYAGG puede retornar [null] si no hay roles
-    const roles = Array.isArray(usuario.roles)
+    let roles = Array.isArray(usuario.roles)
       ? [...new Set(usuario.roles.filter(Boolean))]
       : [];
+
+    if (roles.length === 0) {
+      await pool.query(`
+        INSERT INTO roles (nombre, descripcion)
+        VALUES ('externo', 'Investigador o participante externo en convocatorias')
+        ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion)
+      `);
+      const [[rolExt]] = await pool.query("SELECT id FROM roles WHERE nombre = 'externo' LIMIT 1");
+      if (rolExt) {
+        await pool.query("INSERT IGNORE INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)", [req.usuario.id, rolExt.id]);
+        roles = ['externo'];
+      }
+    }
 
     const [permisosRows] = await pool.query(
       `SELECT DISTINCT p.nombre
@@ -218,7 +231,10 @@ exports.getMe = async (req, res) => {
        WHERE ur.usuario_id = ?`,
       [req.usuario.id]
     );
-    const permisos = permisosRows.map(p => p.nombre);
+    let permisos = permisosRows.map(p => p.nombre);
+    if (permisos.length === 0 && roles.includes('externo')) {
+      permisos = ['convocatorias.leer', 'convocatorias.crear', 'documentos.leer'];
+    }
 
     res.json({ ...usuario, roles, permisos });
   } catch (err) {
@@ -705,11 +721,16 @@ exports.registro = async (req, res) => {
 
     const nuevoUsuarioId = result.insertId;
 
-    // Asignar rol 'externo' automáticamente
+    // Garantizar que exista el rol 'externo' en BD y asignarlo
+    await pool.query(`
+      INSERT INTO roles (nombre, descripcion)
+      VALUES ('externo', 'Investigador o participante externo en convocatorias')
+      ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion)
+    `);
     const [[rolExterno]] = await pool.query('SELECT id FROM roles WHERE nombre = ?', ['externo']);
     if (rolExterno) {
       await pool.query(
-        'INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
+        'INSERT IGNORE INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
         [nuevoUsuarioId, rolExterno.id]
       );
     }
@@ -729,6 +750,8 @@ exports.registro = async (req, res) => {
         id: result.insertId,
         nombre: nombre_completo.trim(),
         correo: correo.trim().toLowerCase(),
+        roles: ['externo'],
+        permisos: ['convocatorias.leer', 'convocatorias.crear', 'documentos.leer'],
       },
       mensaje: 'Cuenta creada exitosamente'
     });

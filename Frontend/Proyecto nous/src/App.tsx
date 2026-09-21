@@ -401,6 +401,11 @@ export default function App() {
   const getFirstAllowedPage = (u: UsuarioMe): Page => {
     const permisos = u.permisos || [];
     const isAdmin = u.roles?.some(r => r === "administrador" || r === "Super Administrador");
+    const isExterno = u.roles?.some(r => r.toLowerCase().includes("externo"));
+    const isEstudiante = u.roles?.some(r => r.toLowerCase().includes("estudiante"));
+
+    if (isExterno || isEstudiante) return "convocatorias";
+
     const has = (m: string) => permisos.includes(`${m}.leer`) || isAdmin;
 
     if (has("dashboard")) return "dashboard";
