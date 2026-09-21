@@ -43,7 +43,14 @@ router.get("/:id/semillero-catalogos", verificarPermiso('convocatorias.leer'), p
 router.get("/:id/semillero-externo", verificarPermiso('convocatorias.leer'), semilleroExternoController.obtener);
 router.post("/:id/semillero-externo", verificarPermiso('convocatorias.leer'), semilleroExternoController.guardar);
 
-// ─── Inscripción Externa: Paso 2 — Integrantes ──────────────────────────────
+// ─── Inscripción Externa: Paso 2 — Integrantes y Asentimiento ──────────────
+router.get("/plantilla-asentimiento", pasosSemilleroController.descargarPlantillaAsentimiento);
+router.post(
+  "/:id/semillero-asentimiento",
+  verificarPermiso('convocatorias.leer'),
+  pasosSemilleroController.uploadAsentimientoMiddleware,
+  pasosSemilleroController.subirAsentimiento
+);
 router.get("/:id/semillero-integrantes", verificarPermiso('convocatorias.leer'), pasosSemilleroController.getIntegrantes);
 router.post("/:id/semillero-integrantes", verificarPermiso('convocatorias.leer'), pasosSemilleroController.addIntegrante);
 router.put("/:id/semillero-integrantes/:integId", verificarPermiso('convocatorias.leer'), pasosSemilleroController.updateIntegrante);

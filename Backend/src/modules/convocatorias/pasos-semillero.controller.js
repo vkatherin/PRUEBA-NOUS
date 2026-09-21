@@ -48,6 +48,106 @@ async function cargarTodosPasos(inscripcionId) {
 
 const pasosSemilleroController = {
 
+  uploadAsentimientoMiddleware: uploadEnvio.single("asentimiento"),
+
+  // ─── Subir Asentimiento Informado (menores de edad) ────────────────────────
+  async subirAsentimiento(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se recibió ningún archivo de asentimiento." });
+      }
+      return res.json({
+        ok: true,
+        mensaje: "Asentimiento informado cargado exitosamente.",
+        asentimiento_nombre: req.file.originalname,
+        asentimiento_ruta: `/uploads/inscripciones/${req.file.filename}`,
+        asentimiento_mime: req.file.mimetype,
+        asentimiento_peso_bytes: req.file.size,
+      });
+    } catch (err) {
+      console.error("Error al subir asentimiento:", err);
+      return res.status(500).json({ error: err.message || "Error al subir archivo de asentimiento." });
+    }
+  },
+
+  // ─── Descargar Plantilla Oficial de Asentimiento Informado ─────────────────
+  async descargarPlantillaAsentimiento(req, res) {
+    try {
+      const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Formato de Asentimiento y Consentimiento Informado - Menores de Edad</title>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 40px; color: #1F2937; line-height: 1.6; }
+    .header { text-align: center; border-bottom: 2px solid #1B5E20; padding-bottom: 15px; margin-bottom: 25px; }
+    .title { font-size: 18px; font-weight: bold; color: #1B5E20; text-transform: uppercase; }
+    .subtitle { font-size: 13px; color: #4B5563; }
+    .section-title { font-size: 14px; font-weight: bold; color: #1B5E20; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px; }
+    .field-row { display: flex; margin-bottom: 10px; font-size: 13px; }
+    .field-label { font-weight: bold; width: 220px; color: #374151; }
+    .field-line { border-bottom: 1px solid #9CA3AF; flex: 1; min-height: 20px; }
+    .text-block { font-size: 12px; text-align: justify; margin: 15px 0; color: #374151; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
+    .sig-box { width: 45%; text-align: center; border-top: 1px solid #374151; padding-top: 8px; }
+    @media print { body { margin: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">FUNDACIÓN UNIVERSITARIA CATÓLICA DEL SUR — NOUS</div>
+    <div class="subtitle">DIRECCIÓN DE INVESTIGACIONES Y EXTENSIÓN · SEMILLEROS DE INVESTIGACIÓN</div>
+    <div style="font-weight: bold; margin-top: 8px; font-size: 15px;">FORMATO INSTITUCIONAL DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO (MENORES DE EDAD)</div>
+  </div>
+
+  <div class="section-title">1. DATOS DEL PARTICIPANTE MENOR DE EDAD</div>
+  <div class="field-row"><span class="field-label">Nombre completo del estudiante:</span><span class="field-line"></span></div>
+  <div class="field-row"><span class="field-label">Tipo y número de documento:</span><span class="field-line"></span></div>
+  <div class="field-row"><span class="field-label">Institución educativa / Procedencia:</span><span class="field-line"></span></div>
+  <div class="field-row"><span class="field-label">Nombre del Semillero:</span><span class="field-line"></span></div>
+
+  <div class="section-title">2. DATOS DEL PADRE, MADRE O TUTOR LEGAL</div>
+  <div class="field-row"><span class="field-label">Nombre completo del tutor:</span><span class="field-line"></span></div>
+  <div class="field-row"><span class="field-label">Cédula de ciudadanía:</span><span class="field-line"></span></div>
+  <div class="field-row"><span class="field-label">Parentesco / Representación legal:</span><span class="field-line"></span></div>
+  <div class="field-row"><span class="field-label">Teléfono de contacto:</span><span class="field-line"></span></div>
+  <div class="field-row"><span class="field-label">Correo electrónico:</span><span class="field-line"></span></div>
+
+  <div class="section-title">3. DECLARACIÓN DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO</div>
+  <div class="text-block">
+    Yo, en mi calidad de representante legal del menor de edad arriba identificado, manifiesto de manera voluntaria, libre e informada que he sido enterado(a) de los objetivos, alcance y actividades formativas de la convocatoria académica de investigación NOUS, y <strong>AUTORIZO</strong> su vinculación y participación activa como integrante del semillero de investigación.
+    Asimismo, autorizo el tratamiento de sus datos personales e institucionales en estricto cumplimiento de la Ley 1581 de 2012 con fines exclusivamente académicos, de divulgación científica y seguimiento institucional.
+  </div>
+
+  <div class="signatures">
+    <div class="sig-box">
+      Firma del Padre / Madre / Tutor Legal<br>
+      C.C. Nº: __________________________
+    </div>
+    <div class="sig-box">
+      Firma del Estudiante (Menor de edad)<br>
+      Doc. Identidad Nº: __________________
+    </div>
+  </div>
+  <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #6B7280;">
+    Ciudad y Fecha: _________________________________, Pasto (Nariño), 2026.
+  </div>
+  <script>
+    window.onload = function() {
+      if (window.location.search.includes("print=1")) {
+        window.print();
+      }
+    };
+  </script>
+</body>
+</html>`;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send(htmlContent);
+    } catch (err) {
+      return res.status(500).json({ error: "Error al generar plantilla de asentimiento." });
+    }
+  },
+
   // ─── CATÁLOGOS (helper para el frontend) ──────────────────────────────────
   async getCatalogos(req, res) {
     try {
@@ -113,11 +213,17 @@ const pasosSemilleroController = {
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return res.status(400).json({ error: "El correo electrónico no es válido.", campo: "email" });
 
+      const esMayorEdad = req.body.es_mayor_edad !== false && req.body.es_mayor_edad !== "false";
+      const asentimientoNombre = req.body.asentimiento_nombre || null;
+      const asentimientoRuta = req.body.asentimiento_ruta || null;
+      const asentimientoMime = req.body.asentimiento_mime || null;
+      const asentimientoPesoBytes = req.body.asentimiento_peso_bytes || null;
+
       const [result] = await pool.query(
         `INSERT INTO inscripcion_semillero_integrantes
-         (inscripcion_id, nombre_completo, tipo_documento, numero_documento, rol, email, telefono)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [inscripcion.id, nombreCompleto, tipoDocumento, numeroDocumento, rol, email, telefono]
+         (inscripcion_id, nombre_completo, tipo_documento, numero_documento, rol, email, telefono, es_mayor_edad, asentimiento_nombre, asentimiento_ruta, asentimiento_mime, asentimiento_peso_bytes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [inscripcion.id, nombreCompleto, tipoDocumento, numeroDocumento, rol, email, telefono, esMayorEdad, asentimientoNombre, asentimientoRuta, asentimientoMime, asentimientoPesoBytes]
       );
 
       const [rows] = await pool.query("SELECT * FROM inscripcion_semillero_integrantes WHERE id = ?", [result.insertId]);
@@ -150,21 +256,18 @@ const pasosSemilleroController = {
       const rol = (req.body.rol || "").trim();
       const email = (req.body.email || "").trim();
       const telefono = (req.body.telefono || "").trim() || null;
-
-      if (!nombreCompleto) return res.status(400).json({ error: "El nombre completo es obligatorio.", campo: "nombre_completo" });
-      if (!tipoDocumento || !TIPOS_DOCUMENTO.includes(tipoDocumento))
-        return res.status(400).json({ error: "El tipo de documento no es válido.", campo: "tipo_documento" });
-      if (!numeroDocumento) return res.status(400).json({ error: "El número de documento es obligatorio.", campo: "numero_documento" });
-      if (!rol || !ROLES_INTEGRANTE.includes(rol))
-        return res.status(400).json({ error: "El rol no es válido.", campo: "rol" });
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-        return res.status(400).json({ error: "El correo electrónico no es válido.", campo: "email" });
+      const esMayorEdad = req.body.es_mayor_edad !== false && req.body.es_mayor_edad !== "false";
+      const asentimientoNombre = req.body.asentimiento_nombre || null;
+      const asentimientoRuta = req.body.asentimiento_ruta || null;
+      const asentimientoMime = req.body.asentimiento_mime || null;
+      const asentimientoPesoBytes = req.body.asentimiento_peso_bytes || null;
 
       await pool.query(
         `UPDATE inscripcion_semillero_integrantes
-         SET nombre_completo=?, tipo_documento=?, numero_documento=?, rol=?, email=?, telefono=?
-         WHERE id = ?`,
-        [nombreCompleto, tipoDocumento, numeroDocumento, rol, email, telefono, integId]
+         SET nombre_completo = ?, tipo_documento = ?, numero_documento = ?, rol = ?, email = ?, telefono = ?,
+             es_mayor_edad = ?, asentimiento_nombre = ?, asentimiento_ruta = ?, asentimiento_mime = ?, asentimiento_peso_bytes = ?
+         WHERE id = ? AND inscripcion_id = ?`,
+        [nombreCompleto, tipoDocumento, numeroDocumento, rol, email, telefono, esMayorEdad, asentimientoNombre, asentimientoRuta, asentimientoMime, asentimientoPesoBytes, integId, inscripcion.id]
       );
 
       const [rows] = await pool.query("SELECT * FROM inscripcion_semillero_integrantes WHERE id = ?", [integId]);
@@ -427,8 +530,8 @@ const pasosSemilleroController = {
           if (intg.nombre_completo || intg.numero_documento || intg.email) {
             await pool.query(
               `INSERT INTO inscripcion_semillero_integrantes
-               (inscripcion_id, nombre_completo, tipo_documento, numero_documento, rol, email, telefono)
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+               (inscripcion_id, nombre_completo, tipo_documento, numero_documento, rol, email, telefono, es_mayor_edad, asentimiento_nombre, asentimiento_ruta, asentimiento_mime, asentimiento_peso_bytes)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 inscId,
                 (intg.nombre_completo || "").trim(),
@@ -437,6 +540,11 @@ const pasosSemilleroController = {
                 (intg.rol || "Estudiante").trim(),
                 (intg.email || "").trim(),
                 (intg.telefono || "").trim() || null,
+                intg.es_mayor_edad !== false && intg.es_mayor_edad !== "false",
+                intg.asentimiento_nombre || null,
+                intg.asentimiento_ruta || null,
+                intg.asentimiento_mime || null,
+                intg.asentimiento_peso_bytes || null,
               ]
             );
           }
@@ -795,8 +903,8 @@ const pasosSemilleroController = {
         if (intg.nombre_completo && intg.tipo_documento && intg.numero_documento && intg.rol && intg.email) {
           await pool.query(
             `INSERT INTO inscripcion_semillero_integrantes
-             (inscripcion_id, nombre_completo, tipo_documento, numero_documento, rol, email, telefono)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             (inscripcion_id, nombre_completo, tipo_documento, numero_documento, rol, email, telefono, es_mayor_edad, asentimiento_nombre, asentimiento_ruta, asentimiento_mime, asentimiento_peso_bytes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               inscId,
               intg.nombre_completo.trim(),
@@ -805,6 +913,11 @@ const pasosSemilleroController = {
               intg.rol.trim(),
               intg.email.trim(),
               (intg.telefono || "").trim() || null,
+              intg.es_mayor_edad !== false && intg.es_mayor_edad !== "false",
+              intg.asentimiento_nombre || null,
+              intg.asentimiento_ruta || null,
+              intg.asentimiento_mime || null,
+              intg.asentimiento_peso_bytes || null,
             ]
           );
         }

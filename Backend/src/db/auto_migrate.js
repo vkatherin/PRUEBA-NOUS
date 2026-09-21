@@ -102,10 +102,28 @@ async function autoMigrate() {
         rol VARCHAR(80) NOT NULL,
         email VARCHAR(150) NOT NULL,
         telefono VARCHAR(30) NULL,
+        es_mayor_edad BOOLEAN NOT NULL DEFAULT TRUE,
+        asentimiento_nombre VARCHAR(255) NULL,
+        asentimiento_ruta VARCHAR(255) NULL,
+        asentimiento_mime VARCHAR(100) NULL,
+        asentimiento_peso_bytes BIGINT NULL,
         fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX (inscripcion_id)
       ) ENGINE=InnoDB;
     `);
+
+    const columnasIntegrantes = [
+      "ADD COLUMN IF NOT EXISTS es_mayor_edad BOOLEAN NOT NULL DEFAULT TRUE",
+      "ADD COLUMN IF NOT EXISTS asentimiento_nombre VARCHAR(255) NULL",
+      "ADD COLUMN IF NOT EXISTS asentimiento_ruta VARCHAR(255) NULL",
+      "ADD COLUMN IF NOT EXISTS asentimiento_mime VARCHAR(100) NULL",
+      "ADD COLUMN IF NOT EXISTS asentimiento_peso_bytes BIGINT NULL"
+    ];
+    for (const colQuery of columnasIntegrantes) {
+      try {
+        await pool.query(`ALTER TABLE inscripcion_semillero_integrantes ${colQuery}`);
+      } catch (_) {}
+    }
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inscripcion_semillero_info_general (

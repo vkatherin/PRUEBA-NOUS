@@ -19,6 +19,7 @@ import {
   getIntegrantesSemillero,
   addIntegranteSemillero,
   deleteIntegranteSemillero,
+  subirAsentimientoIntegrante,
   saveInfoGeneralSemillero,
   getInfoGeneralSemillero,
   saveContenidoSemillero,
@@ -979,10 +980,33 @@ function DetalleInscripcionModal({
                       <span>✉️ Email: </span>
                       <a href={`mailto:${intg.email}`} className="text-theme-primary hover:underline">{intg.email}</a>
                     </div>
-                    {intg.telefono && (
-                      <div>
-                        <span>📞 Teléfono: </span>
-                        <span className="text-theme-text-main">{intg.telefono}</span>
+                    <div className="pt-1.5 flex items-center justify-between border-t border-theme-border/60">
+                      <span className="text-[11px] text-theme-text-muted">¿Mayor de edad?</span>
+                      {intg.es_mayor_edad !== false ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          ✓ Sí (Mayor de edad)
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                          ⚠️ Menor de edad
+                        </span>
+                      )}
+                    </div>
+                    {intg.es_mayor_edad === false && (
+                      <div className="p-2 rounded-lg bg-rose-50/60 border border-rose-200 text-[11px] flex items-center justify-between gap-1">
+                        <span className="truncate text-rose-800 font-medium">
+                          📄 {intg.asentimiento_nombre ? `Asentimiento: ${intg.asentimiento_nombre}` : "Asentimiento pendiente"}
+                        </span>
+                        {intg.asentimiento_ruta && (
+                          <a
+                            href={intg.asentimiento_ruta}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2 py-0.5 rounded bg-white text-theme-primary font-bold border border-[#A7D7B5] hover:bg-emerald-50 shrink-0"
+                          >
+                            Ver
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2361,34 +2385,132 @@ const PASOS_SEMILLERO_EXTERNO = [
 function FilaIntegrante({
   integrante,
   onEliminar,
+  onToggleMayorEdad,
+  onSubirAsentimiento,
   eliminando,
 }: {
-  integrante: {
-    id: number;
-    nombre_completo: string;
-    tipo_documento: string;
-    numero_documento: string;
-    rol: string;
-    email: string;
-    telefono?: string;
-  };
+  integrante: IntegranteSemillero;
   onEliminar: (id: number) => void;
+  onToggleMayorEdad?: (id: number, esMayor: boolean) => void;
+  onSubirAsentimiento?: (id: number, file: File) => void;
   eliminando?: boolean;
 }) {
+  const esMayor = integrante.es_mayor_edad !== false;
+
   return (
-    <div className="flex items-start gap-3 p-3 rounded-xl border border-theme-border bg-theme-bg-main">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-theme-border bg-theme-bg-main hover:border-[#C8E6D2] transition-colors">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-theme-text-main truncate">{integrante.nombre_completo}</p>
-        <p className="text-xs text-theme-text-muted">{integrante.rol} · {integrante.tipo_documento} {integrante.numero_documento}</p>
-        <p className="text-xs text-theme-text-muted">{integrante.email}{integrante.telefono ? ` · ${integrante.telefono}` : ""}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-bold text-theme-text-main truncate">{integrante.nombre_completo}</p>
+          <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
+            {integrante.rol}
+          </span>
+        </div>
+        <p className="text-xs text-theme-text-muted mt-0.5">
+          {integrante.tipo_documento} {integrante.numero_documento} · {integrante.email}
+          {integrante.telefono ? ` · Tel: ${integrante.telefono}` : ""}
+        </p>
       </div>
-      <button
-        onClick={() => onEliminar(integrante.id)}
-        disabled={eliminando}
-        className="text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded-lg border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50"
-      >
-        Eliminar
-      </button>
+
+      {/* Selector ¿Mayor de edad? y Asentimiento informado */}
+      <div className="flex items-center gap-3 shrink-0 flex-wrap sm:flex-nowrap">
+        {/* Columna 1: ¿Mayor de edad? */}
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider">
+            ¿Mayor de edad?
+          </span>
+          <div className="inline-flex items-center rounded-full p-0.5 bg-theme-bg-card border border-theme-border">
+            <button
+              type="button"
+              onClick={() => onToggleMayorEdad?.(integrante.id, true)}
+              className={`px-3 py-0.5 text-xs rounded-full font-bold transition-all ${
+                esMayor
+                  ? "bg-emerald-500 text-white shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              title="Es mayor de edad (+18)"
+            >
+              Sí
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleMayorEdad?.(integrante.id, false)}
+              className={`px-3 py-0.5 text-xs rounded-full font-bold transition-all ${
+                !esMayor
+                  ? "bg-rose-500 text-white shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              title="Es menor de edad (-18)"
+            >
+              No
+            </button>
+          </div>
+        </div>
+
+        {/* Columna 2: Asentimiento informado */}
+        <div className="flex flex-col items-center gap-1 min-w-[120px]">
+          <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider">
+            Asentimiento
+          </span>
+          {esMayor ? (
+            <div
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 text-gray-300 text-xs cursor-not-allowed select-none"
+              title="No requiere asentimiento informado por ser mayor de edad"
+            >
+              <span>📤</span>
+              <span className="text-[10px] font-semibold text-gray-400">No aplica</span>
+            </div>
+          ) : integrante.asentimiento_ruta ? (
+            <div className="flex items-center gap-1.5">
+              <a
+                href={integrante.asentimiento_ruta}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors"
+                title={`Ver asentimiento cargado: ${integrante.asentimiento_nombre || "Archivo"}`}
+              >
+                <span>📄</span> Ver
+              </a>
+              <label className="cursor-pointer text-theme-primary hover:text-[#17563A] text-xs font-bold p-1 rounded hover:bg-theme-primary/10" title="Reemplazar archivo">
+                <span>🔄</span>
+                <input
+                  type="file"
+                  accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f && onSubirAsentimiento) onSubirAsentimiento(integrante.id, f);
+                  }}
+                />
+              </label>
+            </div>
+          ) : (
+            <label className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg cursor-pointer transition-all shadow-sm active:scale-95">
+              <span>📤</span>
+              <span className="text-[11px]">Subir formato</span>
+              <input
+                type="file"
+                accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f && onSubirAsentimiento) onSubirAsentimiento(integrante.id, f);
+                }}
+              />
+            </label>
+          )}
+        </div>
+
+        {/* Columna 3: Eliminar */}
+        <button
+          onClick={() => onEliminar(integrante.id)}
+          disabled={eliminando}
+          className="text-red-400 hover:text-red-600 text-xs p-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50 mt-4 sm:mt-0"
+          title="Eliminar integrante de la lista"
+        >
+          🗑️
+        </button>
+      </div>
     </div>
   );
 }
@@ -2466,23 +2588,28 @@ function SemilleroExternoModal({
   const [errores1, setErrores1] = useState<Record<string, string>>({});
 
   // ── Estado Paso 2: Integrantes ────────────────────────────────────────────
-  const [integrantes, setIntegrantes] = useState<Array<{
-    id: number;
+  const [integrantes, setIntegrantes] = useState<IntegranteSemillero[]>([]);
+  const [mostrarFormIntegrante, setMostrarFormIntegrante] = useState(false);
+  const [subiendoAsentimiento, setSubiendoAsentimiento] = useState(false);
+  const [nuevoIntg, setNuevoIntg] = useState<{
     nombre_completo: string;
     tipo_documento: string;
     numero_documento: string;
     rol: string;
     email: string;
-    telefono?: string;
-  }>>([]);
-  const [mostrarFormIntegrante, setMostrarFormIntegrante] = useState(false);
-  const [nuevoIntg, setNuevoIntg] = useState({
+    telefono: string;
+    es_mayor_edad: boolean;
+    asentimiento_nombre?: string;
+    asentimiento_ruta?: string;
+    asentimiento_peso_bytes?: number;
+  }>({
     nombre_completo: "",
     tipo_documento: "",
     numero_documento: "",
     rol: "",
     email: "",
     telefono: "",
+    es_mayor_edad: true,
   });
   const [erroresIntg, setErroresIntg] = useState<Record<string, string>>({});
 
@@ -2531,7 +2658,7 @@ function SemilleroExternoModal({
     setErrores1({});
     setIntegrantes([]);
     setMostrarFormIntegrante(false);
-    setNuevoIntg({ nombre_completo: "", tipo_documento: "", numero_documento: "", rol: "", email: "", telefono: "" });
+    setNuevoIntg({ nombre_completo: "", tipo_documento: "", numero_documento: "", rol: "", email: "", telefono: "", es_mayor_edad: true });
     setErroresIntg({});
     setTituloTrabajo("");
     setLineaInv("");
@@ -2645,7 +2772,7 @@ function SemilleroExternoModal({
       return;
     }
 
-    const nuevo = {
+    const nuevo: IntegranteSemillero = {
       id: Date.now(),
       nombre_completo: nuevoIntg.nombre_completo.trim(),
       tipo_documento: nuevoIntg.tipo_documento.trim(),
@@ -2653,14 +2780,56 @@ function SemilleroExternoModal({
       rol: nuevoIntg.rol.trim(),
       email: nuevoIntg.email.trim(),
       telefono: nuevoIntg.telefono.trim() || undefined,
+      es_mayor_edad: nuevoIntg.es_mayor_edad,
+      asentimiento_nombre: nuevoIntg.asentimiento_nombre,
+      asentimiento_ruta: nuevoIntg.asentimiento_ruta,
+      asentimiento_peso_bytes: nuevoIntg.asentimiento_peso_bytes,
     };
 
     setIntegrantes((p) => [...p, nuevo]);
-    setNuevoIntg({ nombre_completo: "", tipo_documento: "", numero_documento: "", rol: "", email: "", telefono: "" });
+    setNuevoIntg({
+      nombre_completo: "",
+      tipo_documento: "",
+      numero_documento: "",
+      rol: "",
+      email: "",
+      telefono: "",
+      es_mayor_edad: true,
+    });
     setErroresIntg({});
     setMostrarFormIntegrante(false);
     setGeneralError("");
     setPasosCompletados((p) => new Set([...p, 2]));
+  };
+
+  const toggleMayorEdadIntegrante = (id: number, esMayor: boolean) => {
+    setIntegrantes((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, es_mayor_edad: esMayor } : it))
+    );
+  };
+
+  const subirAsentimientoFila = async (id: number, file: File) => {
+    try {
+      setGeneralError("");
+      const res = await subirAsentimientoIntegrante(conv.id, file);
+      if (res.ok) {
+        setIntegrantes((prev) =>
+          prev.map((it) =>
+            it.id === id
+              ? {
+                  ...it,
+                  es_mayor_edad: false,
+                  asentimiento_nombre: res.asentimiento_nombre,
+                  asentimiento_ruta: res.asentimiento_ruta,
+                  asentimiento_peso_bytes: res.asentimiento_peso_bytes,
+                }
+              : it
+          )
+        );
+      }
+    } catch (err: any) {
+      setGeneralError(err.message || "Error al subir el archivo de asentimiento.");
+    }
   };
 
   const eliminarIntegrante = (id: number) => {
@@ -3009,8 +3178,32 @@ function SemilleroExternoModal({
       {/* ── PASO 2: INTEGRANTES ──────────────────────────────────────────── */}
       {paso === 2 && (
         <div className="space-y-4">
+          {/* Banner de descarga de plantilla de asentimiento para menores */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-emerald-50/30 border border-[#C8E6D2] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-start gap-2.5">
+              <span className="text-xl shrink-0 mt-0.5">📄</span>
+              <div>
+                <strong className="text-theme-text-main font-bold block">
+                  ¿Tienes estudiantes menores de edad en el semillero?
+                </strong>
+                <p className="text-theme-text-muted text-[11px] leading-relaxed">
+                  Si marcas a un estudiante como <strong>menor de edad</strong>, deberás adjuntar su formato de Asentimiento y Consentimiento Informado firmado por su acudiente legal.
+                </p>
+              </div>
+            </div>
+            <a
+              href="http://localhost:4200/api/convocatorias/plantilla-asentimiento?print=1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-theme-primary text-white font-bold text-xs hover:bg-[#17563A] transition-all shrink-0 shadow-sm active:scale-95"
+              title="Descargar o imprimir formato oficial"
+            >
+              <span>📥</span> Descargar plantilla
+            </a>
+          </div>
+
           <div className="flex items-center justify-between">
-            <SectionTitle>Integrantes del Semillero</SectionTitle>
+            <SectionTitle>Integrantes del Semillero ({integrantes.length})</SectionTitle>
             <Button
               variant="outline"
               size="sm"
@@ -3030,24 +3223,39 @@ function SemilleroExternoModal({
             </div>
           )}
 
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
             {integrantes.map((intg) => (
               <FilaIntegrante
                 key={intg.id}
                 integrante={intg}
                 onEliminar={eliminarIntegrante}
+                onToggleMayorEdad={toggleMayorEdadIntegrante}
+                onSubirAsentimiento={subirAsentimientoFila}
                 eliminando={false}
               />
             ))}
           </div>
 
           {mostrarFormIntegrante && (
-            <div className="p-4 rounded-xl border border-[#C8E6D2] bg-theme-primary/10 space-y-3">
-              <p className="text-sm font-semibold text-theme-text-main">Nuevo integrante</p>
+            <div className="p-4 rounded-xl border border-[#C8E6D2] bg-theme-primary/10 space-y-3.5">
+              <div className="flex items-center justify-between border-b border-theme-border/60 pb-2">
+                <p className="text-sm font-bold text-theme-text-main">Nuevo integrante del semillero</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMostrarFormIntegrante(false);
+                    setErroresIntg({});
+                  }}
+                  className="text-xs text-theme-text-muted hover:text-theme-text-main"
+                >
+                  ✕ Cerrar
+                </button>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Nombre completo" required error={erroresIntg.nombre_completo}>
                   <Input
-                    placeholder="Nombre completo"
+                    placeholder="Nombre completo del integrante"
                     value={nuevoIntg.nombre_completo}
                     onChange={(v) => {
                       setNuevoIntg((p) => ({ ...p, nombre_completo: v }));
@@ -3080,7 +3288,7 @@ function SemilleroExternoModal({
                 </Field>
                 <Field label="Número de documento" required error={erroresIntg.numero_documento}>
                   <Input
-                    placeholder="Número"
+                    placeholder="Número de documento"
                     value={nuevoIntg.numero_documento}
                     onChange={(v) => {
                       setNuevoIntg((p) => ({ ...p, numero_documento: v }));
@@ -3140,7 +3348,116 @@ function SemilleroExternoModal({
                   />
                 </Field>
               </div>
-              <div className="flex justify-end gap-2">
+
+              {/* Control ¿Es mayor de edad? y Subida de Asentimiento */}
+              <div className="p-3.5 rounded-xl bg-white border border-[#BBDDC7] space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-theme-text-main flex items-center gap-1.5">
+                      <span>👤</span> ¿Es mayor de edad?
+                    </label>
+                    <p className="text-[11px] text-theme-text-muted">
+                      Indica si el integrante tiene 18 años o más.
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center rounded-full p-0.5 bg-gray-100 border border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setNuevoIntg((p) => ({ ...p, es_mayor_edad: true }))}
+                      className={`px-4 py-1 text-xs rounded-full font-bold transition-all ${
+                        nuevoIntg.es_mayor_edad
+                          ? "bg-emerald-500 text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Sí (+18)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNuevoIntg((p) => ({ ...p, es_mayor_edad: false }))}
+                      className={`px-4 py-1 text-xs rounded-full font-bold transition-all ${
+                        !nuevoIntg.es_mayor_edad
+                          ? "bg-rose-500 text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      No (-18)
+                    </button>
+                  </div>
+                </div>
+
+                {!nuevoIntg.es_mayor_edad && (
+                  <div className="p-3 rounded-lg bg-rose-50/70 border border-rose-200 space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-rose-800 flex items-center gap-1">
+                        <span>⚠️</span> Asentimiento Informado requerido (Menor de edad)
+                      </span>
+                      <a
+                        href="http://localhost:4200/api/convocatorias/plantilla-asentimiento?print=1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-theme-primary font-bold hover:underline inline-flex items-center gap-1 shrink-0"
+                      >
+                        <span>📥</span> Descargar plantilla &rarr;
+                      </a>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg bg-white border border-rose-300 cursor-pointer hover:bg-rose-50/50 transition-colors">
+                        <span className="text-xs text-theme-text-main truncate font-medium">
+                          {nuevoIntg.asentimiento_nombre ? `📄 ${nuevoIntg.asentimiento_nombre}` : "Seleccionar archivo firmado (PDF, JPG, PNG)..."}
+                        </span>
+                        {subiendoAsentimiento && <span className="text-[10px] text-theme-primary font-bold">Subiendo...</span>}
+                        <input
+                          type="file"
+                          accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              try {
+                                setSubiendoAsentimiento(true);
+                                const res = await subirAsentimientoIntegrante(conv.id, f);
+                                if (res.ok) {
+                                  setNuevoIntg((p) => ({
+                                    ...p,
+                                    asentimiento_nombre: res.asentimiento_nombre,
+                                    asentimiento_ruta: res.asentimiento_ruta,
+                                    asentimiento_peso_bytes: res.asentimiento_peso_bytes,
+                                  }));
+                                }
+                              } catch (err: any) {
+                                setGeneralError(err.message || "Error al subir asentimiento.");
+                              } finally {
+                                setSubiendoAsentimiento(false);
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                      {nuevoIntg.asentimiento_nombre && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setNuevoIntg((p) => ({
+                              ...p,
+                              asentimiento_nombre: undefined,
+                              asentimiento_ruta: undefined,
+                              asentimiento_peso_bytes: undefined,
+                            }))
+                          }
+                          className="px-2 py-1.5 text-xs text-rose-600 hover:text-rose-800 bg-rose-100/60 rounded-lg"
+                          title="Quitar archivo"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
                 <Button
                   variant="ghost"
                   size="sm"

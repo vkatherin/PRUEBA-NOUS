@@ -611,14 +611,19 @@ export async function getCatalogosSemillero(convocatoriaId: number): Promise<Cat
 // ─── Paso 2: Integrantes ──────────────────────────────────────────────────────
 export interface IntegranteSemillero {
   id: number;
-  inscripcion_id: number;
+  inscripcion_id?: number;
   nombre_completo: string;
   tipo_documento: string;
   numero_documento: string;
   rol: string;
   email: string;
   telefono?: string;
-  fecha_creacion: string;
+  es_mayor_edad?: boolean;
+  asentimiento_nombre?: string;
+  asentimiento_ruta?: string;
+  asentimiento_mime?: string;
+  asentimiento_peso_bytes?: number;
+  fecha_creacion?: string;
 }
 
 export async function getIntegrantesSemillero(
@@ -627,9 +632,39 @@ export async function getIntegrantesSemillero(
   return apiFetch(`/convocatorias/${convocatoriaId}/semillero-integrantes?usuario_id=${usuarioId}`);
 }
 
+export async function subirAsentimientoIntegrante(
+  convocatoriaId: number,
+  file: File
+): Promise<{ ok: boolean; asentimiento_nombre: string; asentimiento_ruta: string; asentimiento_mime: string; asentimiento_peso_bytes: number }> {
+  const token = getToken();
+  const fd = new FormData();
+  fd.append("asentimiento", file);
+
+  const res = await fetch(`${BASE}/convocatorias/${convocatoriaId}/semillero-asentimiento`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Error al subir archivo de asentimiento.");
+  return data;
+}
+
 export async function addIntegranteSemillero(
   convocatoriaId: number,
-  data: { usuario_id: number; nombre_completo: string; tipo_documento: string; numero_documento: string; rol: string; email: string; telefono?: string }
+  data: {
+    usuario_id: number;
+    nombre_completo: string;
+    tipo_documento: string;
+    numero_documento: string;
+    rol: string;
+    email: string;
+    telefono?: string;
+    es_mayor_edad?: boolean;
+    asentimiento_nombre?: string;
+    asentimiento_ruta?: string;
+    asentimiento_peso_bytes?: number;
+  }
 ): Promise<{ ok: boolean; mensaje: string; integrante: IntegranteSemillero }> {
   return apiFetch(`/convocatorias/${convocatoriaId}/semillero-integrantes`, {
     method: "POST",
@@ -639,7 +674,19 @@ export async function addIntegranteSemillero(
 
 export async function updateIntegranteSemillero(
   convocatoriaId: number, integranteId: number,
-  data: { usuario_id: number; nombre_completo: string; tipo_documento: string; numero_documento: string; rol: string; email: string; telefono?: string }
+  data: {
+    usuario_id: number;
+    nombre_completo: string;
+    tipo_documento: string;
+    numero_documento: string;
+    rol: string;
+    email: string;
+    telefono?: string;
+    es_mayor_edad?: boolean;
+    asentimiento_nombre?: string;
+    asentimiento_ruta?: string;
+    asentimiento_peso_bytes?: number;
+  }
 ): Promise<{ ok: boolean; mensaje: string; integrante: IntegranteSemillero }> {
   return apiFetch(`/convocatorias/${convocatoriaId}/semillero-integrantes/${integranteId}`, {
     method: "PUT",
