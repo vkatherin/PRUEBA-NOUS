@@ -18,7 +18,7 @@ async function seedPermisos() {
       'convocatorias.leer', 'convocatorias.crear', 'convocatorias.editar', 'convocatorias.eliminar',
       'convocatorias.publicar', 'convocatorias.cerrar', 'convocatorias.comentar', 'convocatorias.consolidar',
       'semilleros.leer', 'semilleros.crear', 'semilleros.editar', 'semilleros.eliminar',
-      'evaluaciones.leer', 'evaluaciones.evaluar',
+      'evaluaciones.leer', 'evaluaciones.evaluar', 'evaluaciones.asignar',
       'usuarios.leer', 'usuarios.crear', 'usuarios.editar', 'usuarios.eliminar',
       'etica.aprobar', 'investigaciones.aprobar'
     ];
@@ -32,9 +32,9 @@ async function seedPermisos() {
     const rolPermisoMap = {
       'administrador': permisos, // todos
       'directivos': ['dashboard.leer', 'proyectos.leer', 'convocatorias.leer', 'semilleros.leer', 'evaluaciones.leer', 'usuarios.leer', 'convocatorias.comentar'],
-      'director_investigacion': ['dashboard.leer', 'proyectos.leer', 'convocatorias.leer', 'convocatorias.comentar', 'convocatorias.consolidar'],
+      'director_investigacion': ['dashboard.leer', 'proyectos.leer', 'convocatorias.leer', 'convocatorias.comentar', 'convocatorias.consolidar', 'evaluaciones.leer', 'evaluaciones.asignar'],
       'director_semilleros': ['dashboard.leer', 'semilleros.leer', 'convocatorias.leer', 'convocatorias.comentar', 'convocatorias.consolidar'],
-      'coordinador_investigacion': ['convocatorias.leer', 'convocatorias.crear', 'convocatorias.editar', 'convocatorias.publicar', 'convocatorias.cerrar'],
+      'coordinador_investigacion': ['convocatorias.leer', 'convocatorias.crear', 'convocatorias.editar', 'convocatorias.publicar', 'convocatorias.cerrar', 'evaluaciones.leer', 'evaluaciones.asignar'],
       'coordinador_semilleros': ['convocatorias.leer', 'convocatorias.crear', 'convocatorias.editar', 'convocatorias.publicar', 'convocatorias.cerrar'],
       'lider_investigacion': ['proyectos.leer', 'proyectos.editar'],
       'lider_semilleros': ['semilleros.leer', 'semilleros.editar'],

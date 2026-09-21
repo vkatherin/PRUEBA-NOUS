@@ -69,6 +69,41 @@ function EliminarUsuarioModal({
   );
 }
 
+function RemoverRolModal({
+  roleInfo,
+  onClose,
+  onConfirm,
+}: {
+  roleInfo: { userId: number, roleName: string } | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!roleInfo) return null;
+  return (
+    <Modal open={!!roleInfo} onClose={onClose} title="Quitar Rol" size="md">
+      <div className="space-y-4">
+        <div className="flex items-center gap-4 p-4 rounded-xl" style={{ backgroundColor: "#FEF2F2", border: "1px solid #FECACA" }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0" style={{ backgroundColor: "#FEE2E2" }}>⚠️</div>
+          <div>
+            <p className="text-sm font-semibold text-red-700">Confirmar acción</p>
+            <p className="text-xs text-red-600 mt-0.5">¿Estás seguro de quitar el rol <strong>{roleInfo.roleName}</strong> a este usuario?</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 pt-2 border-t border-theme-border">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+            style={{ backgroundColor: "#DC2626" }}
+          >
+            Quitar rol
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function NuevoUsuarioModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Modal open={open} onClose={onClose} title="Crear Nuevo Usuario" size="md">
@@ -128,6 +163,7 @@ export function Administracion() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [usuarioAEliminar, setUsuarioAEliminar] = useState<UsuarioRol | null>(null);
+  const [rolToRemove, setRolToRemove] = useState<{ userId: number, roleName: string } | null>(null);
 
   const [usuarios, setUsuarios] = useState<UsuarioRol[]>([]);
   const [rolesDisponibles, setRolesDisponibles] = useState<RolDisponible[]>([]);
@@ -162,12 +198,13 @@ export function Administracion() {
     }
   };
 
-  const handleRemoveRole = async (userId: number, roleName: string) => {
-    if(!confirm(`¿Estás seguro de quitar el rol ${roleName}?`)) return;
+  const handleRemoveRole = async () => {
+    if (!rolToRemove) return;
     try {
-      await usuariosApi.removerRol(userId, roleName);
+      await usuariosApi.removerRol(rolToRemove.userId, rolToRemove.roleName);
       const updated = await usuariosApi.getAll();
       setUsuarios(updated);
+      setRolToRemove(null);
     } catch (err) {
       console.error(err);
       alert("Error removiendo rol");
@@ -275,7 +312,7 @@ export function Administracion() {
                           className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
                           style={{ backgroundColor: (rolColors[r] ?? "#9CA3AF") + "15", color: rolColors[r] ?? "#9CA3AF" }}
                           title="Click para remover rol"
-                          onClick={() => handleRemoveRole(u.id, r)}
+                          onClick={() => setRolToRemove({ userId: u.id, roleName: r })}
                         >
                           {r} ✕
                         </span>
@@ -416,6 +453,11 @@ export function Administracion() {
         usuario={usuarioAEliminar}
         onClose={() => setUsuarioAEliminar(null)}
         onConfirm={handleDeleteUser}
+      />
+      <RemoverRolModal
+        roleInfo={rolToRemove}
+        onClose={() => setRolToRemove(null)}
+        onConfirm={handleRemoveRole}
       />
     </div>
   );

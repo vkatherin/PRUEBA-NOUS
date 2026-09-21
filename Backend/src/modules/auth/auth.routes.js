@@ -55,6 +55,9 @@ router.post('/mfa/setup', verificarAutenticacion, ctrl.setupMfa);
 // POST /api/auth/mfa/verify — verifica código TOTP y activa MFA
 router.post('/mfa/verify', verificarAutenticacion, ctrl.verifyMfa);
 
+// POST /api/auth/mfa/disable — desactiva MFA
+router.post('/mfa/disable', verificarAutenticacion, ctrl.disableMfa);
+
 // ── RF-AU-04 — Recuperación de contraseña ─────────────────────────────────────
 
 // POST /api/auth/recuperar-password — solicita reset (genera token)

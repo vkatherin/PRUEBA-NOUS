@@ -9,6 +9,11 @@ export function MiPerfil({ user, onUserUpdated }: { user?: UsuarioMe | null; onU
   const [totpInput, setTotpInput] = useState("");
   const [errorMfa, setErrorMfa] = useState("");
 
+  const [modalDisableMfaOpen, setModalDisableMfaOpen] = useState(false);
+  const [disableMfaCode, setDisableMfaCode] = useState("");
+  const [errorDisableMfa, setErrorDisableMfa] = useState("");
+  const [exitoDisableMfa, setExitoDisableMfa] = useState("");
+
   const [modalPasswordOpen, setModalPasswordOpen] = useState(false);
   const [passwordActual, setPasswordActual] = useState("");
   const [passwordNueva, setPasswordNueva] = useState("");
@@ -40,6 +45,24 @@ export function MiPerfil({ user, onUserUpdated }: { user?: UsuarioMe | null; onU
       if (onUserUpdated) onUserUpdated();
     } catch (err: any) {
       setErrorMfa(err.message || "Código inválido");
+    }
+  };
+
+  const confirmarDesactivarMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setErrorDisableMfa("");
+      setExitoDisableMfa("");
+      await authApi.disableMfa(disableMfaCode);
+      setExitoDisableMfa("MFA desactivado correctamente");
+      setTimeout(() => {
+        setModalDisableMfaOpen(false);
+        setDisableMfaCode("");
+        setExitoDisableMfa("");
+        if (onUserUpdated) onUserUpdated();
+      }, 1500);
+    } catch (err: any) {
+      setErrorDisableMfa(err.message || "Código inválido");
     }
   };
 
@@ -120,8 +143,7 @@ export function MiPerfil({ user, onUserUpdated }: { user?: UsuarioMe | null; onU
               {user?.mfa_habilitado ? (
                 <div className="flex items-center gap-3">
                   <span className="text-green-600 text-sm font-medium">Activado</span>
-                  {/* Desactivar MFA no estaba en el API authApi, lo omitimos si no existe o creamos un placeholder */}
-                  <Button variant="outline" onClick={() => alert("Comuníquese con soporte para desactivar MFA")}>Desactivar</Button>
+                  <Button variant="outline" onClick={() => setModalDisableMfaOpen(true)}>Desactivar</Button>
                 </div>
               ) : (
                 <Button variant="primary" onClick={handleActivarMfa}>Activar MFA</Button>
@@ -178,6 +200,28 @@ export function MiPerfil({ user, onUserUpdated }: { user?: UsuarioMe | null; onU
               <p className="text-sm text-theme-text-muted">Cargando...</p>
             )}
           </div>
+        </Modal>
+      )}
+
+      {/* MODAL DESACTIVAR MFA */}
+      {modalDisableMfaOpen && (
+        <Modal open={true} title="Desactivar Autenticación Multifactor" onClose={() => setModalDisableMfaOpen(false)}>
+          <form onSubmit={confirmarDesactivarMfa} className="space-y-4">
+            <p className="text-sm text-theme-text-muted">
+              Ingresa tu código de 6 dígitos de tu app autenticadora para confirmar la desactivación.
+            </p>
+            {errorDisableMfa && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-md">{errorDisableMfa}</div>}
+            {exitoDisableMfa && <div className="p-3 bg-green-50 text-green-700 text-sm rounded-md">{exitoDisableMfa}</div>}
+            
+            <Field label="Código MFA actual">
+              <Input value={disableMfaCode} onChange={setDisableMfaCode} placeholder="Ej: 123456" maxLength={6} required className="text-center text-lg tracking-widest font-mono" />
+            </Field>
+            
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" type="button" onClick={() => setModalDisableMfaOpen(false)}>Cancelar</Button>
+              <Button variant="danger" type="submit" disabled={disableMfaCode.length < 6}>Desactivar MFA</Button>
+            </div>
+          </form>
         </Modal>
       )}
 

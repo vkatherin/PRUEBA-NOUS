@@ -142,4 +142,93 @@ router.post("/:id/calificar", verificarPermiso('evaluaciones.evaluar'), async (r
   }
 });
 
+// GET /api/evaluaciones/data/evaluadores — lista de usuarios con rol evaluador
+router.get("/data/evaluadores", verificarPermiso('evaluaciones.asignar'), async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT u.id, u.nombre_completo, u.correo_institucional
+      FROM usuarios u
+      JOIN usuario_rol ur ON ur.usuario_id = u.id
+      JOIN roles r ON r.id = ur.rol_id
+      WHERE r.nombre = 'evaluador' AND u.activo = 1
+      ORDER BY u.nombre_completo
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Error al listar evaluadores" });
+  }
+});
+
+// GET /api/evaluaciones/data/proyectos-sin-evaluador — proyectos evaluables aún sin asignar
+router.get("/data/proyectos-sin-evaluador", verificarPermiso('evaluaciones.asignar'), async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT p.id, p.titulo, p.codigo_unico, p.estado
+      FROM proyectos p
+      WHERE p.id NOT IN (
+        SELECT proyecto_id FROM evaluaciones WHERE estado = 'pendiente'
+      )
+      ORDER BY p.fecha_inicio DESC
+      LIMIT 100
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Error al listar proyectos" });
+  }
+});
+
+// POST /api/evaluaciones — asignar un evaluador a un proyecto
+router.post("/", verificarPermiso('evaluaciones.asignar'), async (req, res) => {
+  try {
+    const { proyecto_id, evaluador_id, tipo, fecha_limite } = req.body;
+
+    if (!proyecto_id || !evaluador_id || !tipo) {
+      return res.status(400).json({ error: "proyecto_id, evaluador_id y tipo son obligatorios" });
+    }
+
+    const [[proyecto]] = await pool.query("SELECT id, titulo, investigador_principal_id FROM proyectos WHERE id = ?", [proyecto_id]);
+    if (!proyecto) return res.status(404).json({ error: "Proyecto no encontrado" });
+
+    const [[evaluadorUsuario]] = await pool.query(`
+      SELECT u.id FROM usuarios u
+      JOIN usuario_rol ur ON ur.usuario_id = u.id
+      JOIN roles r ON r.id = ur.rol_id
+      WHERE u.id = ? AND r.nombre = 'evaluador'
+    `, [evaluador_id]);
+    if (!evaluadorUsuario) return res.status(400).json({ error: "El usuario seleccionado no tiene rol de evaluador" });
+
+    const [result] = await pool.query(`
+      INSERT INTO evaluaciones (proyecto_id, evaluador_id, tipo, fecha_asignacion, fecha_limite, estado)
+      VALUES (?, ?, ?, CURDATE(), ?, 'pendiente')
+    `, [proyecto_id, evaluador_id, tipo, fecha_limite || null]);
+
+    // Notificación al evaluador asignado
+    try {
+      const { enviarCorreo } = require('../../shared/mailer');
+      const [[pref]] = await pool.query(
+        `SELECT notif_evaluacion_asignada FROM preferencias_notificacion WHERE usuario_id = ?`,
+        [evaluador_id]
+      );
+      const [[correoEvaluador]] = await pool.query(
+        `SELECT correo_institucional FROM usuarios WHERE id = ?`, [evaluador_id]
+      );
+      if ((!pref || pref.notif_evaluacion_asignada) && correoEvaluador) {
+        await enviarCorreo({
+          destinatarios: [correoEvaluador.correo_institucional],
+          asunto: `Nueva evaluación asignada: ${proyecto.titulo}`,
+          cuerpo: `Se te ha asignado la evaluación del proyecto "${proyecto.titulo}" (tipo: ${tipo}). Fecha límite: ${fecha_limite || 'sin definir'}.`,
+          tipo: 'evaluacion_asignada',
+        });
+      }
+    } catch (mailErr) {
+      console.warn('No se pudo enviar notificación de evaluación asignada:', mailErr.message);
+    }
+
+    res.status(201).json({ ok: true, id: result.insertId, mensaje: "Evaluador asignado correctamente" });
+  } catch (err) {
+    console.error("Error al asignar evaluador:", err);
+    res.status(500).json({ error: "Error al asignar evaluador" });
+  }
+});
+
 module.exports = router;

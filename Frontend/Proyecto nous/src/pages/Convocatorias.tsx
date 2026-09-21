@@ -846,11 +846,13 @@ function DetailModal({
   onClose,
   onInscribirse,
   onEliminar,
+  user,
 }: {
   conv: Convocatoria | null;
   onClose: () => void;
   onInscribirse: (c: Convocatoria) => void;
   onEliminar?: (c: Convocatoria) => void;
+  user?: UsuarioMe | null;
 }) {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
   const [loadingInscripciones, setLoadingInscripciones] = useState(false);
@@ -868,6 +870,14 @@ function DetailModal({
   }, [conv?.id]);
 
   if (!conv) return null;
+
+  const isRestrictedRole = user?.roles?.some(r => {
+    const lower = r.toLowerCase();
+    return lower.includes("estudiante") || lower.includes("docente") || lower.includes("investigador");
+  });
+  const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador");
+  const canDelete = isAdmin || (!isRestrictedRole && user?.permisos?.includes('convocatorias.eliminar'));
+  const canViewFiles = isAdmin || !isRestrictedRole;
 
   const formatDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" }) : "—";
@@ -1012,23 +1022,27 @@ function DetailModal({
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <a
-                                href={doc.documento_ruta}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-md transition-colors"
-                                title="Ver documento PDF"
-                              >
-                                <span>📄</span> Ver
-                              </a>
-                              <a
-                                href={doc.documento_ruta}
-                                download={doc.documento_nombre_original}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-md transition-colors"
-                                title="Descargar documento PDF"
-                              >
-                                <span>⬇️</span> Descargar
-                              </a>
+                              {canViewFiles && (
+                                <>
+                                  <a
+                                    href={doc.documento_ruta}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-md transition-colors"
+                                    title="Ver documento PDF"
+                                  >
+                                    <span>📄</span> Ver
+                                  </a>
+                                  <a
+                                    href={doc.documento_ruta}
+                                    download={doc.documento_nombre_original}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-md transition-colors"
+                                    title="Descargar documento PDF"
+                                  >
+                                    <span>⬇️</span> Descargar
+                                  </a>
+                                </>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1040,23 +1054,27 @@ function DetailModal({
                         📎 {ins.documento_nombre_original} ({(ins.documento_peso_bytes / 1024).toFixed(1)} KB)
                       </span>
                       <div className="flex items-center gap-2">
-                        <a
-                          href={ins.documento_ruta}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-colors"
-                          title="Ver anteproyecto en nueva pestaña"
-                        >
-                          <span>📄</span> Ver
-                        </a>
-                        <a
-                          href={ins.documento_ruta}
-                          download={ins.documento_nombre_original || "anteproyecto.pdf"}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-lg transition-colors"
-                          title="Descargar anteproyecto PDF"
-                        >
-                          <span>⬇️</span> Descargar
-                        </a>
+                        {canViewFiles && (
+                          <>
+                            <a
+                              href={ins.documento_ruta}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-colors"
+                              title="Ver anteproyecto en nueva pestaña"
+                            >
+                              <span>📄</span> Ver
+                            </a>
+                            <a
+                              href={ins.documento_ruta}
+                              download={ins.documento_nombre_original || "anteproyecto.pdf"}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-lg transition-colors"
+                              title="Descargar anteproyecto PDF"
+                            >
+                              <span>⬇️</span> Descargar
+                            </a>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1069,7 +1087,7 @@ function DetailModal({
       <div className="flex justify-between items-center mt-6 pt-4 border-t border-theme-border">
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={onClose}>Cerrar</Button>
-          {onEliminar && (
+          {onEliminar && canDelete && (
             <Button
               variant="outline"
               className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
@@ -3139,6 +3157,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  const isEstudiante = user?.roles?.some(r => r.toLowerCase().includes("estudiante"));
+
   const filtradas = convocatorias.filter((c) => {
     const cod = (c.codigo_con || c.codigo || "").toLowerCase();
     const matchSearch =
@@ -3158,7 +3178,9 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
       matchTipo = tipoLower === "conjunta" || tipoLower === "conjuntas";
     }
 
-    return matchSearch && matchEstado && matchTipo;
+    const matchRole = !isEstudiante || (c.dirigida_a && c.dirigida_a.toLowerCase().includes("estudiante"));
+
+    return matchSearch && matchEstado && matchTipo && matchRole;
   });
 
   const estadoBadge = (estado: string): "active" | "evaluation" | "closed" | "draft" => {
@@ -3376,6 +3398,7 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
       <WizardModal open={showWizard} onClose={() => setShowWizard(false)} onCreated={cargar} />
       <DetailModal
         conv={selected}
+        user={user}
         onClose={() => setSelected(null)}
         onEliminar={(c) => setDeletingConv(c)}
         onInscribirse={(c) => {

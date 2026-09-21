@@ -406,6 +406,46 @@ exports.verifyMfa = async (req, res) => {
   }
 };
 
+exports.disableMfa = async (req, res) => {
+  const speakeasy = require('speakeasy');
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: 'Ingresa tu código MFA actual para desactivarlo' });
+  }
+
+  try {
+    const usuarioId = req.usuario.id;
+    const [[mfaRow]] = await pool.query(
+      `SELECT secret FROM usuario_mfa WHERE usuario_id = ?`,
+      [usuarioId]
+    );
+
+    if (!mfaRow) {
+      return res.status(400).json({ error: 'MFA no está activado en tu cuenta' });
+    }
+
+    const valido = speakeasy.totp.verify({
+      secret: mfaRow.secret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!valido) {
+      return res.status(401).json({ error: 'Código MFA inválido o expirado' });
+    }
+
+    await pool.query(`DELETE FROM usuario_mfa WHERE usuario_id = ?`, [usuarioId]);
+    await pool.query(`UPDATE usuarios SET mfa_habilitado = FALSE WHERE id = ?`, [usuarioId]);
+    await registrarAuditoria(usuarioId, 'mfa_desactivado', 'usuarios', usuarioId);
+
+    res.json({ mensaje: 'MFA desactivado correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // ── POST /api/auth/recuperar-password (RF-AU-04) ─────────────────────────────
 
 /**

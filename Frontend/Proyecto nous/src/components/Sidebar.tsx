@@ -128,10 +128,14 @@ export function Sidebar({
 
   const permisos = user?.permisos || [];
   const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador");
+  const isEstudiante = user?.roles?.some(r => r.toLowerCase().includes("estudiante"));
 
   const hasPermiso = (modulo: string) => permisos.includes(`${modulo}.leer`) || isAdmin;
 
   const topItems = NAV_ITEMS.slice(0, 8).filter(item => {
+    if (isEstudiante) {
+      return item.id === "convocatorias" || item.id === "documentos";
+    }
     switch (item.id) {
       case "dashboard": return hasPermiso("dashboard");
       case "convocatorias": return hasPermiso("convocatorias");
@@ -146,6 +150,7 @@ export function Sidebar({
   });
 
   let bottomItems = NAV_ITEMS.slice(8).filter(item => {
+    if (isEstudiante) return false;
     switch (item.id) {
       case "semilleros": return hasPermiso("semilleros");
       case "administracion": return hasPermiso("usuarios") || isAdmin;

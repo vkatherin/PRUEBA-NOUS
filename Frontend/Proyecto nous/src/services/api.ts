@@ -120,6 +120,14 @@ export const authApi = {
     });
   },
 
+  /** Desactiva MFA */
+  disableMfa(token: string): Promise<{ mensaje: string }> {
+    return apiFetch<{ mensaje: string }>('/auth/mfa/disable', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+
   /** Solicita el flujo de recuperación de contraseña */
   solicitarReset(correo: string): Promise<{ mensaje: string }> {
     return apiFetch<{ mensaje: string }>('/auth/recuperar-password', {
@@ -776,4 +784,28 @@ export const documentosApi = {
   getDescargarUrl: (id: number): string => {
     return `${BASE}/documentos/formatos/${id}/descargar`;
   }
+};
+
+// ── Evaluaciones ─────────────────────────────────────────────────────────────
+export interface Evaluacion {
+  id: number; proyecto_id: number; evaluador_id: number; tipo: string;
+  fecha_asignacion: string; fecha_limite: string; estado: string;
+  puntaje_total: number; observaciones: string;
+  proyecto: string; convocatoria: string; evaluador_nombre: string;
+}
+export interface EvaluacionDetalle extends Evaluacion {
+  criterios: { id: number; criterio: string; puntaje_maximo: number; puntaje_obtenido: number }[];
+}
+export interface EvaluadorDisponible { id: number; nombre_completo: string; correo_institucional: string; }
+export interface ProyectoSinEvaluador { id: number; titulo: string; codigo_unico: string; estado: string; }
+
+export const evaluacionesApi = {
+  getAll: () => apiFetch<Evaluacion[]>('/evaluaciones'),
+  getById: (id: number) => apiFetch<EvaluacionDetalle>(`/evaluaciones/${id}`),
+  calificar: (id: number, data: { puntaje_total: number; observaciones: string; criterios: { id?: number; criterio?: string; puntaje_maximo?: number; puntaje_obtenido: number }[] }) =>
+    apiFetch(`/evaluaciones/${id}/calificar`, { method: 'POST', body: JSON.stringify(data) }),
+  getEvaluadoresDisponibles: () => apiFetch<EvaluadorDisponible[]>('/evaluaciones/data/evaluadores'),
+  getProyectosSinEvaluador: () => apiFetch<ProyectoSinEvaluador[]>('/evaluaciones/data/proyectos-sin-evaluador'),
+  asignar: (data: { proyecto_id: number; evaluador_id: number; tipo: string; fecha_limite?: string }) =>
+    apiFetch('/evaluaciones', { method: 'POST', body: JSON.stringify(data) }),
 };
