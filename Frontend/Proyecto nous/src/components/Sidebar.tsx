@@ -161,14 +161,14 @@ export function Sidebar({
 
       if (hasPermiso("proyectos") && !isEstudiante && !isExternoRestrictivo) {
         try {
-          const proys = await proyectosApi.listar();
+          const proys = await proyectosApi.getAll();
           proyCount = proys.length;
         } catch (e) { console.error("Error proyectos sidebar", e); }
       }
 
       if (hasPermiso("evaluaciones") || user?.roles?.some(r => r.toLowerCase() === "evaluador")) {
         try {
-          const evals = await evaluacionesApi.listar();
+          const evals = await evaluacionesApi.getAll();
           evalCount = evals.length;
         } catch (e) { console.error("Error evaluaciones sidebar", e); }
       }
