@@ -2727,9 +2727,9 @@ function FilaIntegrante({
               </label>
             </div>
           ) : (
-            <label className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg cursor-pointer transition-all shadow-sm active:scale-95">
+            <label className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded-lg cursor-pointer transition-all shadow-sm active:scale-95 animate-pulse" title="Obligatorio: Adjuntar formato de asentimiento informado para menor de edad">
               <span>📤</span>
-              <span className="text-[11px]">Subir formato</span>
+              <span className="text-[11px]">Subir formato *</span>
               <input
                 type="file"
                 accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
@@ -3036,6 +3036,10 @@ function SemilleroExternoModal({
       errs.email = "Ingresa un correo electrónico válido.";
     }
 
+    if (!nuevoIntg.es_mayor_edad && !nuevoIntg.asentimiento_ruta && !nuevoIntg.asentimiento_nombre) {
+      errs.asentimiento = "Debes adjuntar el archivo de asentimiento informado firmado para este integrante menor de edad.";
+    }
+
     if (Object.keys(errs).length > 0) {
       setErroresIntg(errs);
       return;
@@ -3118,6 +3122,15 @@ function SemilleroExternoModal({
   const avanzarPaso2 = () => {
     if (integrantes.length === 0) {
       setGeneralError("Debes agregar al menos un integrante al semillero para continuar.");
+      return;
+    }
+    const menorSinAsentimiento = integrantes.find(
+      (it) => it.es_mayor_edad === false && !it.asentimiento_ruta && !it.asentimiento_nombre
+    );
+    if (menorSinAsentimiento) {
+      setGeneralError(
+        `El integrante menor de edad "${menorSinAsentimiento.nombre_completo || "sin nombre"}" debe tener cargado su formato de asentimiento informado firmado para poder continuar.`
+      );
       return;
     }
     setGeneralError("");
@@ -3738,10 +3751,10 @@ function SemilleroExternoModal({
                 </div>
 
                 {!nuevoIntg.es_mayor_edad && (
-                  <div className="p-3 rounded-lg bg-rose-50/70 border border-rose-200 space-y-2 text-xs">
+                  <div className={`p-3 rounded-lg ${erroresIntg.asentimiento ? "bg-rose-100/80 border-rose-300" : "bg-rose-50/70 border-rose-200"} border space-y-2 text-xs`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-rose-800 flex items-center gap-1">
-                        <span>⚠️</span> Asentimiento Informado requerido (Menor de edad)
+                        <span>⚠️</span> Asentimiento Informado requerido * (Menor de edad)
                       </span>
                       <a
                         href={`http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv?.id || ""}&print=1`}
@@ -3754,9 +3767,9 @@ function SemilleroExternoModal({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <label className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg bg-white border border-rose-300 cursor-pointer hover:bg-rose-50/50 transition-colors">
+                      <label className={`flex-1 flex items-center justify-between px-3 py-2 rounded-lg bg-white border ${erroresIntg.asentimiento ? "border-rose-500 ring-1 ring-rose-500" : "border-rose-300"} cursor-pointer hover:bg-rose-50/50 transition-colors`}>
                         <span className="text-xs text-theme-text-main truncate font-medium">
-                          {nuevoIntg.asentimiento_nombre ? `📄 ${nuevoIntg.asentimiento_nombre}` : "Seleccionar archivo firmado (PDF, JPG, PNG)..."}
+                          {nuevoIntg.asentimiento_nombre ? `📄 ${nuevoIntg.asentimiento_nombre}` : "Seleccionar archivo firmado (PDF, JPG, PNG)... *"}
                         </span>
                         {subiendoAsentimiento && <span className="text-[10px] text-theme-primary font-bold">Subiendo...</span>}
                         <input
@@ -3776,6 +3789,11 @@ function SemilleroExternoModal({
                                     asentimiento_ruta: res.asentimiento_ruta,
                                     asentimiento_peso_bytes: res.asentimiento_peso_bytes,
                                   }));
+                                  setErroresIntg((prev) => {
+                                    const n = { ...prev };
+                                    delete n.asentimiento;
+                                    return n;
+                                  });
                                 }
                               } catch (err: any) {
                                 setGeneralError(err.message || "Error al subir asentimiento.");
@@ -3804,6 +3822,9 @@ function SemilleroExternoModal({
                         </button>
                       )}
                     </div>
+                    {erroresIntg.asentimiento && (
+                      <p className="text-xs text-rose-600 font-semibold">{erroresIntg.asentimiento}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -3826,7 +3847,25 @@ function SemilleroExternoModal({
             </div>
           )}
 
-          <NavButtons onBack={() => setPaso(1)} onNext={avanzarPaso2} nextLabel="Continuar →" />
+          {integrantes.some((it) => it.es_mayor_edad === false && !it.asentimiento_ruta && !it.asentimiento_nombre) && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-300 text-rose-800 text-xs flex items-center gap-2">
+              <span>⚠️</span>
+              <div>
+                <p className="font-bold">Formato de asentimiento obligatorio</p>
+                <p>Hay integrantes menores de edad sin el formato de asentimiento firmado. Debes subir el archivo para cada menor antes de poder continuar.</p>
+              </div>
+            </div>
+          )}
+
+          <NavButtons
+            onBack={() => setPaso(1)}
+            onNext={avanzarPaso2}
+            nextLabel="Continuar →"
+            nextDisabled={
+              integrantes.length === 0 ||
+              integrantes.some((it) => it.es_mayor_edad === false && !it.asentimiento_ruta && !it.asentimiento_nombre)
+            }
+          />
         </div>
       )}
 
