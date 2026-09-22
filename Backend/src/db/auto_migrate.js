@@ -112,30 +112,33 @@ async function autoMigrate() {
       ) ENGINE=InnoDB;
     `);
 
-    const columnasIntegrantes = [
-      "ADD COLUMN IF NOT EXISTS es_mayor_edad BOOLEAN NOT NULL DEFAULT TRUE",
-      "ADD COLUMN IF NOT EXISTS asentimiento_nombre VARCHAR(255) NULL",
-      "ADD COLUMN IF NOT EXISTS asentimiento_ruta VARCHAR(255) NULL",
-      "ADD COLUMN IF NOT EXISTS asentimiento_mime VARCHAR(100) NULL",
-      "ADD COLUMN IF NOT EXISTS asentimiento_peso_bytes BIGINT NULL"
-    ];
-    for (const colQuery of columnasIntegrantes) {
+    // Helper para añadir columnas de forma segura en cualquier versión de MySQL
+    async function asegurarColumnas(tabla, colsDef) {
       try {
-        await pool.query(`ALTER TABLE inscripcion_semillero_integrantes ${colQuery}`);
+        const [cols] = await pool.query(`SHOW COLUMNS FROM ${tabla}`);
+        const existentes = cols.map((c) => c.Field);
+        for (const c of colsDef) {
+          if (!existentes.includes(c.nombre)) {
+            await pool.query(`ALTER TABLE ${tabla} ADD COLUMN ${c.nombre} ${c.tipo}`);
+          }
+        }
       } catch (_) {}
     }
 
-    const columnasConvocatorias = [
-      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_nombre VARCHAR(255) NULL",
-      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_ruta VARCHAR(255) NULL",
-      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_mime VARCHAR(100) NULL",
-      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_peso_bytes BIGINT NULL"
-    ];
-    for (const colQuery of columnasConvocatorias) {
-      try {
-        await pool.query(`ALTER TABLE convocatorias ${colQuery}`);
-      } catch (_) {}
-    }
+    await asegurarColumnas("inscripcion_semillero_integrantes", [
+      { nombre: "es_mayor_edad", tipo: "BOOLEAN NOT NULL DEFAULT TRUE" },
+      { nombre: "asentimiento_nombre", tipo: "VARCHAR(255) NULL" },
+      { nombre: "asentimiento_ruta", tipo: "VARCHAR(255) NULL" },
+      { nombre: "asentimiento_mime", tipo: "VARCHAR(100) NULL" },
+      { nombre: "asentimiento_peso_bytes", tipo: "BIGINT NULL" }
+    ]);
+
+    await asegurarColumnas("convocatorias", [
+      { nombre: "plantilla_asentimiento_nombre", tipo: "VARCHAR(255) NULL" },
+      { nombre: "plantilla_asentimiento_ruta", tipo: "VARCHAR(255) NULL" },
+      { nombre: "plantilla_asentimiento_mime", tipo: "VARCHAR(100) NULL" },
+      { nombre: "plantilla_asentimiento_peso_bytes", tipo: "BIGINT NULL" }
+    ]);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS configuracion_plantillas (
