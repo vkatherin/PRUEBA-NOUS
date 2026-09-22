@@ -335,6 +335,10 @@ const pasosSemilleroController = {
       if (!tipoDocumento || !TIPOS_DOCUMENTO.includes(tipoDocumento))
         return res.status(400).json({ error: "El tipo de documento no es válido.", campo: "tipo_documento" });
       if (!numeroDocumento) return res.status(400).json({ error: "El número de documento es obligatorio.", campo: "numero_documento" });
+      if (!/^\d+$/.test(numeroDocumento))
+        return res.status(400).json({ error: "El número de documento solo debe contener números.", campo: "numero_documento" });
+      if (telefono && !/^\d+$/.test(telefono))
+        return res.status(400).json({ error: "El teléfono solo debe contener números.", campo: "telefono" });
       if (!rol || !ROLES_INTEGRANTE.includes(rol))
         return res.status(400).json({ error: "El rol no es válido.", campo: "rol" });
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -383,6 +387,20 @@ const pasosSemilleroController = {
       const rol = (req.body.rol || "").trim();
       const email = (req.body.email || "").trim();
       const telefono = (req.body.telefono || "").trim() || null;
+
+      if (!nombreCompleto) return res.status(400).json({ error: "El nombre completo es obligatorio.", campo: "nombre_completo" });
+      if (!tipoDocumento || !TIPOS_DOCUMENTO.includes(tipoDocumento))
+        return res.status(400).json({ error: "El tipo de documento no es válido.", campo: "tipo_documento" });
+      if (!numeroDocumento) return res.status(400).json({ error: "El número de documento es obligatorio.", campo: "numero_documento" });
+      if (!/^\d+$/.test(numeroDocumento))
+        return res.status(400).json({ error: "El número de documento solo debe contener números.", campo: "numero_documento" });
+      if (telefono && !/^\d+$/.test(telefono))
+        return res.status(400).json({ error: "El teléfono solo debe contener números.", campo: "telefono" });
+      if (!rol || !ROLES_INTEGRANTE.includes(rol))
+        return res.status(400).json({ error: "El rol no es válido.", campo: "rol" });
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return res.status(400).json({ error: "El correo electrónico no es válido.", campo: "email" });
+
       const esMayorEdad = req.body.es_mayor_edad !== false && req.body.es_mayor_edad !== "false";
       const asentimientoNombre = req.body.asentimiento_nombre || null;
       const asentimientoRuta = req.body.asentimiento_ruta || null;

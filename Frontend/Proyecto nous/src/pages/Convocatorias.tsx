@@ -2962,8 +2962,24 @@ function SemilleroExternoModal({
   const agregarIntegrante = () => {
     const errs: Record<string, string> = {};
     if (!nuevoIntg.nombre_completo.trim()) errs.nombre_completo = "El nombre completo es obligatorio.";
-    if (!nuevoIntg.tipo_documento) errs.tipo_documento = "Selecciona el tipo de documento.";
-    if (!nuevoIntg.numero_documento.trim()) errs.numero_documento = "El número de documento es obligatorio.";
+    const numDocLimpio = nuevoIntg.numero_documento.trim();
+    if (!numDocLimpio) {
+      errs.numero_documento = "El número de documento es obligatorio.";
+    } else if (!/^\d+$/.test(numDocLimpio)) {
+      errs.numero_documento = "El número de documento solo debe contener números.";
+    } else if (numDocLimpio.length < 5 || numDocLimpio.length > 15) {
+      errs.numero_documento = "El número de documento debe tener entre 5 y 15 dígitos.";
+    }
+
+    const telLimpio = nuevoIntg.telefono.trim();
+    if (telLimpio) {
+      if (!/^\d+$/.test(telLimpio)) {
+        errs.telefono = "El teléfono solo debe contener números.";
+      } else if (telLimpio.length < 7 || telLimpio.length > 12) {
+        errs.telefono = "El teléfono debe tener entre 7 y 12 dígitos.";
+      }
+    }
+
     if (!nuevoIntg.rol) errs.rol = "Selecciona el rol.";
     if (!nuevoIntg.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevoIntg.email)) {
       errs.email = "Ingresa un correo electrónico válido.";
@@ -3539,12 +3555,13 @@ function SemilleroExternoModal({
                     hasError={!!erroresIntg.tipo_documento}
                   />
                 </Field>
-                <Field label="Número de documento" required error={erroresIntg.numero_documento}>
+                <Field label="Número de documento (solo números)" required error={erroresIntg.numero_documento}>
                   <Input
-                    placeholder="Número de documento"
+                    placeholder="Ej: 1085234567"
                     value={nuevoIntg.numero_documento}
                     onChange={(v) => {
-                      setNuevoIntg((p) => ({ ...p, numero_documento: v }));
+                      const soloNumeros = v.replace(/\D/g, "");
+                      setNuevoIntg((p) => ({ ...p, numero_documento: soloNumeros }));
                       setErroresIntg((p) => {
                         const n = { ...p };
                         delete n.numero_documento;
@@ -3593,11 +3610,20 @@ function SemilleroExternoModal({
                     hasError={!!erroresIntg.email}
                   />
                 </Field>
-                <Field label="Teléfono">
+                <Field label="Teléfono (solo números)" error={erroresIntg.telefono}>
                   <Input
-                    placeholder="Opcional"
+                    placeholder="Ej: 3123456789"
                     value={nuevoIntg.telefono}
-                    onChange={(v) => setNuevoIntg((p) => ({ ...p, telefono: v }))}
+                    onChange={(v) => {
+                      const soloNumeros = v.replace(/\D/g, "");
+                      setNuevoIntg((p) => ({ ...p, telefono: soloNumeros }));
+                      setErroresIntg((p) => {
+                        const n = { ...p };
+                        delete n.telefono;
+                        return n;
+                      });
+                    }}
+                    hasError={!!erroresIntg.telefono}
                   />
                 </Field>
               </div>
