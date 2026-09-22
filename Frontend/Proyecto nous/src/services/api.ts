@@ -299,6 +299,7 @@ export interface ProyectoDetalle extends Proyecto {
   duracion_meses: number;
   // Descripción completa
   resumen_ejecutivo?: string;
+  resumen?: string;
   justificacion?: string;
   pertinencia?: string;
   contexto?: string;
@@ -307,6 +308,7 @@ export interface ProyectoDetalle extends Proyecto {
   pregunta_investigacion?: string;
   marco_teorico?: string;
   objetivo_general?: string;
+  objetivos?: string;
   objetivos_especificos?: string;
   consideraciones_eticas_bioeticas?: string;
   conocimiento_generado?: string;

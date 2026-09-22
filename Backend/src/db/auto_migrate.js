@@ -140,6 +140,10 @@ async function autoMigrate() {
       { nombre: "plantilla_asentimiento_peso_bytes", tipo: "BIGINT NULL" }
     ]);
 
+    await asegurarColumnas("proyectos", [
+      { nombre: "inscripcion_id", tipo: "INT NULL" }
+    ]);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS configuracion_plantillas (
         id INT AUTO_INCREMENT PRIMARY KEY,
