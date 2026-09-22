@@ -2,6 +2,7 @@ const pool = require("../../db/connection");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const PDFDocument = require("pdfkit");
 
 // ─── Catálogos ────────────────────────────────────────────────────────────────
 const TIPOS_DOCUMENTO = ["CC", "TI", "CE", "Pasaporte", "NIT", "Otro"];
@@ -222,76 +223,144 @@ const pasosSemilleroController = {
         }
       }
 
-      const htmlContent = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Formato de Asentimiento y Consentimiento Informado - Menores de Edad</title>
-  <style>
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 40px; color: #1F2937; line-height: 1.6; }
-    .header { text-align: center; border-bottom: 2px solid #1B5E20; padding-bottom: 15px; margin-bottom: 25px; }
-    .title { font-size: 18px; font-weight: bold; color: #1B5E20; text-transform: uppercase; }
-    .subtitle { font-size: 13px; color: #4B5563; }
-    .section-title { font-size: 14px; font-weight: bold; color: #1B5E20; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px; }
-    .field-row { display: flex; margin-bottom: 10px; font-size: 13px; }
-    .field-label { font-weight: bold; width: 220px; color: #374151; }
-    .field-line { border-bottom: 1px solid #9CA3AF; flex: 1; min-height: 20px; }
-    .text-block { font-size: 12px; text-align: justify; margin: 15px 0; color: #374151; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
-    .sig-box { width: 45%; text-align: center; border-top: 1px solid #374151; padding-top: 8px; }
-    @media print { body { margin: 20px; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="title">FUNDACIÓN UNIVERSITARIA CATÓLICA DEL SUR — NOUS</div>
-    <div class="subtitle">DIRECCIÓN DE INVESTIGACIONES Y EXTENSIÓN · SEMILLEROS DE INVESTIGACIÓN</div>
-    <div style="font-weight: bold; margin-top: 8px; font-size: 15px;">FORMATO INSTITUCIONAL DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO (MENORES DE EDAD)</div>
-  </div>
+      // Generar PDF Institucional Oficial con PDFKit y descargar directamente
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="Formato_Asentimiento_Informado_NOUS.pdf"'
+      );
 
-  <div class="section-title">1. DATOS DEL PARTICIPANTE MENOR DE EDAD</div>
-  <div class="field-row"><span class="field-label">Nombre completo del estudiante:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Tipo y número de documento:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Institución educativa / Procedencia:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Nombre del Semillero:</span><span class="field-line"></span></div>
+      const doc = new PDFDocument({
+        size: "LETTER",
+        margins: { top: 40, bottom: 40, left: 45, right: 45 },
+      });
 
-  <div class="section-title">2. DATOS DEL PADRE, MADRE O TUTOR LEGAL</div>
-  <div class="field-row"><span class="field-label">Nombre completo del tutor:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Cédula de ciudadanía:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Parentesco / Representación legal:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Teléfono de contacto:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Correo electrónico:</span><span class="field-line"></span></div>
+      doc.pipe(res);
 
-  <div class="section-title">3. DECLARACIÓN DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO</div>
-  <div class="text-block">
-    Yo, en mi calidad de representante legal del menor de edad arriba identificado, manifiesto de manera voluntaria, libre e informada que he sido enterado(a) de los objetivos, alcance y actividades formativas de la convocatoria académica de investigación NOUS, y <strong>AUTORIZO</strong> su vinculación y participación activa como integrante del semillero de investigación.
-    Asimismo, autorizo el tratamiento de sus datos personales e institucionales en estricto cumplimiento de la Ley 1581 de 2012 con fines exclusivamente académicos, de divulgación científica y seguimiento institucional.
-  </div>
+      const startX = doc.page.margins.left;
+      const endX = doc.page.width - doc.page.margins.right;
 
-  <div class="signatures">
-    <div class="sig-box">
-      Firma del Padre / Madre / Tutor Legal<br>
-      C.C. Nº: __________________________
-    </div>
-    <div class="sig-box">
-      Firma del Estudiante (Menor de edad)<br>
-      Doc. Identidad Nº: __________________
-    </div>
-  </div>
-  <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #6B7280;">
-    Ciudad y Fecha: _________________________________, Pasto (Nariño), 2026.
-  </div>
-  <script>
-    window.onload = function() {
-      if (window.location.search.includes("print=1")) {
-        window.print();
-      }
-    };
-  </script>
-</body>
-</html>`;
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.send(htmlContent);
+      // Encabezado
+      doc
+        .fontSize(13)
+        .font("Helvetica-Bold")
+        .fillColor("#1B5E20")
+        .text("FUNDACIÓN UNIVERSITARIA CATÓLICA DEL SUR — NOUS", { align: "center" })
+        .moveDown(0.2);
+
+      doc
+        .fontSize(9)
+        .font("Helvetica")
+        .fillColor("#4B5563")
+        .text("DIRECCIÓN DE INVESTIGACIONES Y EXTENSIÓN · SEMILLEROS DE INVESTIGACIÓN", { align: "center" })
+        .moveDown(0.4);
+
+      doc
+        .fontSize(10)
+        .font("Helvetica-Bold")
+        .fillColor("#1B5E20")
+        .text("FORMATO INSTITUCIONAL DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO (MENORES DE EDAD)", {
+          align: "center",
+        })
+        .moveDown(0.5);
+
+      // Línea divisoria verde
+      doc
+        .strokeColor("#1B5E20")
+        .lineWidth(1.5)
+        .moveTo(startX, doc.y)
+        .lineTo(endX, doc.y)
+        .stroke();
+      doc.y += 10;
+
+      const renderCampo = (label) => {
+        const y = doc.y;
+        doc.fontSize(9.5).font("Helvetica-Bold").fillColor("#374151").text(label, startX, y, { width: 210, continued: false });
+        doc.strokeColor("#9CA3AF").lineWidth(0.8).moveTo(startX + 215, y + 10).lineTo(endX, y + 10).stroke();
+        doc.y = y + 18;
+      };
+
+      const renderSeccion = (titulo) => {
+        doc.y += 4;
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#1B5E20").text(titulo, startX);
+        const secY = doc.y + 2;
+        doc.strokeColor("#E5E7EB").lineWidth(0.8).moveTo(startX, secY).lineTo(endX, secY).stroke();
+        doc.y = secY + 6;
+      };
+
+      // Sección 1
+      renderSeccion("1. DATOS DEL PARTICIPANTE MENOR DE EDAD");
+      renderCampo("Nombre completo del estudiante:");
+      renderCampo("Tipo y número de documento:");
+      renderCampo("Institución educativa / Procedencia:");
+      renderCampo("Nombre del Semillero:");
+
+      // Sección 2
+      renderSeccion("2. DATOS DEL PADRE, MADRE O TUTOR LEGAL");
+      renderCampo("Nombre completo del tutor:");
+      renderCampo("Cédula de ciudadanía:");
+      renderCampo("Parentesco / Representación legal:");
+      renderCampo("Teléfono de contacto:");
+      renderCampo("Correo electrónico:");
+
+      // Sección 3
+      renderSeccion("3. DECLARACIÓN DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO");
+      doc
+        .fontSize(8.8)
+        .font("Helvetica")
+        .fillColor("#374151")
+        .text(
+          "Yo, en mi calidad de representante legal del menor de edad arriba identificado, manifiesto de manera voluntaria, libre e informada que he sido enterado(a) de los objetivos, alcance y actividades formativas de la convocatoria académica de investigación NOUS, y AUTORIZO su vinculación y participación activa como integrante del semillero de investigación.\n\nAsimismo, autorizo el tratamiento de sus datos personales e institucionales en estricto cumplimiento de la Ley 1581 de 2012 con fines exclusivamente académicos, de divulgación científica y seguimiento institucional.",
+          startX,
+          doc.y + 2,
+          { width: endX - startX, align: "justify", lineGap: 2 }
+        );
+      doc.y += 20;
+
+      // Firmas
+      const sigY = doc.y + 10;
+      const colWidth = (endX - startX - 40) / 2;
+
+      // Firma Tutor
+      doc.strokeColor("#374151").lineWidth(1).moveTo(startX, sigY).lineTo(startX + colWidth, sigY).stroke();
+      doc
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .fillColor("#1F2937")
+        .text("Firma del Padre / Madre / Tutor Legal", startX, sigY + 5, { width: colWidth, align: "center" });
+      doc
+        .fontSize(8.5)
+        .font("Helvetica")
+        .fillColor("#4B5563")
+        .text("C.C. Nº: __________________________", startX, sigY + 18, { width: colWidth, align: "center" });
+
+      // Firma Estudiante
+      const col2X = startX + colWidth + 40;
+      doc.strokeColor("#374151").lineWidth(1).moveTo(col2X, sigY).lineTo(col2X + colWidth, sigY).stroke();
+      doc
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .fillColor("#1F2937")
+        .text("Firma del Estudiante (Menor de edad)", col2X, sigY + 5, { width: colWidth, align: "center" });
+      doc
+        .fontSize(8.5)
+        .font("Helvetica")
+        .fillColor("#4B5563")
+        .text("Doc. Identidad Nº: __________________", col2X, sigY + 18, { width: colWidth, align: "center" });
+
+      // Ciudad y fecha
+      doc
+        .fontSize(8.5)
+        .font("Helvetica")
+        .fillColor("#6B7280")
+        .text(
+          "Ciudad y Fecha: _________________________________, Pasto (Nariño), 2026.",
+          startX,
+          sigY + 45,
+          { width: endX - startX, align: "center" }
+        );
+
+      doc.end();
     } catch (err) {
       return res.status(500).json({ error: "Error al generar plantilla de asentimiento." });
     }
