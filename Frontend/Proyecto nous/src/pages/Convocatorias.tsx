@@ -4640,32 +4640,12 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                     className="w-full pl-8 pr-3 py-2 text-sm border border-theme-border rounded-xl bg-theme-bg-main focus:outline-none focus:border-theme-primary transition-colors"
                   />
                 </div>
-                <div className="flex gap-1 flex-wrap">
-                  {[
-                    { value: "todos", label: "Todos" },
-                    { value: "activa", label: "🟢 Activa" },
-                    { value: "evaluacion", label: "🟡 Evaluación" },
-                    { value: "cerrada", label: "⚫ Cerrada" },
-                    { value: "borrador", label: "⚪ Borrador" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFilterEstado(opt.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterEstado === opt.value
-                          ? "bg-theme-primary text-white"
-                          : "bg-theme-bg-main text-theme-text-muted hover:bg-[#DDE4DF]"
-                        }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                {(search || filterEstado !== "todos") && (
+                {search && (
                   <button
-                    onClick={() => { setSearch(""); setFilterEstado("todos"); }}
+                    onClick={() => setSearch("")}
                     className="text-xs text-red-500 hover:text-red-700 font-medium"
                   >
-                    ✕ Limpiar filtros
+                    ✕ Limpiar búsqueda
                   </button>
                 )}
               </div>
