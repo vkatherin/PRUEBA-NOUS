@@ -297,9 +297,31 @@ export interface Proyecto {
 export interface ProyectoDetalle extends Proyecto {
   lugar_ejecucion: string;
   duracion_meses: number;
-  resumen?: string;
-  objetivos?: string;
-  metodologia_resumen?: string;
+  // Descripción completa
+  resumen_ejecutivo?: string;
+  justificacion?: string;
+  pertinencia?: string;
+  contexto?: string;
+  estado_arte?: string;
+  planteamiento_problema?: string;
+  pregunta_investigacion?: string;
+  marco_teorico?: string;
+  objetivo_general?: string;
+  objetivos_especificos?: string;
+  consideraciones_eticas_bioeticas?: string;
+  conocimiento_generado?: string;
+  aporte_social?: string;
+  bibliografia?: string;
+  palabras_clave?: string;
+
+  // Metodología
+  metodologia?: {
+    tipo_estudio: string;
+    variables: string;
+    etapas: string;
+    fuentes_instrumentos: string;
+  };
+
   equipo: { nombre: string; rol: string; dedicacion: string; vinculacion: string }[];
   cronograma: { nombre: string; responsable: string; inicio: string; fin: string; avance: number; estado: string }[];
   productos: { tipo: string; titulo: string; estado: string; fecha: string }[];
@@ -313,6 +335,11 @@ export const proyectosApi = {
     return apiFetch<Proyecto[]>(`/proyectos${qs ? '?' + qs : ''}`);
   },
   getById: (id: number) => apiFetch<ProyectoDetalle>(`/proyectos/${id}`),
+  getInscripcionesDisponibles: () => apiFetch<any[]>('/proyectos/data/inscripciones-disponibles'),
+  actualizar: (id: number, data: any) =>
+    apiFetch(`/proyectos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  actualizarMetodologia: (id: number, data: any) =>
+    apiFetch(`/proyectos/${id}/metodologia`, { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // ── Semilleros ────────────────────────────────────────────────────────────────
