@@ -1240,9 +1240,17 @@ function DetailModal({
     const lower = r.toLowerCase();
     return lower.includes("estudiante") || lower.includes("docente") || lower.includes("investigador");
   });
-  const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador");
+  const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador" || r?.toLowerCase()?.includes("admin"));
   const canDelete = isAdmin || (!isRestrictedRole && user?.permisos?.includes('convocatorias.eliminar'));
   const canViewFiles = isAdmin || !isRestrictedRole;
+
+  const isConvocatoriaAbierta = (() => {
+    if (conv.estado === "cerrada") return false;
+    if (!conv.fecha_cierre) return true;
+    const fCierre = new Date(conv.fecha_cierre);
+    fCierre.setHours(23, 59, 59, 999);
+    return new Date().getTime() <= fCierre.getTime();
+  })();
 
   const formatDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" }) : "—";
@@ -1347,7 +1355,11 @@ function DetailModal({
             </div>
           ) : (
             <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
-              {inscripciones.map((ins) => (
+              {inscripciones.map((ins) => {
+                const userActual: any = user || getUsuarioActual();
+                const userEmail = userActual?.correo || userActual?.email;
+                const esMiInscripcion = userActual && (userActual.id === ins.usuario_id || (userEmail && userEmail === ins.usuario_correo) || isAdmin);
+                return (
                 <div
                   key={ins.id}
                   className="p-3.5 rounded-xl border border-theme-border bg-theme-bg-card hover:border-[#C8E6D2] transition-colors space-y-2.5"
@@ -1369,14 +1381,25 @@ function DetailModal({
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedInscripcionDetalle(ins)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-all shadow-sm active:scale-95"
-                        title="Ver información completa de la postulación"
-                      >
-                        <span>👁️</span> Ver detalle
-                      </button>
+                      {esMiInscripcion && (
+                        isConvocatoriaAbierta ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClose();
+                              onInscribirse(conv);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg transition-all shadow-2xs active:scale-95"
+                            title="Editar postulación dentro del plazo estipulado"
+                          >
+                            <span>✏️</span> Editar
+                          </button>
+                        ) : (
+                          <span className="text-[11px] px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold border border-gray-300 flex items-center gap-1" title="El plazo de la convocatoria ha finalizado">
+                            <span>🔒</span> Plazo cerrado
+                          </span>
+                        )
+                      )}
                       <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
                         ✓ {ins.estado || "Registrada"}
                       </span>
@@ -1384,20 +1407,22 @@ function DetailModal({
                   </div>
 
                   <div className="text-xs space-y-1 bg-theme-bg-main p-2.5 rounded-lg border border-[#E8EEEA]">
-                    {ins.tipo_investigacion && (
+                    <div>
+                      <strong className="text-theme-text-main">Tipo de investigación: </strong>
+                      <span className="text-theme-primary font-bold">🔬 {ins.tipo_investigacion || conv.tipo_investigacion || "Investigación formativa"}</span>
+                    </div>
+                    {ins.resumen_proyecto && (
                       <div>
-                        <strong className="text-theme-text-main">Tipo de investigación: </strong>
-                        <span className="text-theme-primary font-semibold">🔬 {ins.tipo_investigacion}</span>
+                        <strong className="text-theme-text-main">Resumen: </strong>
+                        <span className="text-[#4B5563]">{ins.resumen_proyecto}</span>
                       </div>
                     )}
-                    <div>
-                      <strong className="text-theme-text-main">Resumen: </strong>
-                      <span className="text-[#4B5563]">{ins.resumen_proyecto}</span>
-                    </div>
-                    <div>
-                      <strong className="text-theme-text-main">Justificación: </strong>
-                      <span className="text-[#4B5563]">{ins.justificacion}</span>
-                    </div>
+                    {ins.justificacion && (
+                      <div>
+                        <strong className="text-theme-text-main">Justificación: </strong>
+                        <span className="text-[#4B5563]">{ins.justificacion}</span>
+                      </div>
+                    )}
                   </div>
 
                   {ins.documentos_adjuntos && ins.documentos_adjuntos.length > 0 ? (
@@ -1477,8 +1502,9 @@ function DetailModal({
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           )}
         </div>
       </div>
@@ -1500,13 +1526,19 @@ function DetailModal({
         </div>
         <Button
           variant="primary"
-          disabled={inscripciones.length >= 50}
+          disabled={!isConvocatoriaAbierta || (inscripciones.length >= 50 && !inscripciones.some(i => i.usuario_id === (user?.id || getUsuarioActual()?.id)))}
           onClick={() => {
             onClose();
             onInscribirse(conv);
           }}
         >
-          {inscripciones.length >= 50 ? "Cupo lleno (50/50)" : "📝 Inscribirse"}
+          {!isConvocatoriaAbierta
+            ? "🔒 Convocatoria cerrada"
+            : inscripciones.some((i) => i.usuario_id === (user?.id || getUsuarioActual()?.id))
+            ? "✏️ Editar mi inscripción"
+            : inscripciones.length >= 50
+            ? "Cupo lleno (50/50)"
+            : "📝 Inscribirse"}
         </Button>
       </div>
 
@@ -1551,11 +1583,20 @@ function InscripcionModal({
     return [...REQUISITOS_DEFAULT];
   }, [conv?.requisitos]);
 
+  const isConvocatoriaAbierta = (() => {
+    if (!conv) return false;
+    if (conv.estado === "cerrada") return false;
+    if (!conv.fecha_cierre) return true;
+    const fCierre = new Date(conv.fecha_cierre);
+    fCierre.setHours(23, 59, 59, 999);
+    return new Date().getTime() <= fCierre.getTime();
+  })();
+
   useEffect(() => {
     if (conv) {
       setArchivosRequisitos({});
       setActiveRequisitoForUpload(null);
-      setTipoInvestigacion("");
+      setTipoInvestigacion(conv.tipo_investigacion || "");
       setResumen("");
       setJustificacion("");
       setFieldErrors({});
@@ -1563,6 +1604,21 @@ function InscripcionModal({
       setSuccessMessage("");
       setSaving(false);
       setAutorizaDatos(false);
+
+      const u: any = getUsuarioActual();
+      if (u?.id && conv.id) {
+        const uEmail = u.correo || u.email;
+        getInscripcionesConvocatoria(conv.id)
+          .then((list) => {
+            const miIns = list.find((i) => i.usuario_id === u.id || (uEmail && i.usuario_correo === uEmail));
+            if (miIns) {
+              if (miIns.tipo_investigacion) setTipoInvestigacion(miIns.tipo_investigacion);
+              if (miIns.resumen_proyecto) setResumen(miIns.resumen_proyecto);
+              if (miIns.justificacion) setJustificacion(miIns.justificacion);
+            }
+          })
+          .catch(() => null);
+      }
     }
   }, [conv]);
 
@@ -1616,6 +1672,11 @@ function InscripcionModal({
   const handleEnviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving) return;
+
+    if (!isConvocatoriaAbierta) {
+      setGeneralError("La convocatoria se encuentra cerrada o el plazo ha finalizado. No se permiten modificaciones.");
+      return;
+    }
 
     const errors: Record<string, string> = {};
     const resumenTrim = resumen.trim();
