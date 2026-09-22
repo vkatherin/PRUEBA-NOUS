@@ -412,6 +412,9 @@ export interface Convocatoria {
   dias_restantes?: number;
   requisitos?: string;
   observaciones_comite?: string;
+  plantilla_asentimiento_nombre?: string;
+  plantilla_asentimiento_ruta?: string;
+  plantilla_asentimiento_peso_bytes?: number;
 }
 
 export interface ConvocatoriaExterna {
@@ -648,6 +651,38 @@ export async function subirAsentimientoIntegrante(
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Error al subir archivo de asentimiento.");
   return data;
+}
+
+export async function subirPlantillaAsentimiento(
+  file: File,
+  convocatoriaId?: number
+): Promise<{ ok: boolean; mensaje: string; plantilla_nombre: string; plantilla_ruta: string; plantilla_mime: string; plantilla_peso_bytes: number }> {
+  const token = getToken();
+  const fd = new FormData();
+  fd.append("plantilla", file);
+  if (convocatoriaId) {
+    fd.append("convocatoria_id", String(convocatoriaId));
+  }
+
+  const endpoint = convocatoriaId
+    ? `${BASE}/convocatorias/${convocatoriaId}/plantilla-asentimiento`
+    : `${BASE}/convocatorias/plantilla-asentimiento`;
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Error al subir plantilla de asentimiento.");
+  return data;
+}
+
+export async function getInfoPlantillaAsentimiento(
+  convocatoriaId?: number
+): Promise<{ ok: boolean; personalizada: boolean; nombre: string; ruta: string; peso_bytes?: number }> {
+  const query = convocatoriaId ? `?convocatoria_id=${convocatoriaId}` : "";
+  return apiFetch(`/convocatorias/plantilla-asentimiento/info${query}`);
 }
 
 export async function addIntegranteSemillero(

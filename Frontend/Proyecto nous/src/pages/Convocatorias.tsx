@@ -20,6 +20,8 @@ import {
   addIntegranteSemillero,
   deleteIntegranteSemillero,
   subirAsentimientoIntegrante,
+  subirPlantillaAsentimiento,
+  getInfoPlantillaAsentimiento,
   saveInfoGeneralSemillero,
   getInfoGeneralSemillero,
   saveContenidoSemillero,
@@ -1316,6 +1318,29 @@ function DetailModal({
           </div>
         )}
 
+        {/* Sección de Plantilla de Asentimiento Informado */}
+        <div className="p-3.5 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">📄</span>
+            <div>
+              <p className="font-bold text-theme-text-main">Formato de Asentimiento Informado (Menores de edad)</p>
+              <p className="text-theme-text-muted text-[11px]">
+                {conv.plantilla_asentimiento_nombre
+                  ? `Archivo oficial configurado: ${conv.plantilla_asentimiento_nombre}`
+                  : "Plantilla institucional estándar (HTML / PDF)"}
+              </p>
+            </div>
+          </div>
+          <a
+            href={`http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv.id}&print=1`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 font-bold hover:bg-emerald-50 transition-colors shadow-2xs shrink-0"
+          >
+            <span>📥</span> Descargar plantilla
+          </a>
+        </div>
+
         <div className="mt-4 pt-4 border-t border-theme-border space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold text-theme-text-main flex items-center gap-2">
@@ -2135,6 +2160,172 @@ function ExternaModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
   );
 }
 
+// ─── Modal Administrador: Gestión de Plantilla de Asentimiento ───────────────
+function GestionarPlantillaModal({
+  open,
+  onClose,
+  convocatorias,
+  convocatoriaSeleccionada,
+}: {
+  open: boolean;
+  onClose: () => void;
+  convocatorias: Convocatoria[];
+  convocatoriaSeleccionada?: Convocatoria | null;
+}) {
+  const [convId, setConvId] = useState<string>(
+    convocatoriaSeleccionada ? String(convocatoriaSeleccionada.id) : ""
+  );
+  const [info, setInfo] = useState<{ personalizada: boolean; nombre: string; ruta: string; peso_bytes?: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+  const [error, setError] = useState("");
+
+  const cargarInfo = useCallback(async (id?: number) => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getInfoPlantillaAsentimiento(id);
+      setInfo(data);
+    } catch {
+      setError("Error al consultar plantilla");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      const idNum = convId ? Number(convId) : convocatoriaSeleccionada?.id;
+      if (convocatoriaSeleccionada && !convId) {
+        setConvId(String(convocatoriaSeleccionada.id));
+      }
+      cargarInfo(idNum);
+      setMensaje("");
+      setError("");
+    }
+  }, [open, convId, convocatoriaSeleccionada, cargarInfo]);
+
+  const handleSubirArchivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    setMensaje("");
+    try {
+      const idNum = convId ? Number(convId) : undefined;
+      const res = await subirPlantillaAsentimiento(file, idNum);
+      setMensaje(`✅ Plantilla cargada exitosamente: ${res.plantilla_nombre}`);
+      await cargarInfo(idNum);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error al subir la plantilla");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Gestión de Formato / Plantilla de Asentimiento" size="lg">
+      <div className="space-y-4">
+        <p className="text-xs text-theme-text-muted leading-relaxed">
+          Sube y administra el documento oficial (Word .docx, PDF, etc.) de <strong>Asentimiento y Consentimiento Informado</strong> que los postulantes externos deben descargar, diligenciar y adjuntar para estudiantes menores de edad.
+        </p>
+
+        <Field label="Ámbito de la plantilla">
+          <select
+            value={convId}
+            onChange={(e) => {
+              setConvId(e.target.value);
+              cargarInfo(e.target.value ? Number(e.target.value) : undefined);
+            }}
+            className="w-full px-3 py-2 bg-theme-bg-main border border-theme-border rounded-xl text-sm text-theme-text-main focus:outline-none focus:ring-2 focus:ring-theme-primary"
+          >
+            <option value="">🌐 Plantilla Global Institucional (para todas las convocatorias)</option>
+            {convocatorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.codigo_con || c.codigo ? `[${c.codigo_con || c.codigo}] ` : ""}{c.titulo} ({c.tipo})
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <div className="p-4 rounded-xl bg-theme-bg-main border border-theme-border space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-theme-text-muted uppercase tracking-wider">Estado actual de la plantilla</span>
+            {loading && <span className="text-xs text-theme-text-muted animate-pulse">Consultando...</span>}
+          </div>
+
+          {info && (
+            <div className="flex items-start justify-between gap-3 p-3 bg-theme-bg-card rounded-lg border border-theme-border">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{info.personalizada ? "📄" : "⚙️"}</span>
+                <div>
+                  <p className="text-sm font-bold text-theme-text-main">{info.nombre}</p>
+                  <p className="text-xs text-theme-text-muted">
+                    {info.personalizada
+                      ? `Archivo personalizado subido por el Administrador ${info.peso_bytes ? `(${(info.peso_bytes / 1024).toFixed(1)} KB)` : ""}`
+                      : "Formato web interactivo predeterminado del sistema NOUS"}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={
+                  convId
+                    ? `http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${convId}&print=1`
+                    : `http://localhost:4200/api/convocatorias/plantilla-asentimiento?print=1`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-theme-bg-main border border-theme-border text-xs font-semibold text-theme-primary hover:bg-theme-primary/10 flex items-center gap-1 shrink-0"
+              >
+                <span>📥</span> Probar descarga
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Zona de carga de nuevo archivo */}
+        <div className="p-4 rounded-xl border-2 border-dashed border-emerald-300/80 bg-emerald-50/40 text-center space-y-2">
+          <div className="text-2xl">📤</div>
+          <p className="text-sm font-bold text-theme-text-main">
+            Cargar nuevo archivo de plantilla oficial
+          </p>
+          <p className="text-xs text-theme-text-muted max-w-md mx-auto">
+            Formatos soportados: <strong>.pdf, .docx, .doc, .xlsx</strong> (Máx. 15 MB). Al subirlo, los participantes descargarán automáticamente este archivo.
+          </p>
+          <div className="pt-2">
+            <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-theme-primary text-white font-bold text-xs hover:bg-[#17563A] transition-all cursor-pointer shadow-sm active:scale-95">
+              <span>{uploading ? "⏳ Subiendo archivo..." : "Seleccionar y subir archivo"}</span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.xlsx"
+                className="hidden"
+                disabled={uploading}
+                onChange={handleSubirArchivo}
+              />
+            </label>
+          </div>
+        </div>
+
+        {mensaje && (
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center gap-2">
+            <span>✅</span> {mensaje}
+          </div>
+        )}
+        {error && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-600 flex items-center gap-2">
+            <span>⚠️</span> {error}
+          </div>
+        )}
+      </div>
+      <div className="flex justify-end pt-4 border-t border-theme-border mt-4">
+        <Button variant="primary" onClick={onClose}>Listo</Button>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Tab: Alertas (RF-CON-03) ─────────────────────────────────────────────────
 function AlertasTab({ user }: { user?: UsuarioMe | null }) {
   const [alertas, setAlertas] = useState<AlertasConvocatorias | null>(null);
@@ -2564,11 +2755,12 @@ function StepperHeader({
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function SemilleroExternoModal({
-  conv, onClose, onGuardado,
+  conv, onClose, onGuardado, user,
 }: {
   conv: Convocatoria | null;
   onClose: () => void;
   onGuardado: () => void;
+  user?: UsuarioMe | null;
 }) {
   // ── Estado global del wizard ──────────────────────────────────────────────
   const [paso, setPaso] = useState(1);
@@ -2636,9 +2828,14 @@ function SemilleroExternoModal({
   const [borradorGuardadoMensaje, setBorradorGuardadoMensaje] = useState("");
   const [borradorRecuperado, setBorradorRecuperado] = useState(false);
 
+  // Estado plantilla oficial de asentimiento
+  const [infoPlantilla, setInfoPlantilla] = useState<{ personalizada: boolean; nombre: string; ruta: string } | null>(null);
+  const [subiendoPlantillaAdmin, setSubiendoPlantillaAdmin] = useState(false);
+  const [mensajePlantillaAdmin, setMensajePlantillaAdmin] = useState("");
+
   const PROCEDENCIA_FIJA = "Semillero externo";
-  const user = getUsuarioActual();
-  const usuarioId = user?.id || 1;
+  const userActual = user || getUsuarioActual();
+  const usuarioId = userActual?.id || 1;
 
   // ── Carga inicial de catálogos y datos previos si existen ─────────────────
   useEffect(() => {
@@ -2673,6 +2870,11 @@ function SemilleroExternoModal({
     setErrores4({});
     setDocFinal(null);
     setComprobantePago(null);
+
+    // Cargar información de la plantilla oficial
+    getInfoPlantillaAsentimiento(conv.id)
+      .then(setInfoPlantilla)
+      .catch(() => null);
 
     // Cargar catálogos
     getCatalogosSemillero(conv.id)
@@ -3179,27 +3381,78 @@ function SemilleroExternoModal({
       {paso === 2 && (
         <div className="space-y-4">
           {/* Banner de descarga de plantilla de asentimiento para menores */}
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-emerald-50/30 border border-[#C8E6D2] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-start gap-2.5">
-              <span className="text-xl shrink-0 mt-0.5">📄</span>
-              <div>
-                <strong className="text-theme-text-main font-bold block">
-                  ¿Tienes estudiantes menores de edad en el semillero?
-                </strong>
-                <p className="text-theme-text-muted text-[11px] leading-relaxed">
-                  Si marcas a un estudiante como <strong>menor de edad</strong>, deberás adjuntar su formato de Asentimiento y Consentimiento Informado firmado por su acudiente legal.
-                </p>
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-emerald-50/30 border border-[#C8E6D2] flex flex-col gap-3 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <span className="text-xl shrink-0 mt-0.5">📄</span>
+                <div>
+                  <strong className="text-theme-text-main font-bold block">
+                    ¿Tienes estudiantes menores de edad en el semillero?
+                  </strong>
+                  <p className="text-theme-text-muted text-[11px] leading-relaxed">
+                    Si marcas a un estudiante como <strong>menor de edad</strong>, deberás adjuntar su formato de Asentimiento y Consentimiento Informado firmado por su acudiente legal.
+                  </p>
+                  {infoPlantilla?.personalizada && (
+                    <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                      📌 Plantilla institucional configurada: {infoPlantilla.nombre}
+                    </p>
+                  )}
+                </div>
               </div>
+              <a
+                href={`http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv?.id || ""}&print=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-theme-primary text-white font-bold text-xs hover:bg-[#17563A] transition-all shrink-0 shadow-sm active:scale-95"
+                title="Descargar formato oficial"
+              >
+                <span>📥</span> Descargar plantilla
+              </a>
             </div>
-            <a
-              href="http://localhost:4200/api/convocatorias/plantilla-asentimiento?print=1"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-theme-primary text-white font-bold text-xs hover:bg-[#17563A] transition-all shrink-0 shadow-sm active:scale-95"
-              title="Descargar o imprimir formato oficial"
-            >
-              <span>📥</span> Descargar plantilla
-            </a>
+
+            {/* Zona Admin para subir / cambiar la plantilla oficial */}
+            {(user?.roles?.some((r: string) => ["administrador", "directivos", "director_investigacion", "coordinador_investigacion"].includes(r.toLowerCase())) || user?.permisos?.includes('convocatorias.editar') || (userActual as any)?.rol?.toLowerCase().includes('admin')) && (
+              <div className="pt-2 border-t border-emerald-200/70 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] text-theme-text-muted font-medium flex items-center gap-1">
+                  ⚙️ <strong>Zona Admin:</strong> Carga o actualiza el archivo oficial de plantilla (.docx, .pdf, .doc) para esta convocatoria.
+                </span>
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-800 font-semibold text-[11px] cursor-pointer hover:bg-emerald-50 shadow-2xs transition-all">
+                    <span>{subiendoPlantillaAdmin ? "⏳ Subiendo..." : "📤 Cargar archivo plantilla"}</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xlsx"
+                      className="hidden"
+                      disabled={subiendoPlantillaAdmin}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !conv?.id) return;
+                        setSubiendoPlantillaAdmin(true);
+                        setMensajePlantillaAdmin("");
+                        try {
+                          const res = await subirPlantillaAsentimiento(file, conv.id);
+                          setInfoPlantilla({
+                            personalizada: true,
+                            nombre: res.plantilla_nombre,
+                            ruta: res.plantilla_ruta,
+                          });
+                          setMensajePlantillaAdmin(`✅ Plantilla actualizada: ${res.plantilla_nombre}`);
+                          setTimeout(() => setMensajePlantillaAdmin(""), 4000);
+                        } catch (err: unknown) {
+                          alert(err instanceof Error ? err.message : "Error al subir plantilla");
+                        } finally {
+                          setSubiendoPlantillaAdmin(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                  </label>
+                  {mensajePlantillaAdmin && (
+                    <span className="text-[11px] text-emerald-700 font-bold">{mensajePlantillaAdmin}</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -3393,7 +3646,7 @@ function SemilleroExternoModal({
                         <span>⚠️</span> Asentimiento Informado requerido (Menor de edad)
                       </span>
                       <a
-                        href="http://localhost:4200/api/convocatorias/plantilla-asentimiento?print=1"
+                        href={`http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv?.id || ""}&print=1`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[11px] text-theme-primary font-bold hover:underline inline-flex items-center gap-1 shrink-0"
@@ -4113,6 +4366,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
   // Estado para flujo de inscripción en convocatorias externas (Paso 1: Semillero)
   const [semilleroExternoConv, setSemilleroExternoConv] = useState<Convocatoria | null>(null);
   const [misBorradores, setMisBorradores] = useState<any[]>([]);
+  const [showPlantillaModal, setShowPlantillaModal] = useState(false);
+  const [plantillaConvTarget, setPlantillaConvTarget] = useState<Convocatoria | null>(null);
 
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -4191,10 +4446,21 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
         subtitle="Gestión de convocatorias internas y externas de investigación"
         breadcrumb={["NOUS", "Convocatorias"]}
         actions={
-          (user?.permisos?.includes('convocatorias.crear') || user?.roles?.includes('administrador')) && (
-            <Button variant="primary" onClick={() => setShowWizard(true)}>
-              + Nueva Convocatoria
-            </Button>
+          (user?.permisos?.includes('convocatorias.crear') || user?.roles?.includes('administrador') || user?.roles?.includes('directivos')) && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPlantillaConvTarget(null);
+                  setShowPlantillaModal(true);
+                }}
+              >
+                📄 Plantilla Asentimiento
+              </Button>
+              <Button variant="primary" onClick={() => setShowWizard(true)}>
+                + Nueva Convocatoria
+              </Button>
+            </div>
           )
         }
       />
@@ -4428,8 +4694,15 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
       />
       <SemilleroExternoModal
         conv={semilleroExternoConv}
+        user={user}
         onClose={() => setSemilleroExternoConv(null)}
         onGuardado={cargar}
+      />
+      <GestionarPlantillaModal
+        open={showPlantillaModal}
+        onClose={() => setShowPlantillaModal(false)}
+        convocatorias={convocatorias}
+        convocatoriaSeleccionada={plantillaConvTarget}
       />
     </div>
   );

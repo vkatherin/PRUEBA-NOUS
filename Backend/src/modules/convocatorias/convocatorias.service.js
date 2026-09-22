@@ -43,6 +43,7 @@ const convocatoriasService = {
              c.titulo, c.tipo, c.descripcion, c.dirigida_a,
              c.fecha_apertura, c.fecha_cierre, c.estado, c.aprobada_comite, c.fecha_aprobacion,
              c.observaciones_comite, c.requisitos, c.plantilla_base_url,
+             c.plantilla_asentimiento_nombre, c.plantilla_asentimiento_ruta, c.plantilla_asentimiento_peso_bytes,
              u.nombre_completo as creado_por_nombre,
              DATEDIFF(c.fecha_cierre, CURDATE()) as dias_restantes
       FROM convocatorias c
@@ -79,6 +80,7 @@ const convocatoriasService = {
              COALESCE(c.codigo, CONCAT('CON', c.id)) as codigo_con,
              c.titulo, c.tipo, c.descripcion, c.dirigida_a,
              c.fecha_apertura, c.fecha_cierre, c.estado, c.aprobada_comite, c.requisitos,
+             c.plantilla_asentimiento_nombre, c.plantilla_asentimiento_ruta, c.plantilla_asentimiento_peso_bytes,
              u.nombre_completo as creado_por_nombre,
              DATEDIFF(c.fecha_cierre, CURDATE()) as dias_restantes
       FROM convocatorias c
@@ -180,7 +182,8 @@ const convocatoriasService = {
 
     const allowed = [
       "titulo", "tipo", "tipo_investigacion", "dirigida_a", "descripcion", "fecha_apertura", "fecha_cierre",
-      "estado", "requisitos", "plantilla_base_url"
+      "estado", "requisitos", "plantilla_base_url",
+      "plantilla_asentimiento_nombre", "plantilla_asentimiento_ruta", "plantilla_asentimiento_mime", "plantilla_asentimiento_peso_bytes"
     ];
 
     for (const key of allowed) {

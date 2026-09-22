@@ -125,6 +125,30 @@ async function autoMigrate() {
       } catch (_) {}
     }
 
+    const columnasConvocatorias = [
+      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_nombre VARCHAR(255) NULL",
+      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_ruta VARCHAR(255) NULL",
+      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_mime VARCHAR(100) NULL",
+      "ADD COLUMN IF NOT EXISTS plantilla_asentimiento_peso_bytes BIGINT NULL"
+    ];
+    for (const colQuery of columnasConvocatorias) {
+      try {
+        await pool.query(`ALTER TABLE convocatorias ${colQuery}`);
+      } catch (_) {}
+    }
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS configuracion_plantillas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        clave VARCHAR(100) NOT NULL UNIQUE,
+        nombre_original VARCHAR(255) NOT NULL,
+        ruta_archivo VARCHAR(255) NOT NULL,
+        mime_type VARCHAR(100) NULL,
+        peso_bytes BIGINT NULL,
+        fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB;
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inscripcion_semillero_info_general (
         id INT AUTO_INCREMENT PRIMARY KEY,

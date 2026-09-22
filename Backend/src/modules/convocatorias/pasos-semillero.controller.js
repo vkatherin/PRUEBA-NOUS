@@ -49,6 +49,101 @@ async function cargarTodosPasos(inscripcionId) {
 const pasosSemilleroController = {
 
   uploadAsentimientoMiddleware: uploadEnvio.single("asentimiento"),
+  uploadPlantillaMiddleware: uploadEnvio.single("plantilla"),
+
+  // ─── Subir Plantilla Oficial de Asentimiento (Administrador) ────────────────
+  async subirPlantillaAsentimiento(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se recibió ningún archivo de plantilla." });
+      }
+
+      const convocatoriaId = req.params.id || req.body.convocatoria_id;
+      const rutaRelativa = `/uploads/inscripciones/${req.file.filename}`;
+
+      if (convocatoriaId) {
+        await pool.query(
+          `UPDATE convocatorias 
+           SET plantilla_asentimiento_nombre = ?, 
+               plantilla_asentimiento_ruta = ?, 
+               plantilla_asentimiento_mime = ?, 
+               plantilla_asentimiento_peso_bytes = ? 
+           WHERE id = ?`,
+          [req.file.originalname, rutaRelativa, req.file.mimetype, req.file.size, convocatoriaId]
+        );
+      }
+
+      // Guardar también en configuracion_plantillas como plantilla global
+      await pool.query(
+        `INSERT INTO configuracion_plantillas (clave, nombre_original, ruta_archivo, mime_type, peso_bytes)
+         VALUES ('plantilla_asentimiento', ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+           nombre_original = VALUES(nombre_original),
+           ruta_archivo = VALUES(ruta_archivo),
+           mime_type = VALUES(mime_type),
+           peso_bytes = VALUES(peso_bytes)`,
+        [req.file.originalname, rutaRelativa, req.file.mimetype, req.file.size]
+      );
+
+      return res.json({
+        ok: true,
+        mensaje: "Plantilla oficial de asentimiento guardada exitosamente.",
+        plantilla_nombre: req.file.originalname,
+        plantilla_ruta: rutaRelativa,
+        plantilla_mime: req.file.mimetype,
+        plantilla_peso_bytes: req.file.size,
+      });
+    } catch (err) {
+      console.error("Error al subir plantilla de asentimiento:", err);
+      return res.status(500).json({ error: err.message || "Error al subir plantilla de asentimiento." });
+    }
+  },
+
+  // ─── Obtener Información de la Plantilla Actual ──────────────────────────────
+  async obtenerInfoPlantilla(req, res) {
+    try {
+      const convId = req.params.id || req.query.convocatoria_id;
+      if (convId) {
+        const [rows] = await pool.query(
+          "SELECT plantilla_asentimiento_nombre, plantilla_asentimiento_ruta, plantilla_asentimiento_peso_bytes FROM convocatorias WHERE id = ?",
+          [convId]
+        );
+        if (rows.length > 0 && rows[0].plantilla_asentimiento_ruta) {
+          return res.json({
+            ok: true,
+            personalizada: true,
+            nombre: rows[0].plantilla_asentimiento_nombre,
+            ruta: rows[0].plantilla_asentimiento_ruta,
+            peso_bytes: rows[0].plantilla_asentimiento_peso_bytes,
+          });
+        }
+      }
+
+      // Revisar global
+      const [gRows] = await pool.query(
+        "SELECT nombre_original, ruta_archivo, peso_bytes, fecha_actualizacion FROM configuracion_plantillas WHERE clave = 'plantilla_asentimiento' LIMIT 1"
+      );
+      if (gRows.length > 0 && gRows[0].ruta_archivo) {
+        return res.json({
+          ok: true,
+          personalizada: true,
+          nombre: gRows[0].nombre_original,
+          ruta: gRows[0].ruta_archivo,
+          peso_bytes: gRows[0].peso_bytes,
+          fecha: gRows[0].fecha_actualizacion,
+        });
+      }
+
+      return res.json({
+        ok: true,
+        personalizada: false,
+        nombre: "Formato Institucional Estándar (HTML / PDF)",
+        ruta: "/api/convocatorias/plantilla-asentimiento?print=1",
+      });
+    } catch (err) {
+      return res.status(500).json({ error: "Error al consultar información de plantilla." });
+    }
+  },
 
   // ─── Subir Asentimiento Informado (menores de edad) ────────────────────────
   async subirAsentimiento(req, res) {
@@ -73,6 +168,38 @@ const pasosSemilleroController = {
   // ─── Descargar Plantilla Oficial de Asentimiento Informado ─────────────────
   async descargarPlantillaAsentimiento(req, res) {
     try {
+      const convId = req.params.id || req.query.convocatoria_id;
+      let archivoRuta = null;
+      let archivoNombre = null;
+
+      if (convId) {
+        const [rows] = await pool.query(
+          "SELECT plantilla_asentimiento_nombre, plantilla_asentimiento_ruta FROM convocatorias WHERE id = ?",
+          [convId]
+        );
+        if (rows.length > 0 && rows[0].plantilla_asentimiento_ruta) {
+          archivoRuta = rows[0].plantilla_asentimiento_ruta;
+          archivoNombre = rows[0].plantilla_asentimiento_nombre;
+        }
+      }
+
+      if (!archivoRuta) {
+        const [gRows] = await pool.query(
+          "SELECT nombre_original, ruta_archivo FROM configuracion_plantillas WHERE clave = 'plantilla_asentimiento' LIMIT 1"
+        );
+        if (gRows.length > 0 && gRows[0].ruta_archivo) {
+          archivoRuta = gRows[0].ruta_archivo;
+          archivoNombre = gRows[0].nombre_original;
+        }
+      }
+
+      if (archivoRuta) {
+        const absPath = path.join(__dirname, "../../../", archivoRuta.replace(/^\//, ""));
+        if (fs.existsSync(absPath)) {
+          return res.download(absPath, archivoNombre || "Plantilla_Asentimiento_Informado.pdf");
+        }
+      }
+
       const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
