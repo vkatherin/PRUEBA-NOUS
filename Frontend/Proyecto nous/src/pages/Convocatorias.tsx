@@ -22,6 +22,7 @@ import {
   subirAsentimientoIntegrante,
   subirPlantillaAsentimiento,
   getInfoPlantillaAsentimiento,
+  restablecerPlantillaAsentimiento,
   saveInfoGeneralSemillero,
   getInfoGeneralSemillero,
   saveContenidoSemillero,
@@ -2272,6 +2273,25 @@ function GestionarPlantillaModal({
     }
   };
 
+  const handleRestablecer = async () => {
+    if (!window.confirm("¿Deseas restablecer la plantilla al formato institucional estándar predeterminado?")) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setMensaje("");
+    try {
+      const idNum = convId ? Number(convId) : undefined;
+      const res = await restablecerPlantillaAsentimiento(idNum);
+      setMensaje(`✅ ${res.mensaje || "Formato institucional restablecido correctamente."}`);
+      await cargarInfo(idNum);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error al restablecer plantilla");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal open={open} onClose={onClose} title="Gestión de Formato / Plantilla de Asentimiento" size="lg">
       <div className="space-y-4">
@@ -2304,7 +2324,7 @@ function GestionarPlantillaModal({
           </div>
 
           {info && (
-            <div className="flex items-start justify-between gap-3 p-3 bg-theme-bg-card rounded-lg border border-theme-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-theme-bg-card rounded-lg border border-theme-border">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{info.personalizada ? "📄" : "⚙️"}</span>
                 <div>
@@ -2316,18 +2336,30 @@ function GestionarPlantillaModal({
                   </p>
                 </div>
               </div>
-              <a
-                href={
-                  convId
-                    ? `http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${convId}&print=1`
-                    : `http://localhost:4200/api/convocatorias/plantilla-asentimiento?print=1`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-theme-bg-main border border-theme-border text-xs font-semibold text-theme-primary hover:bg-theme-primary/10 flex items-center gap-1 shrink-0"
-              >
-                <span>📥</span> Probar descarga
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                {info.personalizada && (
+                  <button
+                    type="button"
+                    onClick={handleRestablecer}
+                    className="px-2.5 py-1.5 rounded-lg border border-rose-200 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-1"
+                    title="Restablecer al formato predeterminado del sistema"
+                  >
+                    <span>🔄</span> Restablecer estándar
+                  </button>
+                )}
+                <a
+                  href={
+                    convId
+                      ? `http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${convId}&print=1`
+                      : `http://localhost:4200/api/convocatorias/plantilla-asentimiento?print=1`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-theme-bg-main border border-theme-border text-xs font-semibold text-theme-primary hover:bg-theme-primary/10 flex items-center gap-1"
+                >
+                  <span>📥</span> Probar descarga
+                </a>
+              </div>
             </div>
           )}
         </div>

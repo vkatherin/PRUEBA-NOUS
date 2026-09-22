@@ -99,6 +99,28 @@ const pasosSemilleroController = {
     }
   },
 
+  // ─── Restablecer Plantilla Oficial de Asentimiento al Formato Estándar ──────
+  async eliminarPlantillaAsentimiento(req, res) {
+    try {
+      const convId = req.params.id || req.query.convocatoria_id || req.body.convocatoria_id;
+      if (convId) {
+        await pool.query(
+          "UPDATE convocatorias SET plantilla_asentimiento_nombre = NULL, plantilla_asentimiento_ruta = NULL, plantilla_asentimiento_mime = NULL, plantilla_asentimiento_peso_bytes = NULL WHERE id = ?",
+          [convId]
+        );
+      } else {
+        await pool.query("DELETE FROM configuracion_plantillas WHERE clave = 'plantilla_asentimiento'");
+      }
+      return res.json({
+        ok: true,
+        mensaje: "Plantilla restablecida exitosamente al formato institucional estándar.",
+      });
+    } catch (err) {
+      console.error("Error al restablecer plantilla de asentimiento:", err);
+      return res.status(500).json({ error: err.message || "Error al restablecer plantilla de asentimiento." });
+    }
+  },
+
   // ─── Obtener Información de la Plantilla Actual ──────────────────────────────
   async obtenerInfoPlantilla(req, res) {
     try {

@@ -714,6 +714,13 @@ export async function getInfoPlantillaAsentimiento(
   return apiFetch(`/convocatorias/plantilla-asentimiento/info${query}`);
 }
 
+export async function restablecerPlantillaAsentimiento(
+  convocatoriaId?: number
+): Promise<{ ok: boolean; mensaje: string }> {
+  const query = convocatoriaId ? `?convocatoria_id=${convocatoriaId}` : "";
+  return apiFetch(`/convocatorias/plantilla-asentimiento${query}`, { method: "DELETE" });
+}
+
 export async function addIntegranteSemillero(
   convocatoriaId: number,
   data: {
