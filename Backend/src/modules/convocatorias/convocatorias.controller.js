@@ -142,7 +142,7 @@ const convocatoriasController = {
 
 
 
-      // 3. Validar dirigida_a (Docente, Estudiante, Administrativo - hasta 2 opciones)
+      // 3. Validar dirigida_a (Docente, Estudiante, Administrativo)
       const DIRIGIDA_PERMITIDOS = ["Docente", "Estudiante", "Administrativo"];
       let listaDirigida = [];
       if (Array.isArray(dirigida_a)) {
@@ -154,13 +154,6 @@ const convocatoriasController = {
       if (listaDirigida.length === 0) {
         return res.status(400).json({
           error: "Selecciona a quién va dirigida la convocatoria (Docente, Estudiante, Administrativo).",
-          campo: "dirigida_a",
-        });
-      }
-
-      if (listaDirigida.length > 2) {
-        return res.status(400).json({
-          error: "Puedes seleccionar máximo dos opciones para 'Dirigida a'.",
           campo: "dirigida_a",
         });
       }
@@ -264,13 +257,6 @@ const convocatoriasController = {
         if (listaDirigida.length === 0) {
           return res.status(400).json({
             error: "Selecciona a quién va dirigida la convocatoria (Docente, Estudiante, Administrativo).",
-            campo: "dirigida_a",
-          });
-        }
-
-        if (listaDirigida.length > 2) {
-          return res.status(400).json({
-            error: "Puedes seleccionar máximo dos opciones para 'Dirigida a'.",
             campo: "dirigida_a",
           });
         }

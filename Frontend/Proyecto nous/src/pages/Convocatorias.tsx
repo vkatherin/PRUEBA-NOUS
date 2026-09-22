@@ -116,7 +116,6 @@ function WizardModal({
     if (exists) {
       updated = data.dirigida.filter((item) => item !== opcion);
     } else {
-      if (data.dirigida.length >= 2) return;
       updated = [...data.dirigida, opcion];
     }
     set("dirigida", updated);
@@ -160,9 +159,7 @@ function WizardModal({
       errs.tipo = "Selecciona una opción.";
     }
     if (!data.dirigida || data.dirigida.length === 0) {
-      errs.dirigida = "Selecciona a quién va dirigida la convocatoria (máximo 2).";
-    } else if (data.dirigida.length > 2) {
-      errs.dirigida = "Puedes seleccionar máximo 2 opciones.";
+      errs.dirigida = "Selecciona a quién va dirigida la convocatoria (Docente, Estudiante, Administrativo).";
     } else if (data.dirigida.some((v) => !OPCIONES_DIRIGIDA_A.some((o) => o.value === v))) {
       errs.dirigida = "Selecciona opciones válidas (Docente, Estudiante, Administrativo).";
     }
@@ -364,23 +361,19 @@ function WizardModal({
             label="Dirigida a"
             required
             error={fieldErrors.dirigida}
-            hint="Selecciona hasta 2 opciones (Docente, Estudiante, Administrativo)"
+            hint="Selecciona las opciones a las que va dirigida (Docente, Estudiante, Administrativo)"
           >
             <div className="flex flex-wrap gap-2 pt-1">
               {OPCIONES_DIRIGIDA_A.map((opcion) => {
                 const isSelected = data.dirigida.includes(opcion.value);
-                const isDisabled = !isSelected && data.dirigida.length >= 2;
                 return (
                   <button
                     key={opcion.value}
                     type="button"
-                    disabled={isDisabled}
                     onClick={() => toggleDirigida(opcion.value)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${
                       isSelected
                         ? "bg-theme-primary text-white border-theme-primary shadow-sm"
-                        : isDisabled
-                        ? "bg-theme-bg-main text-theme-text-muted border-theme-border cursor-not-allowed opacity-60"
                         : "bg-theme-bg-card text-theme-text-main border-theme-border hover:border-theme-primary hover:bg-theme-bg-main"
                     }`}
                   >
@@ -588,7 +581,6 @@ function EditModal({
       if (exists) {
         updated = prev.dirigida_a.filter((item) => item !== opcion);
       } else {
-        if (prev.dirigida_a.length >= 2) return prev;
         updated = [...prev.dirigida_a, opcion];
       }
       if (updated.length > 0 && fieldErrors.dirigida_a) {
@@ -627,9 +619,7 @@ function EditModal({
       errs.tipo = "Selecciona una opción.";
     }
     if (formData.dirigida_a.length === 0) {
-      errs.dirigida_a = "Selecciona a quién va dirigida la convocatoria (máximo 2).";
-    } else if (formData.dirigida_a.length > 2) {
-      errs.dirigida_a = "Puedes seleccionar máximo 2 opciones.";
+      errs.dirigida_a = "Selecciona a quién va dirigida la convocatoria (Docente, Estudiante, Administrativo).";
     } else if (formData.dirigida_a.some((v) => !OPCIONES_DIRIGIDA_A.some((o) => o.value === v))) {
       errs.dirigida_a = "Selecciona opciones válidas (Docente, Estudiante, Administrativo).";
     }
@@ -741,23 +731,19 @@ function EditModal({
           label="Dirigida a"
           required
           error={fieldErrors.dirigida_a}
-          hint="Selecciona hasta 2 opciones (Docente, Estudiante, Administrativo)"
+          hint="Selecciona las opciones a las que va dirigida (Docente, Estudiante, Administrativo)"
         >
           <div className="flex flex-wrap gap-2 pt-1">
             {OPCIONES_DIRIGIDA_A.map((opcion) => {
               const isSelected = formData.dirigida_a.includes(opcion.value);
-              const isDisabled = !isSelected && formData.dirigida_a.length >= 2;
               return (
                 <button
                   key={opcion.value}
                   type="button"
-                  disabled={isDisabled}
                   onClick={() => toggleDirigidaEdit(opcion.value)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${
                     isSelected
                       ? "bg-theme-primary text-white border-theme-primary shadow-sm"
-                      : isDisabled
-                      ? "bg-theme-bg-main text-theme-text-muted border-theme-border cursor-not-allowed opacity-60"
                       : "bg-theme-bg-card text-theme-text-main border-theme-border hover:border-theme-primary hover:bg-theme-bg-main"
                   }`}
                 >
