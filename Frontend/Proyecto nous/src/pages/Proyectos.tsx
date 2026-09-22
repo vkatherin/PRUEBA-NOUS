@@ -12,6 +12,7 @@ const TABS = [
   { id: "productos", label: "Productos" },
   { id: "presupuesto", label: "Presupuesto" },
   { id: "riesgos", label: "Riesgos e impactos" },
+  { id: "metodologia", label: "Metodología" },
 ];
 
 function formatCOP(n: number) {
@@ -31,11 +32,19 @@ function DetalleProyecto({ id, onBack, user }: { id: number; onBack: () => void;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [showDescModal, setShowDescModal] = useState(false);
+  const [showMetModal, setShowMetModal] = useState(false);
+
+  const reloadProyecto = () => {
+    setLoading(true);
     proyectosApi.getById(id)
       .then(setProyecto)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    reloadProyecto();
   }, [id]);
 
   if (loading) {
@@ -118,14 +127,49 @@ function DetalleProyecto({ id, onBack, user }: { id: number; onBack: () => void;
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
             <Card>
-              <SectionTitle>Descripción del Proyecto</SectionTitle>
+              <div className="flex items-center justify-between mb-4">
+                <SectionTitle>Descripción del Proyecto</SectionTitle>
+                {(user?.permisos?.includes('proyectos.editar') || user?.roles?.includes('administrador')) && (
+                  <Button variant="primary" size="sm" onClick={() => setShowDescModal(true)}>Editar Descripción</Button>
+                )}
+              </div>
               <p className="text-sm text-theme-text-muted leading-relaxed">
-                {proyecto.resumen || "Sin descripción detallada disponible."}
+                {proyecto.resumen_ejecutivo || proyecto.resumen || "Sin descripción detallada disponible."}
               </p>
-              {proyecto.objetivos && (
+              {proyecto.justificacion && (
                 <>
-                  <h4 className="text-sm font-semibold text-theme-text-main mt-4 mb-2">Objetivos</h4>
-                  <p className="text-sm text-theme-text-muted leading-relaxed">{proyecto.objetivos}</p>
+                  <h4 className="text-sm font-semibold text-theme-text-main mt-4 mb-2">Justificación</h4>
+                  <p className="text-sm text-theme-text-muted leading-relaxed">{proyecto.justificacion}</p>
+                </>
+              )}
+              {proyecto.contexto && (
+                <>
+                  <h4 className="text-sm font-semibold text-theme-text-main mt-4 mb-2">Contexto</h4>
+                  <p className="text-sm text-theme-text-muted leading-relaxed">{proyecto.contexto}</p>
+                </>
+              )}
+              {proyecto.planteamiento_problema && (
+                <>
+                  <h4 className="text-sm font-semibold text-theme-text-main mt-4 mb-2">Planteamiento del Problema</h4>
+                  <p className="text-sm text-theme-text-muted leading-relaxed">{proyecto.planteamiento_problema}</p>
+                </>
+              )}
+              {proyecto.pregunta_investigacion && (
+                <>
+                  <h4 className="text-sm font-semibold text-theme-text-main mt-4 mb-2">Pregunta de Investigación</h4>
+                  <p className="text-sm text-theme-text-muted leading-relaxed">{proyecto.pregunta_investigacion}</p>
+                </>
+              )}
+              {proyecto.objetivo_general && (
+                <>
+                  <h4 className="text-sm font-semibold text-theme-text-main mt-4 mb-2">Objetivo General</h4>
+                  <p className="text-sm text-theme-text-muted leading-relaxed">{proyecto.objetivo_general || proyecto.objetivos}</p>
+                </>
+              )}
+              {proyecto.objetivos_especificos && (
+                <>
+                  <h4 className="text-sm font-semibold text-theme-text-main mt-4 mb-2">Objetivos Específicos</h4>
+                  <p className="text-sm text-theme-text-muted leading-relaxed whitespace-pre-wrap">{proyecto.objetivos_especificos}</p>
                 </>
               )}
             </Card>
@@ -311,21 +355,246 @@ function DetalleProyecto({ id, onBack, user }: { id: number; onBack: () => void;
           </div>
         </Card>
       )}
+
+      {tab === "metodologia" && (
+        <Card padding={false}>
+          <div className="px-5 py-4 border-b border-theme-border flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-theme-text-main">Metodología del Proyecto</h3>
+            {(user?.permisos?.includes('proyectos.editar') || user?.roles?.includes('administrador')) && (
+              <Button variant="primary" size="sm" onClick={() => setShowMetModal(true)}>Editar Metodología</Button>
+            )}
+          </div>
+          <div className="p-5 space-y-5">
+            {!proyecto.metodologia ? (
+              <p className="text-sm text-theme-text-muted text-center py-8">Sin metodología registrada.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-5">
+                <div>
+                  <h4 className="text-xs font-bold text-theme-text-muted uppercase tracking-wide mb-1">Tipo de Estudio</h4>
+                  <p className="text-sm text-theme-text-main">{proyecto.metodologia.tipo_estudio || "-"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-theme-text-muted uppercase tracking-wide mb-1">Variables</h4>
+                  <p className="text-sm text-theme-text-main whitespace-pre-wrap leading-relaxed">{proyecto.metodologia.variables || "-"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-theme-text-muted uppercase tracking-wide mb-1">Etapas</h4>
+                  <p className="text-sm text-theme-text-main whitespace-pre-wrap leading-relaxed">{proyecto.metodologia.etapas || "-"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-theme-text-muted uppercase tracking-wide mb-1">Fuentes e Instrumentos</h4>
+                  <p className="text-sm text-theme-text-main whitespace-pre-wrap leading-relaxed">{proyecto.metodologia.fuentes_instrumentos || "-"}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {showDescModal && (
+        <EditarDescripcionModal
+          proyecto={proyecto}
+          open={showDescModal}
+          onClose={() => setShowDescModal(false)}
+          onSuccess={() => { setShowDescModal(false); reloadProyecto(); }}
+        />
+      )}
+      {showMetModal && (
+        <EditarMetodologiaModal
+          proyecto={proyecto}
+          open={showMetModal}
+          onClose={() => setShowMetModal(false)}
+          onSuccess={() => { setShowMetModal(false); reloadProyecto(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function EditarMetodologiaModal({ open, onClose, onSuccess, proyecto }: { open: boolean; onClose: () => void; onSuccess: () => void; proyecto: ProyectoDetalle }) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    tipo_estudio: proyecto.metodologia?.tipo_estudio || "",
+    variables: proyecto.metodologia?.variables || "",
+    etapas: proyecto.metodologia?.etapas || "",
+    fuentes_instrumentos: proyecto.metodologia?.fuentes_instrumentos || "",
+  });
+
+  const f = (k: keyof typeof form) => (v: string) => setForm({ ...form, [k]: v });
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await proyectosApi.actualizarMetodologia(proyecto.id, form);
+      onSuccess();
+    } catch (e: any) {
+      alert("Error al actualizar metodología: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Editar Metodología" size="lg">
+      <div className="space-y-4">
+        <Field label="Tipo de Estudio">
+          <Select 
+            options={[{value: "Cuantitativo", label: "Cuantitativo"}, {value: "Cualitativo", label: "Cualitativo"}, {value: "Mixto", label: "Mixto"}]} 
+            value={form.tipo_estudio} onChange={f("tipo_estudio")} placeholder="Seleccionar tipo de estudio" 
+          />
+        </Field>
+        <Field label="Variables">
+          <Textarea rows={3} value={form.variables} onChange={f("variables")} placeholder="Describa las variables de la investigación..." />
+        </Field>
+        <Field label="Etapas">
+          <Textarea rows={3} value={form.etapas} onChange={f("etapas")} placeholder="Describa las etapas de la metodología..." />
+        </Field>
+        <Field label="Fuentes e Instrumentos">
+          <Textarea rows={3} value={form.fuentes_instrumentos} onChange={f("fuentes_instrumentos")} placeholder="Describa fuentes y técnicas o instrumentos a utilizar..." />
+        </Field>
+        <div className="flex justify-end gap-3 pt-3 border-t border-theme-border">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="primary" onClick={handleSave} disabled={loading}>Guardar Metodología</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function EditarDescripcionModal({ open, onClose, onSuccess, proyecto }: { open: boolean; onClose: () => void; onSuccess: () => void; proyecto: ProyectoDetalle }) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    palabras_clave: proyecto.palabras_clave || "",
+    resumen_ejecutivo: proyecto.resumen_ejecutivo || proyecto.resumen || "",
+    justificacion: proyecto.justificacion || "",
+    pertinencia: proyecto.pertinencia || "",
+    contexto: proyecto.contexto || "",
+    estado_arte: proyecto.estado_arte || "",
+    planteamiento_problema: proyecto.planteamiento_problema || "",
+    pregunta_investigacion: proyecto.pregunta_investigacion || "",
+    marco_teorico: proyecto.marco_teorico || "",
+    objetivo_general: proyecto.objetivo_general || proyecto.objetivos || "",
+    objetivos_especificos: proyecto.objetivos_especificos || "",
+    consideraciones_eticas_bioeticas: proyecto.consideraciones_eticas_bioeticas || "",
+    conocimiento_generado: proyecto.conocimiento_generado || "",
+    aporte_social: proyecto.aporte_social || "",
+    bibliografia: proyecto.bibliografia || "",
+  });
+
+  const f = (k: keyof typeof form) => (v: string) => setForm({ ...form, [k]: v });
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await proyectosApi.actualizar(proyecto.id, form);
+      onSuccess();
+    } catch (e: any) {
+      alert("Error al actualizar descripción: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Editar Descripción del Proyecto" size="xl">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <Field label="Palabras Clave">
+          <Input value={form.palabras_clave} onChange={f("palabras_clave")} placeholder="Palabra1, Palabra2..." />
+        </Field>
+        <Field label="Resumen Ejecutivo">
+          <Textarea rows={4} value={form.resumen_ejecutivo} onChange={f("resumen_ejecutivo")} placeholder="Breve resumen del proyecto..." />
+        </Field>
+        <Field label="Planteamiento del Problema">
+          <Textarea rows={4} value={form.planteamiento_problema} onChange={f("planteamiento_problema")} />
+        </Field>
+        <Field label="Pregunta de Investigación">
+          <Textarea rows={2} value={form.pregunta_investigacion} onChange={f("pregunta_investigacion")} />
+        </Field>
+        <Field label="Objetivo General">
+          <Textarea rows={3} value={form.objetivo_general} onChange={f("objetivo_general")} />
+        </Field>
+        <Field label="Objetivos Específicos">
+          <Textarea rows={4} value={form.objetivos_especificos} onChange={f("objetivos_especificos")} placeholder="Uno por línea..." />
+        </Field>
+        <Field label="Justificación">
+          <Textarea rows={4} value={form.justificacion} onChange={f("justificacion")} />
+        </Field>
+        <Field label="Contexto">
+          <Textarea rows={3} value={form.contexto} onChange={f("contexto")} />
+        </Field>
+        <Field label="Estado del Arte">
+          <Textarea rows={4} value={form.estado_arte} onChange={f("estado_arte")} />
+        </Field>
+        <Field label="Pertinencia">
+          <Textarea rows={3} value={form.pertinencia} onChange={f("pertinencia")} />
+        </Field>
+        <Field label="Marco Teórico">
+          <Textarea rows={5} value={form.marco_teorico} onChange={f("marco_teorico")} />
+        </Field>
+        <Field label="Consideraciones Éticas / Bioéticas">
+          <Textarea rows={3} value={form.consideraciones_eticas_bioeticas} onChange={f("consideraciones_eticas_bioeticas")} />
+        </Field>
+        <Field label="Conocimiento Generado">
+          <Textarea rows={3} value={form.conocimiento_generado} onChange={f("conocimiento_generado")} />
+        </Field>
+        <Field label="Aporte Social">
+          <Textarea rows={3} value={form.aporte_social} onChange={f("aporte_social")} />
+        </Field>
+        <Field label="Bibliografía">
+          <Textarea rows={4} value={form.bibliografia} onChange={f("bibliografia")} />
+        </Field>
+      </div>
+      <div className="flex justify-end gap-3 pt-4 border-t border-theme-border mt-4">
+        <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" onClick={handleSave} disabled={loading}>Guardar Descripción</Button>
+      </div>
+    </Modal>
   );
 }
 
 function NuevoProyectoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ nombre: "", tipo: "", facultad: "", lider: "", convocatoria: "", objetivo: "" });
+  const [form, setForm] = useState({ inscripcion_id: "", nombre: "", tipo: "", facultad: "", lider: "", convocatoria: "", objetivo: "" });
+  const [inscripciones, setInscripciones] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      proyectosApi.getInscripcionesDisponibles().then(setInscripciones).catch(console.error);
+    }
+  }, [open]);
+
   const f = (k: keyof typeof form) => (v: string) => setForm({ ...form, [k]: v });
+
+  const handleInscripcionChange = (val: string) => {
+    f("inscripcion_id")(val);
+    const selected = inscripciones.find(i => i.id.toString() === val);
+    if (selected) {
+      setForm(prev => ({
+        ...prev,
+        inscripcion_id: val,
+        nombre: (selected.resumen_proyecto || "").substring(0, 80),
+        lider: selected.investigador_nombre || "",
+        objetivo: selected.resumen_proyecto || "",
+        convocatoria: selected.convocatoria_id ? selected.convocatoria_id.toString() : prev.convocatoria,
+      }));
+    }
+  };
+
   const steps = ["Identificación", "Equipo", "Metodología", "Cronograma", "Revisión"];
 
   return (
-    <Modal open={open} onClose={() => { setStep(1); onClose(); }} title="Registrar Nuevo Proyecto" size="lg">
+    <Modal open={open} onClose={() => { setStep(1); setForm({ inscripcion_id: "", nombre: "", tipo: "", facultad: "", lider: "", convocatoria: "", objetivo: "" }); onClose(); }} title="Registrar Nuevo Proyecto" size="lg">
       <div className="flex items-center gap-1 mb-6">{steps.map((label, index) => <React.Fragment key={label}><div className={`flex items-center gap-2 ${index + 1 <= step ? "text-theme-primary" : "text-theme-text-muted"}`}><span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${index + 1 <= step ? "bg-theme-primary text-white" : "bg-theme-bg-main"}`}>{index + 1}</span><span className="hidden sm:block text-xs font-semibold">{label}</span></div>{index < steps.length - 1 && <div className={`h-px flex-1 ${index + 1 < step ? "bg-theme-primary" : "bg-[#DDE4DF]"}`} />}</React.Fragment>)}</div>
       <div className="space-y-4">
         {step === 1 && <div className="grid grid-cols-1 gap-4">
+          <Field label="Vincular a una inscripción existente (opcional)">
+            <Select 
+              options={[{value: "", label: "Ninguna (crear desde cero)"}, ...inscripciones.map(i => ({ value: i.id.toString(), label: `${i.convocatoria_titulo} — ${i.investigador_nombre}` }))]}
+              value={form.inscripcion_id} 
+              onChange={handleInscripcionChange} 
+              placeholder="Seleccione una inscripción" 
+            />
+          </Field>
           <Field label="Título del Proyecto" required>
             <Input placeholder="Nombre completo del proyecto de investigación" value={form.nombre} onChange={f("nombre")} />
           </Field>

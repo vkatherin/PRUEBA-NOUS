@@ -93,4 +93,24 @@ async function avance(req, res) {
   }
 }
 
-module.exports = { listar, detalle, crear, actualizar, cambiarEstado, eliminar, equipo, avance };
+// GET /api/proyectos/data/inscripciones-disponibles
+async function inscripcionesDisponibles(req, res) {
+  try {
+    const data = await svc.listarInscripcionesDisponibles();
+    ok(res, data);
+  } catch (e) {
+    err(res, "Error al listar inscripciones disponibles");
+  }
+}
+
+// PUT /api/proyectos/:id/metodologia
+async function actualizarMetodologia(req, res) {
+  try {
+    const metodologia = await svc.actualizarMetodologia(req.params.id, req.body);
+    ok(res, { ok: true, metodologia });
+  } catch (e) {
+    err(res, "Error al actualizar metodología");
+  }
+}
+
+module.exports = { listar, detalle, crear, actualizar, cambiarEstado, eliminar, equipo, avance, inscripcionesDisponibles, actualizarMetodologia };

@@ -9,7 +9,7 @@ const pool = require('../../db/connection');
  *
  * Uso: router.get('/ruta-protegida', verificarAutenticacion, ctrl.handler)
  */
-exports.verificarAutenticacion = (req, res, next) => {
+exports.verificarAutenticacion = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -54,7 +54,17 @@ exports.verificarAutenticacion = (req, res, next) => {
       }
     }
 
-    req.usuario = { id: payload.id, correo: payload.correo };
+    const [rolesRows] = await pool.query(
+      `SELECT r.nombre FROM roles r
+       JOIN usuario_rol ur ON ur.rol_id = r.id
+       WHERE ur.usuario_id = ?`,
+      [payload.id]
+    );
+    req.usuario = {
+      id: payload.id,
+      correo: payload.correo,
+      roles: rolesRows.map(r => r.nombre),
+    };
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

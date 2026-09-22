@@ -14,6 +14,7 @@ const propProyecto = verificarPropietario('proyectos', 'investigador_principal_i
 router.get("/", verificarPermiso('proyectos.leer'), ctrl.listar);
 
 // Rutas específicas ANTES de /:id
+router.get("/data/inscripciones-disponibles", verificarPermiso('proyectos.crear'), ctrl.inscripcionesDisponibles);
 router.get("/:id/equipo", verificarPermiso('proyectos.leer'), propProyecto, ctrl.equipo);
 router.get("/:id/avance", verificarPermiso('proyectos.leer'), propProyecto, ctrl.avance);
 
@@ -21,6 +22,7 @@ router.get("/:id/avance", verificarPermiso('proyectos.leer'), propProyecto, ctrl
 router.get("/:id",          verificarPermiso('proyectos.leer'), propProyecto, ctrl.detalle);
 router.post("/",            verificarPermiso('proyectos.crear'), ctrl.crear);
 router.put("/:id",          verificarPermiso('proyectos.editar'), propProyecto, ctrl.actualizar);
+router.put("/:id/metodologia", verificarPermiso('proyectos.editar'), propProyecto, ctrl.actualizarMetodologia);
 router.patch("/:id/estado", verificarPermiso('proyectos.editar'), propProyecto, ctrl.cambiarEstado);
 router.delete("/:id",       verificarPermiso('proyectos.eliminar'), propProyecto, ctrl.eliminar);
 
