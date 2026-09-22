@@ -25,11 +25,16 @@ async function main() {
   // ── 1. Roles: mapa nombre -> id ──────────────────────────────────────────
   const [rolesRows] = await pool.query('SELECT id, nombre FROM roles');
   const rolId = {};
-  rolesRows.forEach(r => { rolId[r.nombre] = r.id; });
+  const normalize = (s) => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
+  rolesRows.forEach(r => {
+    rolId[r.nombre] = r.id;
+    rolId[normalize(r.nombre)] = r.id;
+  });
 
   function requireRol(nombre) {
-    if (!rolId[nombre]) throw new Error(`El rol '${nombre}' no existe en la tabla roles. Corrige el nombre o créalo primero.`);
-    return rolId[nombre];
+    const id = rolId[nombre] || rolId[normalize(nombre)];
+    if (!id) throw new Error(`El rol '${nombre}' no existe en la tabla roles. Corrige el nombre o créalo primero.`);
+    return id;
   }
 
   // ── 2. Usuarios de prueba ─────────────────────────────────────────────────
