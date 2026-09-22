@@ -3410,8 +3410,8 @@ function SemilleroExternoModal({
               </a>
             </div>
 
-            {/* Zona Admin para subir / cambiar la plantilla oficial */}
-            {(user?.roles?.some((r: string) => ["administrador", "directivos", "director_investigacion", "coordinador_investigacion"].includes(r.toLowerCase())) || user?.permisos?.includes('convocatorias.editar') || (userActual as any)?.rol?.toLowerCase().includes('admin')) && (
+            {/* Zona Admin para subir / cambiar la plantilla oficial (SOLO ADMINISTRADORES) */}
+            {(user?.roles?.some((r: string) => r.toLowerCase() === "administrador" || r.toLowerCase() === "super administrador") || (userActual as any)?.rol?.toLowerCase() === "administrador") && (
               <div className="pt-2 border-t border-emerald-200/70 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] text-theme-text-muted font-medium flex items-center gap-1">
                   ⚙️ <strong>Zona Admin:</strong> Carga o actualiza el archivo oficial de plantilla (.docx, .pdf, .doc) para esta convocatoria.
@@ -4446,17 +4446,19 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
         subtitle="Gestión de convocatorias internas y externas de investigación"
         breadcrumb={["NOUS", "Convocatorias"]}
         actions={
-          (user?.permisos?.includes('convocatorias.crear') || user?.roles?.includes('administrador') || user?.roles?.includes('directivos')) && (
+          (user?.permisos?.includes('convocatorias.crear') || user?.roles?.some(r => r.toLowerCase().includes('admin'))) && (
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPlantillaConvTarget(null);
-                  setShowPlantillaModal(true);
-                }}
-              >
-                📄 Plantilla Asentimiento
-              </Button>
+              {user?.roles?.some(r => r.toLowerCase().includes('admin')) && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPlantillaConvTarget(null);
+                    setShowPlantillaModal(true);
+                  }}
+                >
+                  📄 Plantilla Asentimiento
+                </Button>
+              )}
               <Button variant="primary" onClick={() => setShowWizard(true)}>
                 + Nueva Convocatoria
               </Button>
