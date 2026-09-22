@@ -33,17 +33,19 @@ async function getInscripcion(convId, usuarioId) {
 
 // ─── Helper: cargar todos los datos del formulario ───────────────────────────
 async function cargarTodosPasos(inscripcionId) {
-  const [[semRows], [intRows], [infoRows], [contRows]] = await Promise.all([
+  const [[semRows], [intRows], [infoRows], [contRows], [docRows]] = await Promise.all([
     pool.query("SELECT * FROM inscripcion_semillero_externo WHERE inscripcion_id = ? LIMIT 1", [inscripcionId]),
     pool.query("SELECT * FROM inscripcion_semillero_integrantes WHERE inscripcion_id = ? ORDER BY id", [inscripcionId]),
     pool.query("SELECT * FROM inscripcion_semillero_info_general WHERE inscripcion_id = ? LIMIT 1", [inscripcionId]),
     pool.query("SELECT * FROM inscripcion_semillero_contenido WHERE inscripcion_id = ? LIMIT 1", [inscripcionId]),
+    pool.query("SELECT * FROM convocatoria_inscripcion_documentos WHERE inscripcion_id = ? ORDER BY id", [inscripcionId]),
   ]);
   return {
     semillero: semRows.length > 0 ? semRows[0] : null,
     integrantes: intRows,
     info_general: infoRows.length > 0 ? infoRows[0] : null,
     contenido: contRows.length > 0 ? contRows[0] : null,
+    documentos: docRows,
   };
 }
 
@@ -1042,8 +1044,32 @@ const pasosSemilleroController = {
         return res.status(400).json({ error: "Paso 4 (Contenido del trabajo): Todos los campos son obligatorios." });
       }
 
+      // ── Consultar si ya existe inscripción previa (borrador o registrada)
+      const [existingRows] = await pool.query(
+        "SELECT id, estado, documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ? LIMIT 1",
+        [convId, usuarioId]
+      );
+      const inscripcionExistente = existingRows.length > 0 ? existingRows[0] : null;
+
+      let docPagoExistente = null;
+      let docPropuestaExistente = null;
+
+      if (inscripcionExistente) {
+        const [docsRows] = await pool.query(
+          "SELECT * FROM convocatoria_inscripcion_documentos WHERE inscripcion_id = ?",
+          [inscripcionExistente.id]
+        );
+        docPagoExistente = docsRows.find((d) => d.requisito_nombre === "Comprobante de Pago");
+        docPropuestaExistente = docsRows.find((d) => d.requisito_nombre === "Propuesta de investigación") || {
+          documento_nombre_original: inscripcionExistente.documento_nombre_original,
+          documento_ruta: inscripcionExistente.documento_ruta,
+          documento_mime: inscripcionExistente.documento_mime,
+          documento_peso_bytes: inscripcionExistente.documento_peso_bytes,
+        };
+      }
+
       // Validar Comprobante de pago obligatorio
-      if (!archivoPago) {
+      if (!archivoPago && !docPagoExistente) {
         limpiarArchivos();
         return res.status(400).json({
           error: "El comprobante de pago de inscripción es obligatorio para convocatorias externas.",
@@ -1051,63 +1077,81 @@ const pasosSemilleroController = {
         });
       }
 
-      const permitidosPago = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"];
-      if (!permitidosPago.includes(archivoPago.mimetype)) {
-        limpiarArchivos();
-        return res.status(400).json({
-          error: "El comprobante de pago debe ser PDF o una imagen (JPG, PNG, WEBP).",
-          campo: "comprobante_pago",
-        });
+      let pagoInfo = null;
+      if (archivoPago) {
+        const permitidosPago = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"];
+        if (!permitidosPago.includes(archivoPago.mimetype)) {
+          limpiarArchivos();
+          return res.status(400).json({
+            error: "El comprobante de pago debe ser PDF o una imagen (JPG, PNG, WEBP).",
+            campo: "comprobante_pago",
+          });
+        }
+        pagoInfo = {
+          nombre: archivoPago.originalname,
+          ruta: `/uploads/inscripciones/${archivoPago.filename}`,
+          mime: archivoPago.mimetype,
+          peso: archivoPago.size,
+        };
+      } else if (docPagoExistente) {
+        pagoInfo = {
+          nombre: docPagoExistente.documento_nombre_original,
+          ruta: docPagoExistente.documento_ruta,
+          mime: docPagoExistente.documento_mime,
+          peso: docPagoExistente.documento_peso_bytes,
+        };
       }
-      const pagoInfo = {
-        nombre: archivoPago.originalname,
-        ruta: `/uploads/inscripciones/${archivoPago.filename}`,
-        mime: archivoPago.mimetype,
-        peso: archivoPago.size,
-      };
 
       // Validar PDF de propuesta obligatorio
-      if (!archivoDoc) {
+      if (!archivoDoc && (!docPropuestaExistente || !docPropuestaExistente.documento_ruta)) {
         limpiarArchivos();
         return res.status(400).json({
           error: "Debes adjuntar el documento de la propuesta de investigación o aval en formato PDF.",
           campo: "documento",
         });
       }
-      if (archivoDoc.mimetype !== "application/pdf") {
-        limpiarArchivos();
-        return res.status(400).json({ error: "La propuesta de investigación debe ser un archivo PDF.", campo: "documento" });
-      }
-      const docInfo = {
-        nombre: archivoDoc.originalname,
-        ruta: `/uploads/inscripciones/${archivoDoc.filename}`,
-        mime: archivoDoc.mimetype,
-        peso: archivoDoc.size,
-      };
 
-      // ── Validar límite de hasta 50 inscripciones por convocatoria
-      const [conteoRows] = await pool.query(
-        "SELECT COUNT(*) as total FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND estado != 'en_proceso'",
-        [convId]
-      );
-      if (conteoRows[0].total >= 50) {
-        limpiarArchivos();
-        return res.status(400).json({
-          error: "Esta convocatoria ya ha alcanzado el límite máximo permitido de 50 inscripciones.",
-        });
+      let docInfo = null;
+      if (archivoDoc) {
+        if (archivoDoc.mimetype !== "application/pdf") {
+          limpiarArchivos();
+          return res.status(400).json({ error: "La propuesta de investigación debe ser un archivo PDF.", campo: "documento" });
+        }
+        docInfo = {
+          nombre: archivoDoc.originalname,
+          ruta: `/uploads/inscripciones/${archivoDoc.filename}`,
+          mime: archivoDoc.mimetype,
+          peso: archivoDoc.size,
+        };
+      } else if (docPropuestaExistente && docPropuestaExistente.documento_ruta) {
+        docInfo = {
+          nombre: docPropuestaExistente.documento_nombre_original,
+          ruta: docPropuestaExistente.documento_ruta,
+          mime: docPropuestaExistente.documento_mime,
+          peso: docPropuestaExistente.documento_peso_bytes,
+        };
+      }
+
+      // ── Validar límite de hasta 50 inscripciones por convocatoria (solo si no existe previa)
+      if (!inscripcionExistente) {
+        const [conteoRows] = await pool.query(
+          "SELECT COUNT(*) as total FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND estado != 'en_proceso'",
+          [convId]
+        );
+        if (conteoRows[0].total >= 50) {
+          limpiarArchivos();
+          return res.status(400).json({
+            error: "Esta convocatoria ya ha alcanzado el límite máximo permitido de 50 inscripciones.",
+          });
+        }
       }
 
       const archivoPrincipalInfo = docInfo || pagoInfo || { nombre: null, ruta: null, mime: null, peso: 0 };
 
-      // ── 1. Reutilizar borrador existente si había uno en proceso, o insertar nueva inscripción
-      const [draftRows] = await pool.query(
-        "SELECT id FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ? AND estado = 'en_proceso' LIMIT 1",
-        [convId, usuarioId]
-      );
-
+      // ── 1. Reutilizar inscripción o insertar nueva inscripción
       let inscId;
-      if (draftRows.length > 0) {
-        inscId = draftRows[0].id;
+      if (inscripcionExistente) {
+        inscId = inscripcionExistente.id;
         await pool.query(
           `UPDATE convocatoria_inscripciones
            SET estado = 'registrada', tipo_investigacion = ?, resumen_proyecto = ?, justificacion = ?,

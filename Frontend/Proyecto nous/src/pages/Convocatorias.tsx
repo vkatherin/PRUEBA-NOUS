@@ -1215,7 +1215,7 @@ function DetailModal({
 }: {
   conv: Convocatoria | null;
   onClose: () => void;
-  onInscribirse: (c: Convocatoria) => void;
+  onInscribirse: (c: Convocatoria, inscripcion?: Inscripcion | null, pasoInicial?: number) => void;
   onEliminar?: (c: Convocatoria) => void;
   user?: UsuarioMe | null;
 }) {
@@ -1387,7 +1387,7 @@ function DetailModal({
                             type="button"
                             onClick={() => {
                               onClose();
-                              onInscribirse(conv);
+                              onInscribirse(conv, ins, 5);
                             }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg transition-all shadow-2xs active:scale-95"
                             title="Editar postulación dentro del plazo estipulado"
@@ -1529,7 +1529,9 @@ function DetailModal({
           disabled={!isConvocatoriaAbierta || (inscripciones.length >= 50 && !inscripciones.some(i => i.usuario_id === (user?.id || getUsuarioActual()?.id)))}
           onClick={() => {
             onClose();
-            onInscribirse(conv);
+            const uId = user?.id || getUsuarioActual()?.id;
+            const miIns = inscripciones.find((i) => i.usuario_id === uId);
+            onInscribirse(conv, miIns || null, miIns ? 5 : 1);
           }}
         >
           {!isConvocatoriaAbierta
@@ -1553,16 +1555,20 @@ function DetailModal({
 }
 
 // ─── Modal de Inscripción a Convocatoria ──────────────────────────────────────
+// ─── Modal de Inscripción a Convocatoria ──────────────────────────────────────
 function InscripcionModal({
   conv,
   onClose,
   onInscrito,
+  inscripcion = null,
 }: {
   conv: Convocatoria | null;
   onClose: () => void;
   onInscrito: () => void;
+  inscripcion?: Inscripcion | null;
 }) {
   const [archivosRequisitos, setArchivosRequisitos] = useState<Record<string, File>>({});
+  const [documentosExistentes, setDocumentosExistentes] = useState<Record<string, { nombre: string; ruta: string }>>({});
   const [activeRequisitoForUpload, setActiveRequisitoForUpload] = useState<string | null>(null);
   const [tipoInvestigacion, setTipoInvestigacion] = useState("");
   const [resumen, setResumen] = useState("");
@@ -1595,6 +1601,7 @@ function InscripcionModal({
   useEffect(() => {
     if (conv) {
       setArchivosRequisitos({});
+      setDocumentosExistentes({});
       setActiveRequisitoForUpload(null);
       setTipoInvestigacion(conv.tipo_investigacion || "");
       setResumen("");
@@ -1603,11 +1610,35 @@ function InscripcionModal({
       setGeneralError("");
       setSuccessMessage("");
       setSaving(false);
-      setAutorizaDatos(false);
+      setAutorizaDatos(!!inscripcion);
 
       const u: any = getUsuarioActual();
-      if (u?.id && conv.id) {
-        const uEmail = u.correo || u.email;
+      const uEmail = u?.correo || u?.email;
+
+      if (inscripcion) {
+        if (inscripcion.tipo_investigacion) setTipoInvestigacion(inscripcion.tipo_investigacion);
+        if (inscripcion.resumen_proyecto) setResumen(inscripcion.resumen_proyecto);
+        if (inscripcion.justificacion) setJustificacion(inscripcion.justificacion);
+        if (inscripcion.documentos && inscripcion.documentos.length > 0) {
+          const docsMap: Record<string, { nombre: string; ruta: string }> = {};
+          inscripcion.documentos.forEach((d: any) => {
+            if (d.tipo_requisito) {
+              docsMap[d.tipo_requisito] = {
+                nombre: d.documento_nombre_original,
+                ruta: d.documento_ruta,
+              };
+            }
+          });
+          setDocumentosExistentes(docsMap);
+        } else if (inscripcion.documento_ruta) {
+          setDocumentosExistentes({
+            [listaRequisitos[0] || "Propuesta de investigación"]: {
+              nombre: inscripcion.documento_nombre_original || "anteproyecto.pdf",
+              ruta: inscripcion.documento_ruta,
+            },
+          });
+        }
+      } else if (u?.id && conv.id) {
         getInscripcionesConvocatoria(conv.id)
           .then((list) => {
             const miIns = list.find((i) => i.usuario_id === u.id || (uEmail && i.usuario_correo === uEmail));
@@ -1615,12 +1646,25 @@ function InscripcionModal({
               if (miIns.tipo_investigacion) setTipoInvestigacion(miIns.tipo_investigacion);
               if (miIns.resumen_proyecto) setResumen(miIns.resumen_proyecto);
               if (miIns.justificacion) setJustificacion(miIns.justificacion);
+              if (miIns.documentos && miIns.documentos.length > 0) {
+                const docsMap: Record<string, { nombre: string; ruta: string }> = {};
+                miIns.documentos.forEach((d: any) => {
+                  if (d.tipo_requisito) {
+                    docsMap[d.tipo_requisito] = {
+                      nombre: d.documento_nombre_original,
+                      ruta: d.documento_ruta,
+                    };
+                  }
+                });
+                setDocumentosExistentes(docsMap);
+              }
+              setAutorizaDatos(true);
             }
           })
           .catch(() => null);
       }
     }
-  }, [conv]);
+  }, [conv, inscripcion]);
 
   if (!conv) return null;
 
@@ -1686,7 +1730,7 @@ function InscripcionModal({
       errors.tipo_investigacion = "Selecciona el tipo de investigación.";
     }
 
-    const faltantes = listaRequisitos.filter((req) => !archivosRequisitos[req]);
+    const faltantes = listaRequisitos.filter((req) => !archivosRequisitos[req] && !documentosExistentes[req]);
     if (faltantes.length > 0) {
       errors.documentos = `Debes adjuntar todos los ${listaRequisitos.length} documentos obligatorios en formato PDF.`;
       faltantes.forEach((req) => {
@@ -1880,25 +1924,28 @@ function InscripcionModal({
           <div className="space-y-2">
             {listaRequisitos.map((req, idx) => {
               const archivo = archivosRequisitos[req];
+              const docExistente = documentosExistentes[req];
               const errorReq = fieldErrors[req];
 
               return (
                 <div
                   key={req}
-                  className={`p-3 rounded-xl border transition-all ${archivo
+                  className={`p-3 rounded-xl border transition-all ${
+                    archivo || docExistente
                       ? "bg-[#F3F9F5] border-[#A7D7B5]"
                       : errorReq
                         ? "bg-red-50/50 border-red-300"
                         : "bg-theme-bg-main border-theme-border hover:border-[#B8C8BD]"
-                    }`}
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${archivo ? "bg-theme-primary text-white" : "bg-[#E2ECE5] text-theme-primary"
-                          }`}
+                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                          archivo || docExistente ? "bg-theme-primary text-white" : "bg-[#E2ECE5] text-theme-primary"
+                        }`}
                       >
-                        {archivo ? "✓" : idx + 1}
+                        {archivo || docExistente ? "✓" : idx + 1}
                       </span>
                       <span className="text-xs font-semibold text-theme-text-main">{req}</span>
                     </div>
@@ -1931,6 +1978,30 @@ function InscripcionModal({
                           title="Quitar archivo"
                         >
                           ✕
+                        </button>
+                      </div>
+                    </div>
+                  ) : docExistente ? (
+                    <div className="flex items-center justify-between pl-7 pt-2 text-xs">
+                      <div className="flex items-center gap-1.5 text-emerald-800 font-medium truncate max-w-[280px]">
+                        <span>📄</span>
+                        <span className="truncate font-mono">{docExistente.nombre}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={docExistente.ruta}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 text-xs font-bold text-emerald-800 bg-white border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors shadow-2xs"
+                        >
+                          👁️ Ver
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectFileClick(req)}
+                          className="px-2.5 py-1 text-xs font-bold text-theme-primary bg-white border border-theme-primary rounded-lg hover:bg-theme-primary/10 transition-colors shadow-2xs"
+                        >
+                          🔄 Reemplazar
                         </button>
                       </div>
                     </div>
@@ -2836,16 +2907,25 @@ function StepperHeader({
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function SemilleroExternoModal({
-  conv, onClose, onGuardado, user,
+  conv,
+  onClose,
+  onGuardado,
+  user,
+  pasoInicial = 1,
+  inscripcion = null,
 }: {
   conv: Convocatoria | null;
   onClose: () => void;
   onGuardado: () => void;
   user?: UsuarioMe | null;
+  pasoInicial?: number;
+  inscripcion?: Inscripcion | null;
 }) {
   // ── Estado global del wizard ──────────────────────────────────────────────
-  const [paso, setPaso] = useState(1);
-  const [pasosCompletados, setPasosCompletados] = useState<Set<number>>(new Set());
+  const [paso, setPaso] = useState(pasoInicial || (inscripcion ? 5 : 1));
+  const [pasosCompletados, setPasosCompletados] = useState<Set<number>>(
+    pasoInicial === 5 || inscripcion ? new Set([1, 2, 3, 4, 5]) : new Set()
+  );
   const [catalogos, setCatalogos] = useState<CatalogosSemillero | null>(null);
   const [saving, setSaving] = useState(false);
   const [generalError, setGeneralError] = useState("");
@@ -2904,6 +2984,8 @@ function SemilleroExternoModal({
   // ── Estado Paso 5: Envío final ────────────────────────────────────────────
   const [docFinal, setDocFinal] = useState<File | null>(null);
   const [comprobantePago, setComprobantePago] = useState<File | null>(null);
+  const [docFinalExistente, setDocFinalExistente] = useState<{ nombre: string; ruta: string; peso_bytes?: number } | null>(null);
+  const [comprobantePagoExistente, setComprobantePagoExistente] = useState<{ nombre: string; ruta: string; peso_bytes?: number } | null>(null);
   const [autorizaDatos, setAutorizaDatos] = useState(false);
   const [guardandoBorrador, setGuardandoBorrador] = useState(false);
   const [borradorGuardadoMensaje, setBorradorGuardadoMensaje] = useState("");
@@ -2921,12 +3003,13 @@ function SemilleroExternoModal({
   // ── Carga inicial de catálogos y datos previos si existen ─────────────────
   useEffect(() => {
     if (!conv) return;
-    setPaso(1);
-    setPasosCompletados(new Set());
+    const initialStep = pasoInicial || (inscripcion ? 5 : 1);
+    setPaso(initialStep);
+    setPasosCompletados(initialStep === 5 || inscripcion ? new Set([1, 2, 3, 4, 5]) : new Set());
     setSaving(false);
     setGeneralError("");
     setInscripcionEnviada(false);
-    setAutorizaDatos(false);
+    setAutorizaDatos(initialStep === 5 || !!inscripcion);
     setGuardandoBorrador(false);
     setBorradorGuardadoMensaje("");
     setBorradorRecuperado(false);
@@ -2951,6 +3034,8 @@ function SemilleroExternoModal({
     setErrores4({});
     setDocFinal(null);
     setComprobantePago(null);
+    setDocFinalExistente(null);
+    setComprobantePagoExistente(null);
 
     // Cargar información de la plantilla oficial
     getInfoPlantillaAsentimiento(conv.id)
@@ -2973,8 +3058,75 @@ function SemilleroExternoModal({
       })
       .catch(() => {});
 
-    // Recuperar borrador activo si existe
-    if (usuarioId) {
+    const targetUser = inscripcion?.usuario_id || usuarioId;
+
+    if (inscripcion || initialStep === 5) {
+      // Modo edición o envío final: Cargar todos los pasos desde el resumen
+      getResumenSemillero(conv.id, targetUser)
+        .then((resData) => {
+          if (resData) {
+            if (resData.semillero) {
+              setTipoInstitucion(resData.semillero.tipo_institucion || "");
+              setInstitucionProcedencia(resData.semillero.institucion_procedencia || "");
+              setSemilleroNombre(resData.semillero.semillero_nombre || "");
+            }
+            if (resData.integrantes && resData.integrantes.length > 0) {
+              setIntegrantes(resData.integrantes);
+            }
+            if (resData.info_general) {
+              setTituloTrabajo(resData.info_general.titulo_trabajo || "");
+              setLineaInv(resData.info_general.linea_investigacion || "");
+              setPalabrasClave(resData.info_general.palabras_clave || "");
+              setResumenInfo(resData.info_general.resumen || "");
+            }
+            if (resData.contenido) {
+              setPlanteamiento(resData.contenido.planteamiento_problema || "");
+              setObjetivoGral(resData.contenido.objetivo_general || "");
+              setObjetivosEsp(resData.contenido.objetivos_especificos || "");
+              setMetodologia(resData.contenido.metodologia || "");
+              setResultados(resData.contenido.resultados_esperados || "");
+            }
+
+            const docs = (resData as any).documentos || [];
+            const compDoc = docs.find((d: any) =>
+              (d.tipo_requisito && d.tipo_requisito.toLowerCase().includes("comprobante")) ||
+              (d.documento_nombre_original && /pago|comprobante|recibo/i.test(d.documento_nombre_original))
+            );
+            if (compDoc) {
+              setComprobantePagoExistente({
+                nombre: compDoc.documento_nombre_original,
+                ruta: compDoc.documento_ruta,
+                peso_bytes: compDoc.documento_peso_bytes,
+              });
+            }
+
+            const propDoc = docs.find((d: any) =>
+              (d.tipo_requisito && d.tipo_requisito.toLowerCase().includes("propuesta")) ||
+              (d.documento_nombre_original && /propuesta|anteproyecto|aval/i.test(d.documento_nombre_original)) ||
+              (d.id && compDoc && d.id !== compDoc.id)
+            );
+            if (propDoc) {
+              setDocFinalExistente({
+                nombre: propDoc.documento_nombre_original,
+                ruta: propDoc.documento_ruta,
+                peso_bytes: propDoc.documento_peso_bytes,
+              });
+            } else if (resData.inscripcion?.documento_ruta) {
+              setDocFinalExistente({
+                nombre: resData.inscripcion.documento_nombre_original || "propuesta_investigacion.pdf",
+                ruta: resData.inscripcion.documento_ruta,
+                peso_bytes: resData.inscripcion.documento_peso_bytes,
+              });
+            }
+
+            setPasosCompletados(new Set([1, 2, 3, 4, 5]));
+            setPaso(5);
+            setAutorizaDatos(true);
+          }
+        })
+        .catch((err) => console.error("Error al cargar resumen de inscripción previa:", err));
+    } else if (usuarioId) {
+      // Recuperar borrador activo si existe
       getBorradorSemillero(conv.id, usuarioId)
         .then((bData) => {
           if (bData.ok && bData.tiene_borrador) {
@@ -3016,7 +3168,7 @@ function SemilleroExternoModal({
         })
         .catch(() => {});
     }
-  }, [conv]);
+  }, [conv, pasoInicial, inscripcion]);
 
   if (!conv) return null;
   const codigoDisplay = conv.codigo_con || conv.codigo || `CON${conv.id}`;
@@ -3214,12 +3366,12 @@ function SemilleroExternoModal({
       return;
     }
 
-    if (!comprobantePago) {
+    if (!comprobantePago && !comprobantePagoExistente) {
       setGeneralError("El comprobante de pago de inscripción es obligatorio. Por favor adjunta el recibo o comprobante (PDF, JPG, PNG o WEBP).");
       return;
     }
 
-    if (!docFinal) {
+    if (!docFinal && !docFinalExistente) {
       setGeneralError("Debes adjuntar el documento de la propuesta de investigación o aval en formato PDF.");
       return;
     }
@@ -4081,6 +4233,17 @@ function SemilleroExternoModal({
             <>
               <SectionTitle>Envío Final — Resumen y Confirmación</SectionTitle>
 
+              {(inscripcion || pasoInicial === 5) && (
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">✏️</span>
+                    <span>
+                      <strong>Modo Edición:</strong> Aquí está toda la información registrada. Puedes revisarla y hacer clic en <strong>"Editar"</strong> en la sección que desees modificar antes de guardar los cambios finales.
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3 text-sm">
                 {/* Paso 1 summary */}
                 <div className="p-3.5 rounded-xl border border-theme-border bg-theme-bg-main">
@@ -4134,6 +4297,11 @@ function SemilleroExternoModal({
                         <div>
                           <span className="font-semibold text-theme-text-main">{intg.nombre_completo}</span>
                           <span className="text-theme-text-muted ml-2">({intg.rol})</span>
+                          {intg.es_mayor_edad === false && (
+                            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">
+                              Menor de edad {intg.asentimiento_ruta || intg.asentimiento_nombre ? "✓ Asentimiento" : "⚠️ Sin asentimiento"}
+                            </span>
+                          )}
                         </div>
                         <span className="text-theme-text-muted">{intg.email}</span>
                       </div>
@@ -4156,7 +4324,7 @@ function SemilleroExternoModal({
                   <div className="space-y-1 text-xs">
                     <div>
                       <span className="text-theme-text-muted">Título: </span>
-                      <strong className="text-theme-text-main">{tituloTrabajo}</strong>
+                      <strong className="text-theme-text-main">{tituloTrabajo || "—"}</strong>
                     </div>
                     {lineaInv && (
                       <div>
@@ -4166,7 +4334,7 @@ function SemilleroExternoModal({
                     )}
                     <div>
                       <span className="text-theme-text-muted">Palabras clave: </span>
-                      <span className="text-theme-text-main">{palabrasClave}</span>
+                      <span className="text-theme-text-main">{palabrasClave || "—"}</span>
                     </div>
                   </div>
                 </div>
@@ -4186,11 +4354,11 @@ function SemilleroExternoModal({
                   <div className="space-y-1 text-xs">
                     <div>
                       <span className="text-theme-text-muted">Planteamiento: </span>
-                      <span className="text-theme-text-main line-clamp-2">{planteamiento}</span>
+                      <span className="text-theme-text-main line-clamp-2">{planteamiento || "—"}</span>
                     </div>
                     <div>
                       <span className="text-theme-text-muted">Objetivo general: </span>
-                      <span className="text-theme-text-main line-clamp-2">{objetivoGral}</span>
+                      <span className="text-theme-text-main line-clamp-2">{objetivoGral || "—"}</span>
                     </div>
                   </div>
                 </div>
@@ -4202,7 +4370,7 @@ function SemilleroExternoModal({
 
                 {/* Comprobante de Pago */}
                 <div className={`p-3.5 rounded-xl border transition-colors space-y-2.5 ${
-                  !comprobantePago ? "border-amber-300 bg-amber-50/40" : "border-[#C8E6D2] bg-[#F7FAF8]"
+                  !comprobantePago && !comprobantePagoExistente ? "border-amber-300 bg-amber-50/40" : "border-[#C8E6D2] bg-[#F7FAF8]"
                 }`}>
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-theme-text-main flex items-center gap-1.5">
@@ -4210,7 +4378,11 @@ function SemilleroExternoModal({
                     </label>
                     {comprobantePago ? (
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                        <span>✓</span> Adjuntado
+                        <span>✓</span> Nuevo archivo seleccionado
+                      </span>
+                    ) : comprobantePagoExistente ? (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                        <span>✓</span> Registrado previamente
                       </span>
                     ) : (
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-700">
@@ -4222,45 +4394,83 @@ function SemilleroExternoModal({
                     Adjunta el recibo o comprobante de pago emitido por la plataforma institucional (PDF, JPG, PNG o WEBP, máx. 15MB).
                   </p>
 
-                  <div className="flex items-center gap-2.5">
-                    <label className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-colors ${
-                      comprobantePago ? "border-emerald-300 bg-white hover:bg-emerald-50/50" : "border-amber-300 bg-white hover:bg-amber-50/50"
-                    }`}>
+                  {comprobantePagoExistente && !comprobantePago && (
+                    <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 truncate">
-                        <span className="text-sm">📎</span>
-                        <span className={`text-xs font-medium truncate ${comprobantePago ? "text-emerald-900 font-semibold" : "text-theme-text-muted"}`}>
-                          {comprobantePago ? comprobantePago.name : "Seleccionar archivo de comprobante..."}
+                        <span className="text-emerald-700 font-bold text-xs">📄</span>
+                        <span className="text-xs font-semibold text-emerald-950 truncate">
+                          {comprobantePagoExistente.nombre}
                         </span>
                       </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={comprobantePagoExistente.ruta}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 text-xs font-bold text-emerald-800 bg-white border border-emerald-300 rounded-md hover:bg-emerald-100 transition-colors shadow-2xs"
+                        >
+                          👁️ Ver
+                        </a>
+                        <label className="px-2.5 py-1 text-xs font-bold text-theme-primary bg-white border border-theme-primary rounded-md hover:bg-theme-primary/10 cursor-pointer transition-colors shadow-2xs">
+                          🔄 Reemplazar
+                          <input
+                            type="file"
+                            accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
+                                setComprobantePago(f);
+                                setGeneralError("");
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {(!comprobantePagoExistente || comprobantePago) && (
+                    <div className="flex items-center gap-2.5">
+                      <label className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-colors ${
+                        comprobantePago ? "border-emerald-300 bg-white hover:bg-emerald-50/50" : "border-amber-300 bg-white hover:bg-amber-50/50"
+                      }`}>
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="text-sm">📎</span>
+                          <span className={`text-xs font-medium truncate ${comprobantePago ? "text-emerald-900 font-semibold" : "text-theme-text-muted"}`}>
+                            {comprobantePago ? comprobantePago.name : "Seleccionar archivo de comprobante..."}
+                          </span>
+                        </div>
+                        {comprobantePago && (
+                          <span className="text-[10px] text-theme-text-muted shrink-0 ml-2 font-medium">
+                            ({(comprobantePago.size / 1024).toFixed(1)} KB)
+                          </span>
+                        )}
+                        <input
+                          type="file"
+                          accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              setComprobantePago(f);
+                              setGeneralError("");
+                            }
+                          }}
+                        />
+                      </label>
                       {comprobantePago && (
-                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2 font-medium">
-                          ({(comprobantePago.size / 1024).toFixed(1)} KB)
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setComprobantePago(null)}
+                          className="px-2.5 py-2 text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors"
+                          title="Quitar archivo"
+                        >
+                          ✕ Quitar
+                        </button>
                       )}
-                      <input
-                        type="file"
-                        accept=".pdf,image/jpeg,image/png,image/webp,image/jpg"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) {
-                            setComprobantePago(f);
-                            setGeneralError("");
-                          }
-                        }}
-                      />
-                    </label>
-                    {comprobantePago && (
-                      <button
-                        type="button"
-                        onClick={() => setComprobantePago(null)}
-                        className="px-2.5 py-2 text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors"
-                        title="Quitar archivo"
-                      >
-                        ✕ Quitar
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div className="text-[11px] text-[#4B5563] pt-0.5 flex items-center justify-between">
                     <span>¿Aún no has cancelado la inscripción?</span>
@@ -4277,7 +4487,7 @@ function SemilleroExternoModal({
 
                 {/* Documento adjunto obligatorio: Propuesta de investigación */}
                 <div className={`p-3.5 rounded-xl border transition-colors space-y-2.5 ${
-                  !docFinal ? "border-amber-300 bg-amber-50/40" : "border-[#C8E6D2] bg-[#F7FAF8]"
+                  !docFinal && !docFinalExistente ? "border-amber-300 bg-amber-50/40" : "border-[#C8E6D2] bg-[#F7FAF8]"
                 }`}>
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-theme-text-main flex items-center gap-1.5">
@@ -4285,7 +4495,11 @@ function SemilleroExternoModal({
                     </label>
                     {docFinal ? (
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                        <span>✓</span> Adjuntado
+                        <span>✓</span> Nuevo archivo seleccionado
+                      </span>
+                    ) : docFinalExistente ? (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                        <span>✓</span> Registrado previamente
                       </span>
                     ) : (
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-700">
@@ -4297,45 +4511,83 @@ function SemilleroExternoModal({
                     Adjunta el documento en formato PDF con la propuesta de investigación detallada o carta de aval (máx. 25MB).
                   </p>
 
-                  <div className="flex items-center gap-2.5">
-                    <label className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-colors ${
-                      docFinal ? "border-emerald-300 bg-white hover:bg-emerald-50/50" : "border-amber-300 bg-white hover:bg-amber-50/50"
-                    }`}>
+                  {docFinalExistente && !docFinal && (
+                    <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 truncate">
-                        <span className="text-sm">📄</span>
-                        <span className={`text-xs font-medium truncate ${docFinal ? "text-emerald-900 font-semibold" : "text-theme-text-muted"}`}>
-                          {docFinal ? docFinal.name : "Seleccionar archivo PDF..."}
+                        <span className="text-emerald-700 font-bold text-xs">📄</span>
+                        <span className="text-xs font-semibold text-emerald-950 truncate">
+                          {docFinalExistente.nombre}
                         </span>
                       </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={docFinalExistente.ruta}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 text-xs font-bold text-emerald-800 bg-white border border-emerald-300 rounded-md hover:bg-emerald-100 transition-colors shadow-2xs"
+                        >
+                          👁️ Ver
+                        </a>
+                        <label className="px-2.5 py-1 text-xs font-bold text-theme-primary bg-white border border-theme-primary rounded-md hover:bg-theme-primary/10 cursor-pointer transition-colors shadow-2xs">
+                          🔄 Reemplazar
+                          <input
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
+                                setDocFinal(f);
+                                setGeneralError("");
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {(!docFinalExistente || docFinal) && (
+                    <div className="flex items-center gap-2.5">
+                      <label className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-colors ${
+                        docFinal ? "border-emerald-300 bg-white hover:bg-emerald-50/50" : "border-amber-300 bg-white hover:bg-amber-50/50"
+                      }`}>
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="text-sm">📄</span>
+                          <span className={`text-xs font-medium truncate ${docFinal ? "text-emerald-900 font-semibold" : "text-theme-text-muted"}`}>
+                            {docFinal ? docFinal.name : "Seleccionar archivo PDF..."}
+                          </span>
+                        </div>
+                        {docFinal && (
+                          <span className="text-[10px] text-theme-text-muted shrink-0 ml-2 font-medium">
+                            ({(docFinal.size / 1024).toFixed(1)} KB)
+                          </span>
+                        )}
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              setDocFinal(f);
+                              setGeneralError("");
+                            }
+                          }}
+                        />
+                      </label>
                       {docFinal && (
-                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2 font-medium">
-                          ({(docFinal.size / 1024).toFixed(1)} KB)
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setDocFinal(null)}
+                          className="px-2.5 py-2 text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors"
+                          title="Quitar archivo"
+                        >
+                          ✕ Quitar
+                        </button>
                       )}
-                      <input
-                        type="file"
-                        accept=".pdf,application/pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) {
-                            setDocFinal(f);
-                            setGeneralError("");
-                          }
-                        }}
-                      />
-                    </label>
-                    {docFinal && (
-                      <button
-                        type="button"
-                        onClick={() => setDocFinal(null)}
-                        className="px-2.5 py-2 text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors"
-                        title="Quitar archivo"
-                      >
-                        ✕ Quitar
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Alerta si hay menores sin formato de asentimiento */}
@@ -4392,19 +4644,19 @@ function SemilleroExternoModal({
 
               <div className="p-3 rounded-xl bg-theme-primary/10 border border-[#C8E6D2]">
                 <p className="text-xs text-theme-primary font-medium">
-                  Al presionar "Guardar y Enviar inscripción" se registrará formalmente toda la información ingresada.
+                  Al presionar {inscripcion || pasoInicial === 5 ? '"Guardar cambios de inscripción"' : '"Guardar y Enviar inscripción"'} se actualizará formalmente toda la información ingresada.
                 </p>
               </div>
 
               <NavButtons
                 onBack={() => setPaso(4)}
                 onNext={enviarFinal}
-                nextLabel="🚀 Guardar y Enviar inscripción"
+                nextLabel={inscripcion || pasoInicial === 5 ? "💾 Guardar cambios de inscripción" : "🚀 Guardar y Enviar inscripción"}
                 nextDisabled={
                   saving ||
                   !autorizaDatos ||
-                  !comprobantePago ||
-                  !docFinal ||
+                  (!comprobantePago && !comprobantePagoExistente) ||
+                  (!docFinal && !docFinalExistente) ||
                   integrantes.some((it) => it.es_mayor_edad === false && !it.asentimiento_ruta && !it.asentimiento_nombre)
                 }
               />
@@ -4596,6 +4848,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
   const [inscribiendoConv, setInscribiendoConv] = useState<Convocatoria | null>(null);
   // Estado para flujo de inscripción en convocatorias externas (Paso 1: Semillero)
   const [semilleroExternoConv, setSemilleroExternoConv] = useState<Convocatoria | null>(null);
+  const [semilleroPasoInicial, setSemilleroPasoInicial] = useState<number>(1);
+  const [inscripcionAEditar, setInscripcionAEditar] = useState<Inscripcion | null>(null);
   const [misBorradores, setMisBorradores] = useState<any[]>([]);
   const [showPlantillaModal, setShowPlantillaModal] = useState(false);
   const [plantillaConvTarget, setPlantillaConvTarget] = useState<Convocatoria | null>(null);
@@ -4851,6 +5105,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                             size="sm"
                             className={borrador ? "border-purple-300 bg-purple-50 text-purple-800 font-semibold hover:bg-purple-100" : ""}
                             onClick={() => {
+                              setInscripcionAEditar(null);
+                              setSemilleroPasoInicial(1);
                               if (c.tipo === "Externa") {
                                 setSemilleroExternoConv(c);
                               } else {
@@ -4884,9 +5140,11 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
         user={user}
         onClose={() => setSelected(null)}
         onEliminar={(c) => setDeletingConv(c)}
-        onInscribirse={(c) => {
+        onInscribirse={(c, ins, pasoInicial) => {
           setSelected(null);
+          setInscripcionAEditar(ins || null);
           if (c.tipo === "Externa") {
+            setSemilleroPasoInicial(pasoInicial || (ins ? 5 : 1));
             setSemilleroExternoConv(c);
           } else {
             setInscribiendoConv(c);
@@ -4895,7 +5153,11 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
       />
       <InscripcionModal
         conv={inscribiendoConv}
-        onClose={() => setInscribiendoConv(null)}
+        inscripcion={inscripcionAEditar}
+        onClose={() => {
+          setInscribiendoConv(null);
+          setInscripcionAEditar(null);
+        }}
         onInscrito={cargar}
       />
       <EditModal
@@ -4911,7 +5173,13 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
       <SemilleroExternoModal
         conv={semilleroExternoConv}
         user={user}
-        onClose={() => setSemilleroExternoConv(null)}
+        pasoInicial={semilleroPasoInicial}
+        inscripcion={inscripcionAEditar}
+        onClose={() => {
+          setSemilleroExternoConv(null);
+          setInscripcionAEditar(null);
+          setSemilleroPasoInicial(1);
+        }}
         onGuardado={cargar}
       />
       <GestionarPlantillaModal

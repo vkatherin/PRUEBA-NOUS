@@ -540,6 +540,7 @@ export interface Inscripcion {
   usuario_cedula?: string;
   convocatoria_titulo?: string;
   documentos_adjuntos?: InscripcionDocumento[];
+  documentos?: any[];
   semillero?: SemilleroExterno | null;
   integrantes?: IntegranteSemillero[];
   info_general?: InfoGeneralSemillero | null;

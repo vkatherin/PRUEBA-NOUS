@@ -568,6 +568,87 @@ const convocatoriasService = {
   },
 
   /**
+   * Actualizar una inscripción existente y sus documentos adjuntos
+   */
+  async actualizarInscripcion({
+    inscripcion_id,
+    convocatoria_id,
+    usuario_id,
+    tipo_investigacion,
+    resumen_proyecto,
+    justificacion,
+    documento_nombre_original,
+    documento_ruta,
+    documento_mime,
+    documento_peso_bytes,
+    documentos_adjuntos = [],
+  }) {
+    let sqlUpdate = `
+      UPDATE convocatoria_inscripciones 
+      SET tipo_investigacion = ?, resumen_proyecto = ?, justificacion = ?
+    `;
+    const params = [tipo_investigacion || null, resumen_proyecto, justificacion];
+
+    if (documento_ruta && documento_nombre_original) {
+      sqlUpdate += `, documento_nombre_original = ?, documento_ruta = ?, documento_mime = ?, documento_peso_bytes = ? `;
+      params.push(documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes);
+    }
+
+    sqlUpdate += ` WHERE id = ?`;
+    params.push(inscripcion_id);
+
+    await pool.query(sqlUpdate, params);
+
+    for (const doc of documentos_adjuntos) {
+      try {
+        const [existeDoc] = await pool.query(
+          `SELECT id FROM convocatoria_inscripcion_documentos WHERE inscripcion_id = ? AND requisito_nombre = ?`,
+          [inscripcion_id, doc.requisito_nombre]
+        );
+        if (existeDoc.length > 0) {
+          await pool.query(
+            `UPDATE convocatoria_inscripcion_documentos 
+             SET documento_nombre_original = ?, documento_ruta = ?, documento_mime = ?, documento_peso_bytes = ?
+             WHERE id = ?`,
+            [doc.documento_nombre_original, doc.documento_ruta, doc.documento_mime, doc.documento_peso_bytes, existeDoc[0].id]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO convocatoria_inscripcion_documentos
+              (inscripcion_id, requisito_nombre, documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [inscripcion_id, doc.requisito_nombre, doc.documento_nombre_original, doc.documento_ruta, doc.documento_mime, doc.documento_peso_bytes]
+          );
+        }
+      } catch (err) {
+        console.warn("Aviso al actualizar documento de inscripción:", err.message);
+      }
+    }
+
+    const [rows] = await pool.query(
+      `SELECT ci.*, u.nombre_completo as usuario_nombre, u.correo_institucional as usuario_correo,
+              c.titulo as convocatoria_titulo
+       FROM convocatoria_inscripciones ci
+       JOIN usuarios u ON u.id = ci.usuario_id
+       JOIN convocatorias c ON c.id = ci.convocatoria_id
+       WHERE ci.id = ?`,
+      [inscripcion_id]
+    );
+
+    try {
+      const [docsGuardados] = await pool.query(
+        `SELECT * FROM convocatoria_inscripcion_documentos WHERE inscripcion_id = ? ORDER BY id ASC`,
+        [inscripcion_id]
+      );
+      rows[0].documentos_adjuntos = docsGuardados;
+    } catch (e) {
+      rows[0].documentos_adjuntos = [];
+    }
+
+    return rows[0];
+  },
+
+  /**
    * Listar todas las inscripciones registradas para una convocatoria con sus documentos
    */
   async listarInscripciones(convocatoria_id) {
