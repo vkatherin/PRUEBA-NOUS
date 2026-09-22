@@ -233,7 +233,7 @@ exports.getMe = async (req, res) => {
     );
     let permisos = permisosRows.map(p => p.nombre);
     if (permisos.length === 0 && roles.includes('externo')) {
-      permisos = ['convocatorias.leer', 'convocatorias.crear', 'documentos.leer'];
+      permisos = ['convocatorias.leer', 'documentos.leer'];
     }
 
     res.json({ ...usuario, roles, permisos });
@@ -751,7 +751,7 @@ exports.registro = async (req, res) => {
         nombre: nombre_completo.trim(),
         correo: correo.trim().toLowerCase(),
         roles: ['externo'],
-        permisos: ['convocatorias.leer', 'convocatorias.crear', 'documentos.leer'],
+        permisos: ['convocatorias.leer', 'documentos.leer'],
       },
       mensaje: 'Cuenta creada exitosamente'
     });

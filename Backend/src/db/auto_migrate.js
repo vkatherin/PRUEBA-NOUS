@@ -235,7 +235,7 @@ async function autoMigrate() {
     const [[rolExternoRow]] = await pool.query("SELECT id FROM roles WHERE nombre = 'externo' LIMIT 1");
 
     if (rolExternoRow) {
-      const permisosExterno = ['convocatorias.leer', 'convocatorias.crear', 'documentos.leer'];
+      const permisosExterno = ['convocatorias.leer', 'documentos.leer'];
       for (const p of permisosExterno) {
         await pool.query("INSERT IGNORE INTO permisos (nombre) VALUES (?)", [p]);
         const [[pRow]] = await pool.query("SELECT id FROM permisos WHERE nombre = ? LIMIT 1", [p]);
@@ -243,6 +243,14 @@ async function autoMigrate() {
           await pool.query("INSERT IGNORE INTO rol_permiso (rol_id, permiso_id) VALUES (?, ?)", [rolExternoRow.id, pRow.id]);
         }
       }
+
+      // Eliminar convocatorias.crear y permisos administrativos del rol externo si existieran
+      await pool.query(`
+        DELETE rp FROM rol_permiso rp
+        JOIN roles r ON r.id = rp.rol_id
+        JOIN permisos p ON p.id = rp.permiso_id
+        WHERE r.nombre = 'externo' AND p.nombre IN ('convocatorias.crear', 'convocatorias.editar', 'convocatorias.eliminar', 'convocatorias.publicar');
+      `);
 
       // Asignar rol 'externo' a cualquier usuario que no tenga ningún rol
       await pool.query(`

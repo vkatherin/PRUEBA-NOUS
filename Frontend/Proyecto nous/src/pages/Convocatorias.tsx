@@ -2479,6 +2479,10 @@ function ExternasTab({ user }: { user?: UsuarioMe | null }) {
     return <span className="text-xs font-bold text-[#D97706] bg-theme-accent/10 px-2 py-1 rounded-full">Sin fecha</span>;
   };
 
+  const isEstudiante = user?.roles?.some(r => r.toLowerCase().includes("estudiante"));
+  const isExternoRestrictivo = user?.roles?.some(r => r.toLowerCase().includes("externo")) && !user?.roles?.some(r => ["administrador", "admin", "directivos", "director_investigacion", "coordinador_investigacion", "docente"].includes(r.toLowerCase()));
+  const puedeCrearExterna = !isExternoRestrictivo && !isEstudiante && (user?.permisos?.includes('convocatorias.crear') || user?.roles?.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('director') || r.toLowerCase().includes('coordinador')));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -2492,7 +2496,7 @@ function ExternasTab({ user }: { user?: UsuarioMe | null }) {
             className="w-full pl-8 pr-3 py-2 text-sm border border-theme-border rounded-xl bg-theme-bg-main focus:outline-none focus:border-theme-primary transition-colors"
           />
         </div>
-        {(user?.permisos?.includes('convocatorias.crear') || user?.roles?.includes('administrador')) && (
+        {puedeCrearExterna && (
           <Button variant="primary" onClick={() => setShowModal(true)}>+ Agregar Externa</Button>
         )}
       </div>
@@ -4503,7 +4507,8 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
   useEffect(() => { cargar(); }, [cargar]);
 
   const isEstudiante = user?.roles?.some(r => r.toLowerCase().includes("estudiante"));
-  const isExternoRestrictivo = user?.roles?.includes("externo") && !user?.roles?.some(r => ["administrador", "directivos", "director_investigacion", "coordinador_investigacion", "docente"].includes(r));
+  const isExternoRestrictivo = user?.roles?.some(r => r.toLowerCase().includes("externo")) && !user?.roles?.some(r => ["administrador", "admin", "directivos", "director_investigacion", "coordinador_investigacion", "docente"].includes(r.toLowerCase()));
+  const puedeCrearConvocatoria = !isExternoRestrictivo && !isEstudiante && (user?.permisos?.includes('convocatorias.crear') || user?.roles?.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('director') || r.toLowerCase().includes('coordinador')));
 
   const convocatoriasPermitidas = convocatorias.filter(c => {
     const isConvExterna = (c.tipo ?? "").toLowerCase() === "externa" || (c.tipo ?? "").toLowerCase() === "externas";
@@ -4559,7 +4564,7 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
         subtitle="Gestión de convocatorias internas y externas de investigación"
         breadcrumb={["NOUS", "Convocatorias"]}
         actions={
-          (user?.permisos?.includes('convocatorias.crear') || user?.roles?.some(r => r.toLowerCase().includes('admin'))) && (
+          (puedeCrearConvocatoria || user?.roles?.some(r => r.toLowerCase().includes('admin'))) && (
             <div className="flex items-center gap-2">
               {user?.roles?.some(r => r.toLowerCase().includes('admin')) && (
                 <Button
@@ -4572,9 +4577,11 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                   📄 Plantilla Asentimiento
                 </Button>
               )}
-              <Button variant="primary" onClick={() => setShowWizard(true)}>
-                + Nueva Convocatoria
-              </Button>
+              {puedeCrearConvocatoria && (
+                <Button variant="primary" onClick={() => setShowWizard(true)}>
+                  + Nueva Convocatoria
+                </Button>
+              )}
             </div>
           )
         }
