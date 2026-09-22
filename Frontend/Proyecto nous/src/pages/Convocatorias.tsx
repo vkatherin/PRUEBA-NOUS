@@ -843,6 +843,355 @@ function EditModal({
   );
 }
 
+// ─── Modal Detalle Completo de Inscripción ─────────────────────────────────────
+function DetalleInscripcionModal({
+  inscripcion,
+  convocatoria,
+  onClose,
+}: {
+  inscripcion: Inscripcion | null;
+  convocatoria?: Convocatoria | null;
+  onClose: () => void;
+}) {
+  if (!inscripcion) return null;
+
+  const formatDate = (d: string | null | undefined) =>
+    d
+      ? new Date(d).toLocaleDateString("es-CO", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "—";
+
+  const sem = inscripcion.semillero;
+  const integrantes = inscripcion.integrantes || [];
+  const info = inscripcion.info_general;
+  const cont = inscripcion.contenido;
+  const docs = inscripcion.documentos_adjuntos || [];
+
+  return (
+    <Modal
+      open={!!inscripcion}
+      onClose={onClose}
+      title={`📋 Detalle de Postulación — ${inscripcion.usuario_nombre || `Usuario #${inscripcion.usuario_id}`}`}
+      size="xl"
+    >
+      <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
+        {/* Cabecera del postulante */}
+        <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-emerald-50/20 border border-[#C8E6D2] flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center text-2xl font-bold border border-[#A7D7B5]">
+              👤
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-theme-text-main">
+                  {inscripcion.usuario_nombre || `Usuario #${inscripcion.usuario_id}`}
+                </h3>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold border border-emerald-300">
+                  ✓ {inscripcion.estado || "Registrada"}
+                </span>
+              </div>
+              <p className="text-xs text-theme-text-muted mt-0.5">
+                📧 {inscripcion.usuario_correo || "Sin correo"} {inscripcion.usuario_cedula ? `· CC: ${inscripcion.usuario_cedula}` : ""}
+              </p>
+              <p className="text-[11px] text-theme-text-muted">
+                📅 Fecha de inscripción: <strong>{formatDate(inscripcion.fecha_inscripcion)}</strong>
+              </p>
+            </div>
+          </div>
+          {convocatoria && (
+            <div className="text-right text-xs bg-white/80 p-2.5 rounded-lg border border-[#D5E8DC] shrink-0">
+              <span className="text-theme-text-muted block text-[10px] uppercase font-bold tracking-wider">
+                Convocatoria
+              </span>
+              <strong className="text-theme-primary font-bold">{convocatoria.codigo_con || convocatoria.codigo || `CON${convocatoria.id}`}</strong>
+              <p className="text-[11px] text-theme-text-main truncate max-w-[200px]">{convocatoria.titulo}</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── PASO 1: INFORMACIÓN DEL SEMILLERO E INSTITUCIÓN ── */}
+        <div className="p-4 rounded-xl border border-theme-border bg-theme-bg-card space-y-3">
+          <div className="flex items-center justify-between border-b border-theme-border pb-2">
+            <h4 className="text-xs font-bold text-theme-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span>🏛️</span> Paso 1 — Datos de la Institución y Semillero
+            </h4>
+            <span className="text-[11px] px-2 py-0.5 rounded bg-theme-bg-main border border-theme-border text-theme-text-muted">
+              {sem?.procedencia || "Semillero externo"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-2.5 rounded-lg bg-theme-bg-main border border-theme-border">
+              <span className="text-theme-text-muted block text-[11px]">Nombre del Semillero:</span>
+              <strong className="text-theme-text-main text-sm">{sem?.semillero_nombre || "—"}</strong>
+            </div>
+            <div className="p-2.5 rounded-lg bg-theme-bg-main border border-theme-border">
+              <span className="text-theme-text-muted block text-[11px]">Institución de Procedencia:</span>
+              <strong className="text-theme-text-main text-sm">{sem?.institucion_procedencia || "—"}</strong>
+            </div>
+            <div className="p-2.5 rounded-lg bg-theme-bg-main border border-theme-border">
+              <span className="text-theme-text-muted block text-[11px]">Tipo de Institución:</span>
+              <span className="text-theme-text-main font-semibold">{sem?.tipo_institucion || "—"}</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-theme-bg-main border border-theme-border">
+              <span className="text-theme-text-muted block text-[11px]">Tipo de Investigación:</span>
+              <span className="text-theme-primary font-semibold">🔬 {inscripcion.tipo_investigacion || "Investigación formativa"}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── PASO 2: INTEGRANTES DEL SEMILLERO ── */}
+        <div className="p-4 rounded-xl border border-theme-border bg-theme-bg-card space-y-3">
+          <div className="flex items-center justify-between border-b border-theme-border pb-2">
+            <h4 className="text-xs font-bold text-theme-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span>👥</span> Paso 2 — Integrantes del Semillero ({integrantes.length})
+            </h4>
+          </div>
+
+          {integrantes.length === 0 ? (
+            <div className="p-3 text-center text-xs text-theme-text-muted bg-theme-bg-main rounded-lg border border-theme-border">
+              Postulante individual: <strong>{inscripcion.usuario_nombre}</strong> ({inscripcion.usuario_correo})
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {integrantes.map((intg, idx) => (
+                <div
+                  key={intg.id || idx}
+                  className="p-3 rounded-lg bg-theme-bg-main border border-theme-border space-y-1.5 text-xs hover:border-[#A7D7B5] transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <strong className="text-theme-text-main text-xs">{intg.nombre_completo}</strong>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20 shrink-0">
+                      {intg.rol}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-theme-text-muted space-y-0.5">
+                    <div>
+                      <span>📄 Documento: </span>
+                      <strong className="text-theme-text-main">{intg.tipo_documento} {intg.numero_documento}</strong>
+                    </div>
+                    <div>
+                      <span>✉️ Email: </span>
+                      <a href={`mailto:${intg.email}`} className="text-theme-primary hover:underline">{intg.email}</a>
+                    </div>
+                    {intg.telefono && (
+                      <div>
+                        <span>📞 Teléfono: </span>
+                        <span className="text-theme-text-main">{intg.telefono}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── PASO 3: INFORMACIÓN GENERAL DEL TRABAJO ── */}
+        <div className="p-4 rounded-xl border border-theme-border bg-theme-bg-card space-y-3">
+          <div className="border-b border-theme-border pb-2">
+            <h4 className="text-xs font-bold text-theme-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span>📋</span> Paso 3 — Información General de la Propuesta
+            </h4>
+          </div>
+
+          <div className="space-y-2.5 text-xs">
+            <div>
+              <span className="text-theme-text-muted block text-[11px] mb-0.5 font-semibold">Título del Trabajo:</span>
+              <div className="p-3 rounded-lg bg-theme-bg-main border border-theme-border text-sm font-bold text-theme-text-main leading-snug">
+                {info?.titulo_trabajo || inscripcion.resumen_proyecto || "—"}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="p-2.5 rounded-lg bg-theme-bg-main border border-theme-border">
+                <span className="text-theme-text-muted block text-[11px] font-semibold">Línea de Investigación:</span>
+                <span className="text-theme-primary font-semibold">{info?.linea_investigacion || "—"}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-theme-bg-main border border-theme-border">
+                <span className="text-theme-text-muted block text-[11px] font-semibold">Palabras Clave:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {(info?.palabras_clave || "—").split(/[,;]+/).map((tag, tIdx) => (
+                    <span key={tIdx} className="px-2 py-0.5 rounded bg-theme-bg-card border border-theme-border text-[11px] text-theme-text-main">
+                      #{tag.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-theme-text-muted block text-[11px] mb-0.5 font-semibold">Resumen de la Propuesta:</span>
+              <div className="p-3 rounded-lg bg-theme-bg-main border border-theme-border text-xs text-[#374151] leading-relaxed whitespace-pre-wrap">
+                {info?.resumen || inscripcion.resumen_proyecto || "—"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── PASO 4: CONTENIDO DEL TRABAJO ── */}
+        <div className="p-4 rounded-xl border border-theme-border bg-theme-bg-card space-y-3">
+          <div className="border-b border-theme-border pb-2">
+            <h4 className="text-xs font-bold text-theme-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span>🔬</span> Paso 4 — Contenido Detallado del Trabajo
+            </h4>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <span className="text-theme-text-muted block text-[11px] mb-0.5 font-semibold">1. Planteamiento del Problema:</span>
+              <div className="p-3 rounded-lg bg-theme-bg-main border border-theme-border text-xs text-[#374151] leading-relaxed whitespace-pre-wrap">
+                {cont?.planteamiento_problema || inscripcion.justificacion || "—"}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div>
+                <span className="text-theme-text-muted block text-[11px] mb-0.5 font-semibold">2. Objetivo General:</span>
+                <div className="p-3 rounded-lg bg-theme-bg-main border border-theme-border text-xs text-[#374151] leading-relaxed whitespace-pre-wrap">
+                  {cont?.objetivo_general || "—"}
+                </div>
+              </div>
+              <div>
+                <span className="text-theme-text-muted block text-[11px] mb-0.5 font-semibold">3. Objetivos Específicos:</span>
+                <div className="p-3 rounded-lg bg-theme-bg-main border border-theme-border text-xs text-[#374151] leading-relaxed whitespace-pre-wrap">
+                  {cont?.objetivos_especificos || "—"}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div>
+                <span className="text-theme-text-muted block text-[11px] mb-0.5 font-semibold">4. Metodología:</span>
+                <div className="p-3 rounded-lg bg-theme-bg-main border border-theme-border text-xs text-[#374151] leading-relaxed whitespace-pre-wrap">
+                  {cont?.metodologia || "—"}
+                </div>
+              </div>
+              <div>
+                <span className="text-theme-text-muted block text-[11px] mb-0.5 font-semibold">5. Resultados Esperados:</span>
+                <div className="p-3 rounded-lg bg-theme-bg-main border border-theme-border text-xs text-[#374151] leading-relaxed whitespace-pre-wrap">
+                  {cont?.resultados_esperados || "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── PASO 5: DOCUMENTOS ADJUNTOS Y COMPROBANTES ── */}
+        <div className="p-4 rounded-xl border border-theme-border bg-theme-bg-card space-y-3">
+          <div className="flex items-center justify-between border-b border-theme-border pb-2">
+            <h4 className="text-xs font-bold text-theme-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span>📁</span> Paso 5 — Documentación y Comprobantes Adjuntos
+            </h4>
+            <span className="text-[11px] font-semibold text-theme-text-muted">
+              {docs.length > 0 ? `${docs.length} archivo(s)` : inscripcion.documento_nombre_original ? "1 archivo" : "Sin archivos"}
+            </span>
+          </div>
+
+          {docs.length > 0 ? (
+            <div className="space-y-2">
+              {docs.map((doc, dIdx) => {
+                const isComprobante = doc.requisito_nombre.toLowerCase().includes("comprobante");
+                return (
+                  <div
+                    key={doc.id || dIdx}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                      isComprobante
+                        ? "bg-[#F4F9F6] border-[#BBDDC7]"
+                        : "bg-theme-bg-main border-theme-border"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate max-w-[340px] sm:max-w-md">
+                      <span className="text-xl shrink-0">{isComprobante ? "💳" : "📄"}</span>
+                      <div className="truncate text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <strong className="text-theme-text-main font-bold truncate">
+                            {doc.requisito_nombre}
+                          </strong>
+                          {isComprobante && (
+                            <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                              Pago Verificado
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-theme-text-muted text-[11px] truncate">
+                          {doc.documento_nombre_original} · {(doc.documento_peso_bytes / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href={doc.documento_ruta}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-colors"
+                        title="Ver documento en nueva pestaña"
+                      >
+                        <span>👁️</span> Ver
+                      </a>
+                      <a
+                        href={doc.documento_ruta}
+                        download={doc.documento_nombre_original}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-lg transition-colors"
+                        title="Descargar documento"
+                      >
+                        <span>⬇️</span> Descargar
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : inscripcion.documento_ruta ? (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-theme-bg-main border border-theme-border text-xs">
+              <div className="flex items-center gap-2.5 truncate max-w-md">
+                <span className="text-xl">📄</span>
+                <div className="truncate">
+                  <strong className="text-theme-text-main block truncate">Documento Principal / Anteproyecto</strong>
+                  <span className="text-[11px] text-theme-text-muted">
+                    {inscripcion.documento_nombre_original} ({(inscripcion.documento_peso_bytes / 1024).toFixed(1)} KB)
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={inscripcion.documento_ruta}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-colors"
+                >
+                  <span>👁️</span> Ver
+                </a>
+                <a
+                  href={inscripcion.documento_ruta}
+                  download={inscripcion.documento_nombre_original || "anteproyecto.pdf"}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-theme-primary hover:bg-[#17563A] border border-theme-primary rounded-lg transition-colors"
+                >
+                  <span>⬇️</span> Descargar
+                </a>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-theme-text-muted italic">No se adjuntaron documentos en esta postulación.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end items-center mt-5 pt-3 border-t border-theme-border">
+        <Button variant="primary" onClick={onClose}>
+          Cerrar Detalle
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 function DetailModal({
   conv,
@@ -859,6 +1208,7 @@ function DetailModal({
 }) {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
   const [loadingInscripciones, setLoadingInscripciones] = useState(false);
+  const [selectedInscripcionDetalle, setSelectedInscripcionDetalle] = useState<Inscripcion | null>(null);
 
   useEffect(() => {
     if (conv?.id) {
@@ -983,9 +1333,19 @@ function DetailModal({
                         })}
                       </p>
                     </div>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
-                      ✓ {ins.estado || "Registrada"}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedInscripcionDetalle(ins)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-theme-primary bg-theme-primary/10 hover:bg-[#D9EFE1] border border-[#A7D7B5] rounded-lg transition-all shadow-sm active:scale-95"
+                        title="Ver información completa de la postulación"
+                      >
+                        <span>👁️</span> Ver detalle
+                      </button>
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                        ✓ {ins.estado || "Registrada"}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="text-xs space-y-1 bg-theme-bg-main p-2.5 rounded-lg border border-[#E8EEEA]">
@@ -1114,6 +1474,13 @@ function DetailModal({
           {inscripciones.length >= 50 ? "Cupo lleno (50/50)" : "📝 Inscribirse"}
         </Button>
       </div>
+
+      {/* Modal de Detalle Completo de Inscripción */}
+      <DetalleInscripcionModal
+        inscripcion={selectedInscripcionDetalle}
+        convocatoria={conv}
+        onClose={() => setSelectedInscripcionDetalle(null)}
+      />
     </Modal>
   );
 }

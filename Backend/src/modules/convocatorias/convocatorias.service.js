@@ -569,7 +569,7 @@ const convocatoriasService = {
    */
   async listarInscripciones(convocatoria_id) {
     const [rows] = await pool.query(
-      `SELECT ci.*, u.nombre_completo as usuario_nombre, u.correo_institucional as usuario_correo
+      `SELECT ci.*, u.nombre_completo as usuario_nombre, u.correo_institucional as usuario_correo, u.cedula as usuario_cedula
        FROM convocatoria_inscripciones ci
        JOIN usuarios u ON u.id = ci.usuario_id
        WHERE ci.convocatoria_id = ?
@@ -584,18 +584,59 @@ const convocatoriasService = {
           `SELECT * FROM convocatoria_inscripcion_documentos WHERE inscripcion_id IN (?) ORDER BY id ASC`,
           [ids]
         );
+        const [semilleros] = await pool.query(
+          `SELECT * FROM inscripcion_semillero_externo WHERE inscripcion_id IN (?)`,
+          [ids]
+        );
+        const [integrantes] = await pool.query(
+          `SELECT * FROM inscripcion_semillero_integrantes WHERE inscripcion_id IN (?) ORDER BY id ASC`,
+          [ids]
+        );
+        const [infoGenerales] = await pool.query(
+          `SELECT * FROM inscripcion_semillero_info_general WHERE inscripcion_id IN (?)`,
+          [ids]
+        );
+        const [contenidos] = await pool.query(
+          `SELECT * FROM inscripcion_semillero_contenido WHERE inscripcion_id IN (?)`,
+          [ids]
+        );
+
         const docsMap = {};
         for (const doc of docs) {
           if (!docsMap[doc.inscripcion_id]) docsMap[doc.inscripcion_id] = [];
           docsMap[doc.inscripcion_id].push(doc);
         }
+
+        const semMap = {};
+        for (const s of semilleros) semMap[s.inscripcion_id] = s;
+
+        const intMap = {};
+        for (const it of integrantes) {
+          if (!intMap[it.inscripcion_id]) intMap[it.inscripcion_id] = [];
+          intMap[it.inscripcion_id].push(it);
+        }
+
+        const infoMap = {};
+        for (const inf of infoGenerales) infoMap[inf.inscripcion_id] = inf;
+
+        const contMap = {};
+        for (const ct of contenidos) contMap[ct.inscripcion_id] = ct;
+
         for (const row of rows) {
           row.documentos_adjuntos = docsMap[row.id] || [];
+          row.semillero = semMap[row.id] || null;
+          row.integrantes = intMap[row.id] || [];
+          row.info_general = infoMap[row.id] || null;
+          row.contenido = contMap[row.id] || null;
         }
       } catch (e) {
-        console.warn("Aviso al cargar documentos de inscripciones:", e.message);
+        console.warn("Aviso al cargar detalles de inscripciones:", e.message);
         for (const row of rows) {
-          row.documentos_adjuntos = [];
+          row.documentos_adjuntos = row.documentos_adjuntos || [];
+          row.semillero = null;
+          row.integrantes = [];
+          row.info_general = null;
+          row.contenido = null;
         }
       }
     }
