@@ -8,23 +8,23 @@ type LoginView = "login" | "registro" | "mfa" | "reset-solicitud" | "reset-ok";
 const DOMINIO = "unicatolicadelsur.edu.co";
 
 // Texto completo de la política, también usado en el modal de registro
-export const TEXTO_POLITICA_REGISTRO = `De conformidad con lo establecido en la Ley 1581 de 2012, el Decreto 1377 de 2013 y demás normas que las modifiquen o complementen, la Fundación Universitaria Católica del Sur, con domicilio en Pasto, Nariño, actuando como Responsable del Tratamiento de Datos Personales, informa lo siguiente:
+export const TEXTO_POLITICA_REGISTRO = `AUTORIZACIÓN PARA EL TRATAMIENTO DE DATOS PERSONALES
+
+De conformidad con la Política de Protección y Tratamiento de Datos Personales de la Fundación Universitaria Católica del Sur (Acuerdo No. 002 del 24 de marzo de 2021, aprobado por el Consejo Superior), y en cumplimiento de la Ley 1581 de 2012 y el Decreto 1377 de 2013, la Fundación Universitaria Católica del Sur, identificada con NIT 900.901.398-7, con domicilio en Calle 18 No. 56-02 Torobajo, San Juan de Pasto, Nariño, actuando como Responsable del Tratamiento de Datos Personales, informa lo siguiente:
 
 Sus datos personales serán recolectados, almacenados, usados y/o procesados en la plataforma NOUS con las siguientes finalidades:
 
-• Gestionar su registro, autenticación y acceso al sistema.
-• Administrar convocatorias, proyectos de investigación, semilleros y procesos de evaluación académica.
-• Generar reportes institucionales y estadísticas de gestión de investigación.
-• Contactarlo para notificaciones relacionadas con los procesos en los que participe.
-• Dar cumplimiento a las obligaciones legales, contractuales y reglamentarias de la Institución.
-
-Sus datos serán tratados de acuerdo con la Política de Tratamiento de Datos Personales de la Fundación Universitaria Católica del Sur.
+- Gestionar su registro, autenticación y acceso al sistema.
+- Administrar convocatorias, proyectos de investigación, semilleros y procesos de evaluación académica.
+- Generar reportes institucionales y estadísticas de gestión de investigación.
+- Contactarlo para notificaciones relacionadas con los procesos en los que participe.
+- Dar cumplimiento a las obligaciones legales, contractuales y reglamentarias de la Institución.
 
 Como Titular de los datos, usted tiene derecho a: conocer, actualizar y rectificar su información; solicitar prueba de la autorización otorgada; ser informado sobre el uso que se le ha dado a sus datos; presentar quejas ante la Superintendencia de Industria y Comercio; revocar la autorización y/o solicitar la supresión del dato, cuando no exista un deber legal o contractual que impida eliminarlo; y acceder de forma gratuita a sus datos personales.
 
-Para ejercer estos derechos, puede escribir a practicante.inv1@unicatolicadelsur.edu.co (Área de Investigación).
+Para ejercer estos derechos, puede escribir a datos@unicatolicadelsur.edu.co (Oficina de Gestión Documental).
 
-Al hacer clic en “Acepto”, usted declara que ha leído y comprendido esta autorización, y que otorga su consentimiento libre, previo, expreso e informado para el tratamiento de sus datos personales conforme a lo aquí descrito.`;
+Al hacer clic en "Acepto", usted declara que ha leído y comprendido esta autorización, y que otorga su consentimiento libre, previo, expreso e informado para el tratamiento de sus datos personales conforme a lo aquí descrito.`;
 
 export function Login({
   onLogin,
@@ -641,6 +641,17 @@ export function Login({
                           }}
                         >
                           {TEXTO_POLITICA_REGISTRO}
+                        </div>
+                        <div className="mt-4 text-center px-4">
+                          <a
+                            href="/uploads/legal/politica-datos-personales.pdf"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold hover:underline"
+                            style={{ color: "var(--theme-primary)" }}
+                          >
+                            📄 Leer la Política de Protección y Tratamiento de Datos Personales completa (PDF)
+                          </a>
                         </div>
                       </div>
                       <div

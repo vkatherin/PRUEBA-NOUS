@@ -156,13 +156,13 @@ export function Header({ activePage, onNavigate, onSearch, onLogout, user }: { a
               {[
                 { label: "Mi perfil", id: "perfil", icon: "👤" },
                 { label: "Preferencias", id: "preferencias", icon: "⚙️" },
-                { label: "Ayuda y soporte", id: "ayuda", icon: "❓" },
+                { label: "Ayuda y soporte", id: "ayuda-soporte", icon: "❓" },
               ].map((item) => (
                 <button
                   key={item.id}
                   onClick={() => {
                     setUserOpen(false);
-                    if (item.id !== "ayuda" && onNavigate) onNavigate(item.id);
+                    if (onNavigate) onNavigate(item.id);
                   }}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-theme-text-main hover:bg-theme-bg-main text-left"
                 >

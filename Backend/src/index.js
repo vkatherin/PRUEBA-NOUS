@@ -15,6 +15,7 @@ const evaluacionRoutes = require('./modules/evaluacion/evaluacion.routes');
 const usuariosRoutes = require('./modules/usuarios/usuarios.routes');
 const preferenciasRoutes = require('./modules/preferencias/preferencias.routes');
 const documentosRoutes = require('./modules/documentos/documentos.routes');
+const soporteRoutes = require('./modules/soporte/soporte.routes');
 
 const path = require('path');
 const app = express();
@@ -59,6 +60,7 @@ app.use('/api/evaluaciones', evaluacionRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/preferencias', preferenciasRoutes);
 app.use('/api/documentos', documentosRoutes);
+app.use('/api/soporte', soporteRoutes);
 
 // Endpoint de salud
 app.get('/api/health', async (req, res) => {

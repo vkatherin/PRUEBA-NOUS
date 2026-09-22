@@ -960,3 +960,24 @@ export const evaluacionesApi = {
   asignar: (data: { proyecto_id: number; evaluador_id: number; tipo: string; fecha_limite?: string }) =>
     apiFetch('/evaluaciones', { method: 'POST', body: JSON.stringify(data) }),
 };
+
+// ── Soporte ────────────────────────────────────────────────────────────────
+export interface ReporteSoporte {
+  id: number;
+  categoria: string;
+  asunto: string;
+  descripcion: string;
+  estado: string;
+  fecha_creacion: string;
+  usuario_nombre?: string;
+  usuario_correo?: string;
+}
+
+export const soporteApi = {
+  crear: (data: { categoria: string; asunto: string; descripcion: string }) =>
+    apiFetch<{ ok: boolean; id: number }>('/soporte', { method: 'POST', body: JSON.stringify(data) }),
+  misReportes: () => apiFetch<ReporteSoporte[]>('/soporte/mis-reportes'),
+  listarTodos: () => apiFetch<ReporteSoporte[]>('/soporte'),
+  actualizarEstado: (id: number, estado: string) =>
+    apiFetch(`/soporte/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ estado }) }),
+};

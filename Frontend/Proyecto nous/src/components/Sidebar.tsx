@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-type Page =
+export type Page =
   | "dashboard"
   | "convocatorias"
   | "evaluaciones"
@@ -16,7 +16,8 @@ type Page =
   | "integraciones"
   | "administracion"
   | "perfil"
-  | "preferencias";
+  | "preferencias"
+  | "ayuda-soporte";
 
 interface NavItem {
   id: Page;

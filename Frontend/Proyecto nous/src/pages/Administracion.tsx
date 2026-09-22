@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Badge, Button, Card, PageHeader, SearchBar, Avatar, Tabs, Modal, Field, Input, Select } from "@/components/ui";
-import { usuariosApi, type UsuarioRol, type RolDisponible } from "@/services/api";
+import { usuariosApi, soporteApi, type UsuarioRol, type RolDisponible, type ReporteSoporte } from "@/services/api";
 
 const ROLES = [
   { nombre: "Super Administrador", usuarios: 1, permisos: 45, desc: "Acceso total al sistema" },
@@ -167,17 +167,20 @@ export function Administracion() {
 
   const [usuarios, setUsuarios] = useState<UsuarioRol[]>([]);
   const [rolesDisponibles, setRolesDisponibles] = useState<RolDisponible[]>([]);
+  const [reportesSoporte, setReportesSoporte] = useState<ReporteSoporte[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [usersData, rolesData] = await Promise.all([
+        const [usersData, rolesData, reportesData] = await Promise.all([
           usuariosApi.getAll(),
-          usuariosApi.getRoles()
+          usuariosApi.getRoles(),
+          soporteApi.listarTodos().catch(() => []) // Fallback in case of error
         ]);
         setUsuarios(usersData);
         setRolesDisponibles(rolesData);
+        setReportesSoporte(reportesData);
       } catch (error) {
         console.error("Error fetching admin data:", error);
       } finally {
@@ -254,6 +257,7 @@ export function Administracion() {
           { id: "roles", label: "Roles y Permisos" },
           { id: "parametros", label: "Parámetros Institucionales" },
           { id: "facultades", label: "Facultades y Programas" },
+          { id: "soporte", label: "Soporte" },
         ]}
         active={tab}
         onChange={setTab}
@@ -446,6 +450,65 @@ export function Administracion() {
             ))}
           </div>
         </div>
+      )}
+
+      {tab === "soporte" && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-theme-text-main">Reportes de Soporte</p>
+          </div>
+          {loading ? (
+            <div className="p-8 text-center text-theme-text-muted">Cargando...</div>
+          ) : reportesSoporte.length === 0 ? (
+            <div className="p-8 text-center text-theme-text-muted">No hay reportes.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-theme-border text-xs text-theme-text-muted">
+                    <th className="pb-3 font-semibold">Usuario</th>
+                    <th className="pb-3 font-semibold">Categoría</th>
+                    <th className="pb-3 font-semibold">Asunto</th>
+                    <th className="pb-3 font-semibold">Fecha</th>
+                    <th className="pb-3 font-semibold">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-theme-border">
+                  {reportesSoporte.map(r => (
+                    <tr key={r.id} className="text-sm text-theme-text-main hover:bg-theme-bg-main">
+                      <td className="py-3 pr-4">
+                        <div className="font-semibold">{r.usuario_nombre}</div>
+                        <div className="text-xs text-theme-text-muted">{r.usuario_correo}</div>
+                      </td>
+                      <td className="py-3 pr-4 uppercase text-xs tracking-wider text-theme-text-muted">{r.categoria.replace('_', ' ')}</td>
+                      <td className="py-3 pr-4 font-medium">{r.asunto}</td>
+                      <td className="py-3 pr-4 text-xs text-theme-text-muted">{new Date(r.fecha_creacion).toLocaleDateString()}</td>
+                      <td className="py-3 pr-4">
+                        <select
+                          className="text-xs border border-theme-border rounded px-2 py-1 outline-none focus:border-theme-primary bg-theme-bg-card"
+                          value={r.estado}
+                          onChange={async (e) => {
+                            try {
+                              await soporteApi.actualizarEstado(r.id, e.target.value);
+                              const updated = await soporteApi.listarTodos();
+                              setReportesSoporte(updated);
+                            } catch(err) {
+                              alert("Error actualizando estado");
+                            }
+                          }}
+                        >
+                          <option value="pendiente">Pendiente</option>
+                          <option value="en_revision">En Revisión</option>
+                          <option value="resuelto">Resuelto</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
       )}
 
       <NuevoUsuarioModal open={showModal} onClose={() => setShowModal(false)} />
