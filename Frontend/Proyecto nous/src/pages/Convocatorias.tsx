@@ -3116,9 +3116,30 @@ function SemilleroExternoModal({
   // ── Guardar y Enviar Final (Paso 5: Guarda todo en la BD) ───────────────────
   const enviarFinal = async () => {
     if (!autorizaDatos) {
-      setGeneralError("Debes aceptar la autorización de tratamiento de datos personales para continuar.");
+      setGeneralError("Debes aceptar la autorización de tratamiento de datos personales para formalizar la inscripción.");
       return;
     }
+
+    if (!comprobantePago) {
+      setGeneralError("El comprobante de pago de inscripción es obligatorio. Por favor adjunta el recibo o comprobante (PDF, JPG, PNG o WEBP).");
+      return;
+    }
+
+    if (!docFinal) {
+      setGeneralError("Debes adjuntar el documento de la propuesta de investigación o aval en formato PDF.");
+      return;
+    }
+
+    const menorSinAsentimiento = integrantes.find(
+      (it) => it.es_mayor_edad === false && !it.asentimiento_ruta && !it.asentimiento_nombre
+    );
+    if (menorSinAsentimiento) {
+      setGeneralError(
+        `El integrante menor de edad "${menorSinAsentimiento.nombre_completo || "sin nombre"}" debe tener cargado su formato de asentimiento informado. Por favor regresa al Paso 2 para adjuntarlo.`
+      );
+      return;
+    }
+
     setSaving(true);
     setGeneralError("");
     try {
@@ -4062,29 +4083,39 @@ function SemilleroExternoModal({
                 <SectionTitle>Documentación y Comprobantes</SectionTitle>
 
                 {/* Comprobante de Pago */}
-                <div className="p-3.5 rounded-xl border border-[#C8E6D2] bg-[#F7FAF8] space-y-2.5">
+                <div className={`p-3.5 rounded-xl border transition-colors space-y-2.5 ${
+                  !comprobantePago ? "border-amber-300 bg-amber-50/40" : "border-[#C8E6D2] bg-[#F7FAF8]"
+                }`}>
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-theme-text-main flex items-center gap-1.5">
-                      <span>💳</span> Comprobante de Pago de Inscripción
+                      <span>💳</span> Comprobante de Pago de Inscripción <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      Recomendado / Requerido
-                    </span>
+                    {comprobantePago ? (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                        <span>✓</span> Adjuntado
+                      </span>
+                    ) : (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                        Obligatorio *
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-theme-text-muted">
                     Adjunta el recibo o comprobante de pago emitido por la plataforma institucional (PDF, JPG, PNG o WEBP, máx. 15MB).
                   </p>
 
                   <div className="flex items-center gap-2.5">
-                    <label className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl border border-[#BBDDC7] bg-white cursor-pointer hover:bg-emerald-50/50 transition-colors">
+                    <label className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-colors ${
+                      comprobantePago ? "border-emerald-300 bg-white hover:bg-emerald-50/50" : "border-amber-300 bg-white hover:bg-amber-50/50"
+                    }`}>
                       <div className="flex items-center gap-2 truncate">
                         <span className="text-sm">📎</span>
-                        <span className="text-xs font-medium text-theme-text-main truncate">
+                        <span className={`text-xs font-medium truncate ${comprobantePago ? "text-emerald-900 font-semibold" : "text-theme-text-muted"}`}>
                           {comprobantePago ? comprobantePago.name : "Seleccionar archivo de comprobante..."}
                         </span>
                       </div>
                       {comprobantePago && (
-                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2">
+                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2 font-medium">
                           ({(comprobantePago.size / 1024).toFixed(1)} KB)
                         </span>
                       )}
@@ -4094,7 +4125,10 @@ function SemilleroExternoModal({
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) setComprobantePago(f);
+                          if (f) {
+                            setComprobantePago(f);
+                            setGeneralError("");
+                          }
                         }}
                       />
                     </label>
@@ -4123,18 +4157,40 @@ function SemilleroExternoModal({
                   </div>
                 </div>
 
-                {/* Documento adjunto opcional: Propuesta de investigación */}
-                <Field label="Propuesta de Investigación o Aval (opcional)" hint="PDF con propuesta detallada o carta de aval">
+                {/* Documento adjunto obligatorio: Propuesta de investigación */}
+                <div className={`p-3.5 rounded-xl border transition-colors space-y-2.5 ${
+                  !docFinal ? "border-amber-300 bg-amber-50/40" : "border-[#C8E6D2] bg-[#F7FAF8]"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-theme-text-main flex items-center gap-1.5">
+                      <span>📄</span> Propuesta de Investigación o Aval <span className="text-red-500">*</span>
+                    </label>
+                    {docFinal ? (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                        <span>✓</span> Adjuntado
+                      </span>
+                    ) : (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                        Obligatorio *
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-theme-text-muted">
+                    Adjunta el documento en formato PDF con la propuesta de investigación detallada o carta de aval (máx. 25MB).
+                  </p>
+
                   <div className="flex items-center gap-2.5">
-                    <label className="flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl border border-theme-border bg-theme-bg-main cursor-pointer hover:bg-theme-primary/10 transition-colors">
+                    <label className={`flex-1 flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-colors ${
+                      docFinal ? "border-emerald-300 bg-white hover:bg-emerald-50/50" : "border-amber-300 bg-white hover:bg-amber-50/50"
+                    }`}>
                       <div className="flex items-center gap-2 truncate">
                         <span className="text-sm">📄</span>
-                        <span className="text-xs text-theme-text-muted truncate">
+                        <span className={`text-xs font-medium truncate ${docFinal ? "text-emerald-900 font-semibold" : "text-theme-text-muted"}`}>
                           {docFinal ? docFinal.name : "Seleccionar archivo PDF..."}
                         </span>
                       </div>
                       {docFinal && (
-                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2">
+                        <span className="text-[10px] text-theme-text-muted shrink-0 ml-2 font-medium">
                           ({(docFinal.size / 1024).toFixed(1)} KB)
                         </span>
                       )}
@@ -4144,7 +4200,10 @@ function SemilleroExternoModal({
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) setDocFinal(f);
+                          if (f) {
+                            setDocFinal(f);
+                            setGeneralError("");
+                          }
                         }}
                       />
                     </label>
@@ -4159,7 +4218,29 @@ function SemilleroExternoModal({
                       </button>
                     )}
                   </div>
-                </Field>
+                </div>
+
+                {/* Alerta si hay menores sin formato de asentimiento */}
+                {integrantes.some((it) => it.es_mayor_edad === false && !it.asentimiento_ruta && !it.asentimiento_nombre) && (
+                  <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex items-start justify-between gap-3 text-xs">
+                    <div className="flex items-start gap-2">
+                      <span className="text-base shrink-0">⚠️</span>
+                      <div>
+                        <p className="font-bold">Faltan formatos de asentimiento informado</p>
+                        <p className="text-[11px] text-amber-800 mt-0.5">
+                          Hay integrantes menores de edad que no tienen su formato cargado. Debes regresar al Paso 2 para adjuntarlo.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPaso(2)}
+                      className="shrink-0 px-2.5 py-1 text-xs font-semibold bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg transition-colors"
+                    >
+                      Ir al Paso 2 &rarr;
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* ── Aviso y Autorización de Tratamiento de Datos Personales (Semillero Externo) ── */}
@@ -4201,7 +4282,13 @@ function SemilleroExternoModal({
                 onBack={() => setPaso(4)}
                 onNext={enviarFinal}
                 nextLabel="🚀 Guardar y Enviar inscripción"
-                nextDisabled={saving || !autorizaDatos}
+                nextDisabled={
+                  saving ||
+                  !autorizaDatos ||
+                  !comprobantePago ||
+                  !docFinal ||
+                  integrantes.some((it) => it.es_mayor_edad === false && !it.asentimiento_ruta && !it.asentimiento_nombre)
+                }
               />
             </>
           )}

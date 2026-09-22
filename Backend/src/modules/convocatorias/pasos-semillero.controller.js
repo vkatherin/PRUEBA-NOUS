@@ -918,6 +918,18 @@ const pasosSemilleroController = {
         return res.status(400).json({ error: "Paso 2 (Integrantes): Debes agregar al menos un integrante." });
       }
 
+      // Validar que todos los menores de edad tengan asentimiento informado adjunto
+      for (const intg of integrantesData) {
+        const esMayor = intg.es_mayor_edad !== false && intg.es_mayor_edad !== "false";
+        if (!esMayor && !intg.asentimiento_ruta && !intg.asentimiento_nombre) {
+          limpiarArchivos();
+          return res.status(400).json({
+            error: `El integrante menor de edad "${intg.nombre_completo || 'sin nombre'}" debe tener adjunto su formato de asentimiento informado.`,
+            campo: "integrantes",
+          });
+        }
+      }
+
       const titTrabajo = infoGeneralData?.titulo_trabajo || "";
       const linInvest = infoGeneralData?.linea_investigacion || null;
       const palClave = infoGeneralData?.palabras_clave || "";
@@ -939,39 +951,48 @@ const pasosSemilleroController = {
         return res.status(400).json({ error: "Paso 4 (Contenido del trabajo): Todos los campos son obligatorios." });
       }
 
-      // Validar PDF de propuesta si se adjuntó
-      let docInfo = null;
-      if (archivoDoc) {
-        if (archivoDoc.mimetype !== "application/pdf") {
-          limpiarArchivos();
-          return res.status(400).json({ error: "La propuesta de investigación debe ser un archivo PDF.", campo: "documento" });
-        }
-        docInfo = {
-          nombre: archivoDoc.originalname,
-          ruta: `/uploads/inscripciones/${archivoDoc.filename}`,
-          mime: archivoDoc.mimetype,
-          peso: archivoDoc.size,
-        };
+      // Validar Comprobante de pago obligatorio
+      if (!archivoPago) {
+        limpiarArchivos();
+        return res.status(400).json({
+          error: "El comprobante de pago de inscripción es obligatorio para convocatorias externas.",
+          campo: "comprobante_pago",
+        });
       }
 
-      // Validar Comprobante de pago si se adjuntó
-      let pagoInfo = null;
-      if (archivoPago) {
-        const permitidos = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"];
-        if (!permitidos.includes(archivoPago.mimetype)) {
-          limpiarArchivos();
-          return res.status(400).json({
-            error: "El comprobante de pago debe ser PDF o una imagen (JPG, PNG, WEBP).",
-            campo: "comprobante_pago",
-          });
-        }
-        pagoInfo = {
-          nombre: archivoPago.originalname,
-          ruta: `/uploads/inscripciones/${archivoPago.filename}`,
-          mime: archivoPago.mimetype,
-          peso: archivoPago.size,
-        };
+      const permitidosPago = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"];
+      if (!permitidosPago.includes(archivoPago.mimetype)) {
+        limpiarArchivos();
+        return res.status(400).json({
+          error: "El comprobante de pago debe ser PDF o una imagen (JPG, PNG, WEBP).",
+          campo: "comprobante_pago",
+        });
       }
+      const pagoInfo = {
+        nombre: archivoPago.originalname,
+        ruta: `/uploads/inscripciones/${archivoPago.filename}`,
+        mime: archivoPago.mimetype,
+        peso: archivoPago.size,
+      };
+
+      // Validar PDF de propuesta obligatorio
+      if (!archivoDoc) {
+        limpiarArchivos();
+        return res.status(400).json({
+          error: "Debes adjuntar el documento de la propuesta de investigación o aval en formato PDF.",
+          campo: "documento",
+        });
+      }
+      if (archivoDoc.mimetype !== "application/pdf") {
+        limpiarArchivos();
+        return res.status(400).json({ error: "La propuesta de investigación debe ser un archivo PDF.", campo: "documento" });
+      }
+      const docInfo = {
+        nombre: archivoDoc.originalname,
+        ruta: `/uploads/inscripciones/${archivoDoc.filename}`,
+        mime: archivoDoc.mimetype,
+        peso: archivoDoc.size,
+      };
 
       // ── Validar límite de hasta 50 inscripciones por convocatoria
       const [conteoRows] = await pool.query(
