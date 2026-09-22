@@ -6,6 +6,11 @@ const pasosSemilleroController = require("./pasos-semillero.controller");
 
 const { verificarAutenticacion, verificarPermiso } = require('../auth/auth.middleware');
 
+// ─── Plantilla Oficial de Asentimiento (Descarga Pública y Consulta) ────────
+router.get("/plantilla-asentimiento", pasosSemilleroController.descargarPlantillaAsentimiento);
+router.get("/plantilla-asentimiento/info", pasosSemilleroController.obtenerInfoPlantilla);
+router.get("/:id/plantilla-asentimiento/info", pasosSemilleroController.obtenerInfoPlantilla);
+
 router.use(verificarAutenticacion);
 
 // ─── RF-CON-03: Alertas de Fechas (Debe ir antes de /:id) ───────────────────
@@ -43,16 +48,13 @@ router.get("/:id/semillero-catalogos", verificarPermiso('convocatorias.leer'), p
 router.get("/:id/semillero-externo", verificarPermiso('convocatorias.leer'), semilleroExternoController.obtener);
 router.post("/:id/semillero-externo", verificarPermiso('convocatorias.leer'), semilleroExternoController.guardar);
 
-// ─── Plantilla Oficial de Asentimiento (Descarga y Administración) ──────────
-router.get("/plantilla-asentimiento", pasosSemilleroController.descargarPlantillaAsentimiento);
-router.get("/plantilla-asentimiento/info", pasosSemilleroController.obtenerInfoPlantilla);
+// ─── Plantilla Oficial de Asentimiento (Carga Administrativa) ───────────────
 router.post(
   "/plantilla-asentimiento",
   verificarPermiso('convocatorias.editar'),
   pasosSemilleroController.uploadPlantillaMiddleware,
   pasosSemilleroController.subirPlantillaAsentimiento
 );
-router.get("/:id/plantilla-asentimiento/info", pasosSemilleroController.obtenerInfoPlantilla);
 router.post(
   "/:id/plantilla-asentimiento",
   verificarPermiso('convocatorias.editar'),
