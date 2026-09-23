@@ -1284,6 +1284,17 @@ function DetailModal({
             <span className="text-xs font-mono font-bold text-theme-primary bg-theme-bg-card px-2 py-0.5 rounded border border-[#C8E6D2]">
               {codigoDisplay}
             </span>
+            {conv.tipo && (
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+                (conv.tipo || "").toLowerCase().includes("intern")
+                  ? "bg-teal-50 text-teal-700 border-teal-200"
+                  : (conv.tipo || "").toLowerCase().includes("extern")
+                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                  : "bg-indigo-50 text-indigo-700 border-indigo-200"
+              }`}>
+                {conv.tipo}
+              </span>
+            )}
             {conv.tipo_investigacion && (
               <span className="text-xs bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full font-medium border border-purple-200">
                 🔬 {conv.tipo_investigacion}
@@ -2664,6 +2675,9 @@ function ExternasTab({ user }: { user?: UsuarioMe | null }) {
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="text-xs font-mono font-bold text-theme-primary bg-theme-primary/10 px-2.5 py-0.5 rounded-md border border-[#C8E6D2]">
                   {e.codigo || e.codigo_ext || `EXT${e.id}`}
+                </span>
+                <span className="text-xs bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full font-medium border border-amber-200">
+                  Externa
                 </span>
                 {e.tipo_investigacion && (
                   <span className="text-xs bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full font-medium border border-purple-200">
@@ -5052,7 +5066,13 @@ export function Convocatorias({ user }: { user?: UsuarioMe | null }) {
                             </span>
                           )}
                           {c.tipo && (
-                            <span className="text-xs bg-theme-bg-main text-theme-text-muted px-2 py-0.5 rounded font-medium">
+                            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+                              (c.tipo || "").toLowerCase().includes("intern")
+                                ? "bg-teal-50 text-teal-700 border-teal-200"
+                                : (c.tipo || "").toLowerCase().includes("extern")
+                                ? "bg-amber-50 text-amber-800 border-amber-200"
+                                : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                            }`}>
                               {c.tipo}
                             </span>
                           )}
