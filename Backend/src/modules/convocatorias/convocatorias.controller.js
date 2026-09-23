@@ -535,20 +535,29 @@ const convocatoriasController = {
         return res.status(403).json({ error: "Usuario inactivo o no autorizado." });
       }
 
-      // 3. Validar límite de hasta 50 inscripciones por convocatoria
-      const [conteoRows] = await pool.query(
-        "SELECT COUNT(*) as total FROM convocatoria_inscripciones WHERE convocatoria_id = ?",
-        [convId]
+      // 3. Verificar si ya existe inscripción previa
+      const [existentes] = await pool.query(
+        "SELECT id, documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ?",
+        [convId, usuarioId]
       );
-      if (conteoRows[0].total >= 50) {
-        limpiarArchivosSubidos();
-        return res.status(400).json({
-          error: "Esta convocatoria ya ha alcanzado el límite máximo permitido de 50 inscripciones.",
-        });
+      const inscripcionExistente = existentes.length > 0 ? existentes[0] : null;
+
+      if (!inscripcionExistente) {
+        // Validar límite de hasta 50 inscripciones por convocatoria
+        const [conteoRows] = await pool.query(
+          "SELECT COUNT(*) as total FROM convocatoria_inscripciones WHERE convocatoria_id = ?",
+          [convId]
+        );
+        if (conteoRows[0].total >= 50) {
+          limpiarArchivosSubidos();
+          return res.status(400).json({
+            error: "Esta convocatoria ya ha alcanzado el límite máximo permitido de 50 inscripciones.",
+          });
+        }
       }
 
-      // 4. Validar documento(s)
-      if (!files || files.length === 0) {
+      // 4. Validar documento(s) si es nueva inscripción o si se adjuntaron nuevos
+      if (!inscripcionExistente && (!files || files.length === 0)) {
         return res.status(400).json({
           error: "Debes adjuntar los archivos PDF requeridos.",
           campo: "documentos",
@@ -638,9 +647,31 @@ const convocatoriasController = {
       });
 
       const archivoPrincipal = files.find((f) => f.fieldname === "documento") || files[0];
-      const rutaRelativaPrincipal = `/uploads/inscripciones/${archivoPrincipal.filename}`;
+      const rutaRelativaPrincipal = archivoPrincipal ? `/uploads/inscripciones/${archivoPrincipal.filename}` : undefined;
 
-      // 8. Registrar inscripción
+      // 8. Actualizar o Registrar inscripción
+      if (inscripcionExistente) {
+        const inscripcionActualizada = await convocatoriasService.actualizarInscripcion({
+          inscripcion_id: inscripcionExistente.id,
+          convocatoria_id: convId,
+          usuario_id: usuarioId,
+          tipo_investigacion: tipoInvestigacion,
+          resumen_proyecto: resumen,
+          justificacion: justificacion,
+          documento_nombre_original: archivoPrincipal?.originalname,
+          documento_ruta: rutaRelativaPrincipal,
+          documento_mime: archivoPrincipal?.mimetype,
+          documento_peso_bytes: archivoPrincipal?.size,
+          documentos_adjuntos: documentosProcesados,
+        });
+
+        return res.status(200).json({
+          ok: true,
+          mensaje: "Inscripción actualizada correctamente.",
+          inscripcion: inscripcionActualizada,
+        });
+      }
+
       const nuevaInscripcion = await convocatoriasService.registrarInscripcion({
         convocatoria_id: convId,
         usuario_id: usuarioId,

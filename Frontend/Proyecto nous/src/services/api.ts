@@ -540,6 +540,7 @@ export interface Inscripcion {
   usuario_cedula?: string;
   convocatoria_titulo?: string;
   documentos_adjuntos?: InscripcionDocumento[];
+  documentos?: any[];
   semillero?: SemilleroExterno | null;
   integrantes?: IntegranteSemillero[];
   info_general?: InfoGeneralSemillero | null;
@@ -712,6 +713,13 @@ export async function getInfoPlantillaAsentimiento(
 ): Promise<{ ok: boolean; personalizada: boolean; nombre: string; ruta: string; peso_bytes?: number }> {
   const query = convocatoriaId ? `?convocatoria_id=${convocatoriaId}` : "";
   return apiFetch(`/convocatorias/plantilla-asentimiento/info${query}`);
+}
+
+export async function restablecerPlantillaAsentimiento(
+  convocatoriaId?: number
+): Promise<{ ok: boolean; mensaje: string }> {
+  const query = convocatoriaId ? `?convocatoria_id=${convocatoriaId}` : "";
+  return apiFetch(`/convocatorias/plantilla-asentimiento${query}`, { method: "DELETE" });
 }
 
 export async function addIntegranteSemillero(

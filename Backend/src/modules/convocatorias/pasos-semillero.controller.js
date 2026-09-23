@@ -2,6 +2,7 @@ const pool = require("../../db/connection");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const PDFDocument = require("pdfkit");
 
 // ─── Catálogos ────────────────────────────────────────────────────────────────
 const TIPOS_DOCUMENTO = ["CC", "TI", "CE", "Pasaporte", "NIT", "Otro"];
@@ -32,17 +33,19 @@ async function getInscripcion(convId, usuarioId) {
 
 // ─── Helper: cargar todos los datos del formulario ───────────────────────────
 async function cargarTodosPasos(inscripcionId) {
-  const [[semRows], [intRows], [infoRows], [contRows]] = await Promise.all([
+  const [[semRows], [intRows], [infoRows], [contRows], [docRows]] = await Promise.all([
     pool.query("SELECT * FROM inscripcion_semillero_externo WHERE inscripcion_id = ? LIMIT 1", [inscripcionId]),
     pool.query("SELECT * FROM inscripcion_semillero_integrantes WHERE inscripcion_id = ? ORDER BY id", [inscripcionId]),
     pool.query("SELECT * FROM inscripcion_semillero_info_general WHERE inscripcion_id = ? LIMIT 1", [inscripcionId]),
     pool.query("SELECT * FROM inscripcion_semillero_contenido WHERE inscripcion_id = ? LIMIT 1", [inscripcionId]),
+    pool.query("SELECT * FROM convocatoria_inscripcion_documentos WHERE inscripcion_id = ? ORDER BY id", [inscripcionId]),
   ]);
   return {
     semillero: semRows.length > 0 ? semRows[0] : null,
     integrantes: intRows,
     info_general: infoRows.length > 0 ? infoRows[0] : null,
     contenido: contRows.length > 0 ? contRows[0] : null,
+    documentos: docRows,
   };
 }
 
@@ -96,6 +99,28 @@ const pasosSemilleroController = {
     } catch (err) {
       console.error("Error al subir plantilla de asentimiento:", err);
       return res.status(500).json({ error: err.message || "Error al subir plantilla de asentimiento." });
+    }
+  },
+
+  // ─── Restablecer Plantilla Oficial de Asentimiento al Formato Estándar ──────
+  async eliminarPlantillaAsentimiento(req, res) {
+    try {
+      const convId = req.params.id || req.query.convocatoria_id || req.body.convocatoria_id;
+      if (convId) {
+        await pool.query(
+          "UPDATE convocatorias SET plantilla_asentimiento_nombre = NULL, plantilla_asentimiento_ruta = NULL, plantilla_asentimiento_mime = NULL, plantilla_asentimiento_peso_bytes = NULL WHERE id = ?",
+          [convId]
+        );
+      } else {
+        await pool.query("DELETE FROM configuracion_plantillas WHERE clave = 'plantilla_asentimiento'");
+      }
+      return res.json({
+        ok: true,
+        mensaje: "Plantilla restablecida exitosamente al formato institucional estándar.",
+      });
+    } catch (err) {
+      console.error("Error al restablecer plantilla de asentimiento:", err);
+      return res.status(500).json({ error: err.message || "Error al restablecer plantilla de asentimiento." });
     }
   },
 
@@ -200,76 +225,144 @@ const pasosSemilleroController = {
         }
       }
 
-      const htmlContent = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Formato de Asentimiento y Consentimiento Informado - Menores de Edad</title>
-  <style>
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 40px; color: #1F2937; line-height: 1.6; }
-    .header { text-align: center; border-bottom: 2px solid #1B5E20; padding-bottom: 15px; margin-bottom: 25px; }
-    .title { font-size: 18px; font-weight: bold; color: #1B5E20; text-transform: uppercase; }
-    .subtitle { font-size: 13px; color: #4B5563; }
-    .section-title { font-size: 14px; font-weight: bold; color: #1B5E20; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px; }
-    .field-row { display: flex; margin-bottom: 10px; font-size: 13px; }
-    .field-label { font-weight: bold; width: 220px; color: #374151; }
-    .field-line { border-bottom: 1px solid #9CA3AF; flex: 1; min-height: 20px; }
-    .text-block { font-size: 12px; text-align: justify; margin: 15px 0; color: #374151; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
-    .sig-box { width: 45%; text-align: center; border-top: 1px solid #374151; padding-top: 8px; }
-    @media print { body { margin: 20px; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="title">FUNDACIÓN UNIVERSITARIA CATÓLICA DEL SUR — NOUS</div>
-    <div class="subtitle">DIRECCIÓN DE INVESTIGACIONES Y EXTENSIÓN · SEMILLEROS DE INVESTIGACIÓN</div>
-    <div style="font-weight: bold; margin-top: 8px; font-size: 15px;">FORMATO INSTITUCIONAL DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO (MENORES DE EDAD)</div>
-  </div>
+      // Generar PDF Institucional Oficial con PDFKit y descargar directamente
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="Formato_Asentimiento_Informado_NOUS.pdf"'
+      );
 
-  <div class="section-title">1. DATOS DEL PARTICIPANTE MENOR DE EDAD</div>
-  <div class="field-row"><span class="field-label">Nombre completo del estudiante:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Tipo y número de documento:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Institución educativa / Procedencia:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Nombre del Semillero:</span><span class="field-line"></span></div>
+      const doc = new PDFDocument({
+        size: "LETTER",
+        margins: { top: 40, bottom: 40, left: 45, right: 45 },
+      });
 
-  <div class="section-title">2. DATOS DEL PADRE, MADRE O TUTOR LEGAL</div>
-  <div class="field-row"><span class="field-label">Nombre completo del tutor:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Cédula de ciudadanía:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Parentesco / Representación legal:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Teléfono de contacto:</span><span class="field-line"></span></div>
-  <div class="field-row"><span class="field-label">Correo electrónico:</span><span class="field-line"></span></div>
+      doc.pipe(res);
 
-  <div class="section-title">3. DECLARACIÓN DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO</div>
-  <div class="text-block">
-    Yo, en mi calidad de representante legal del menor de edad arriba identificado, manifiesto de manera voluntaria, libre e informada que he sido enterado(a) de los objetivos, alcance y actividades formativas de la convocatoria académica de investigación NOUS, y <strong>AUTORIZO</strong> su vinculación y participación activa como integrante del semillero de investigación.
-    Asimismo, autorizo el tratamiento de sus datos personales e institucionales en estricto cumplimiento de la Ley 1581 de 2012 con fines exclusivamente académicos, de divulgación científica y seguimiento institucional.
-  </div>
+      const startX = doc.page.margins.left;
+      const endX = doc.page.width - doc.page.margins.right;
 
-  <div class="signatures">
-    <div class="sig-box">
-      Firma del Padre / Madre / Tutor Legal<br>
-      C.C. Nº: __________________________
-    </div>
-    <div class="sig-box">
-      Firma del Estudiante (Menor de edad)<br>
-      Doc. Identidad Nº: __________________
-    </div>
-  </div>
-  <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #6B7280;">
-    Ciudad y Fecha: _________________________________, Pasto (Nariño), 2026.
-  </div>
-  <script>
-    window.onload = function() {
-      if (window.location.search.includes("print=1")) {
-        window.print();
-      }
-    };
-  </script>
-</body>
-</html>`;
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.send(htmlContent);
+      // Encabezado
+      doc
+        .fontSize(13)
+        .font("Helvetica-Bold")
+        .fillColor("#1B5E20")
+        .text("FUNDACIÓN UNIVERSITARIA CATÓLICA DEL SUR — NOUS", { align: "center" })
+        .moveDown(0.2);
+
+      doc
+        .fontSize(9)
+        .font("Helvetica")
+        .fillColor("#4B5563")
+        .text("DIRECCIÓN DE INVESTIGACIONES Y EXTENSIÓN · SEMILLEROS DE INVESTIGACIÓN", { align: "center" })
+        .moveDown(0.4);
+
+      doc
+        .fontSize(10)
+        .font("Helvetica-Bold")
+        .fillColor("#1B5E20")
+        .text("FORMATO INSTITUCIONAL DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO (MENORES DE EDAD)", {
+          align: "center",
+        })
+        .moveDown(0.5);
+
+      // Línea divisoria verde
+      doc
+        .strokeColor("#1B5E20")
+        .lineWidth(1.5)
+        .moveTo(startX, doc.y)
+        .lineTo(endX, doc.y)
+        .stroke();
+      doc.y += 10;
+
+      const renderCampo = (label) => {
+        const y = doc.y;
+        doc.fontSize(9.5).font("Helvetica-Bold").fillColor("#374151").text(label, startX, y, { width: 210, continued: false });
+        doc.strokeColor("#9CA3AF").lineWidth(0.8).moveTo(startX + 215, y + 10).lineTo(endX, y + 10).stroke();
+        doc.y = y + 18;
+      };
+
+      const renderSeccion = (titulo) => {
+        doc.y += 4;
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#1B5E20").text(titulo, startX);
+        const secY = doc.y + 2;
+        doc.strokeColor("#E5E7EB").lineWidth(0.8).moveTo(startX, secY).lineTo(endX, secY).stroke();
+        doc.y = secY + 6;
+      };
+
+      // Sección 1
+      renderSeccion("1. DATOS DEL PARTICIPANTE MENOR DE EDAD");
+      renderCampo("Nombre completo del estudiante:");
+      renderCampo("Tipo y número de documento:");
+      renderCampo("Institución educativa / Procedencia:");
+      renderCampo("Nombre del Semillero:");
+
+      // Sección 2
+      renderSeccion("2. DATOS DEL PADRE, MADRE O TUTOR LEGAL");
+      renderCampo("Nombre completo del tutor:");
+      renderCampo("Cédula de ciudadanía:");
+      renderCampo("Parentesco / Representación legal:");
+      renderCampo("Teléfono de contacto:");
+      renderCampo("Correo electrónico:");
+
+      // Sección 3
+      renderSeccion("3. DECLARACIÓN DE ASENTIMIENTO Y CONSENTIMIENTO INFORMADO");
+      doc
+        .fontSize(8.8)
+        .font("Helvetica")
+        .fillColor("#374151")
+        .text(
+          "Yo, en mi calidad de representante legal del menor de edad arriba identificado, manifiesto de manera voluntaria, libre e informada que he sido enterado(a) de los objetivos, alcance y actividades formativas de la convocatoria académica de investigación NOUS, y AUTORIZO su vinculación y participación activa como integrante del semillero de investigación.\n\nAsimismo, autorizo el tratamiento de sus datos personales e institucionales en estricto cumplimiento de la Ley 1581 de 2012 con fines exclusivamente académicos, de divulgación científica y seguimiento institucional.",
+          startX,
+          doc.y + 2,
+          { width: endX - startX, align: "justify", lineGap: 2 }
+        );
+      doc.y += 20;
+
+      // Firmas
+      const sigY = doc.y + 10;
+      const colWidth = (endX - startX - 40) / 2;
+
+      // Firma Tutor
+      doc.strokeColor("#374151").lineWidth(1).moveTo(startX, sigY).lineTo(startX + colWidth, sigY).stroke();
+      doc
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .fillColor("#1F2937")
+        .text("Firma del Padre / Madre / Tutor Legal", startX, sigY + 5, { width: colWidth, align: "center" });
+      doc
+        .fontSize(8.5)
+        .font("Helvetica")
+        .fillColor("#4B5563")
+        .text("C.C. Nº: __________________________", startX, sigY + 18, { width: colWidth, align: "center" });
+
+      // Firma Estudiante
+      const col2X = startX + colWidth + 40;
+      doc.strokeColor("#374151").lineWidth(1).moveTo(col2X, sigY).lineTo(col2X + colWidth, sigY).stroke();
+      doc
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .fillColor("#1F2937")
+        .text("Firma del Estudiante (Menor de edad)", col2X, sigY + 5, { width: colWidth, align: "center" });
+      doc
+        .fontSize(8.5)
+        .font("Helvetica")
+        .fillColor("#4B5563")
+        .text("Doc. Identidad Nº: __________________", col2X, sigY + 18, { width: colWidth, align: "center" });
+
+      // Ciudad y fecha
+      doc
+        .fontSize(8.5)
+        .font("Helvetica")
+        .fillColor("#6B7280")
+        .text(
+          "Ciudad y Fecha: _________________________________, Pasto (Nariño), 2026.",
+          startX,
+          sigY + 45,
+          { width: endX - startX, align: "center" }
+        );
+
+      doc.end();
     } catch (err) {
       return res.status(500).json({ error: "Error al generar plantilla de asentimiento." });
     }
@@ -951,8 +1044,32 @@ const pasosSemilleroController = {
         return res.status(400).json({ error: "Paso 4 (Contenido del trabajo): Todos los campos son obligatorios." });
       }
 
+      // ── Consultar si ya existe inscripción previa (borrador o registrada)
+      const [existingRows] = await pool.query(
+        "SELECT id, estado, documento_nombre_original, documento_ruta, documento_mime, documento_peso_bytes FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ? LIMIT 1",
+        [convId, usuarioId]
+      );
+      const inscripcionExistente = existingRows.length > 0 ? existingRows[0] : null;
+
+      let docPagoExistente = null;
+      let docPropuestaExistente = null;
+
+      if (inscripcionExistente) {
+        const [docsRows] = await pool.query(
+          "SELECT * FROM convocatoria_inscripcion_documentos WHERE inscripcion_id = ?",
+          [inscripcionExistente.id]
+        );
+        docPagoExistente = docsRows.find((d) => d.requisito_nombre === "Comprobante de Pago");
+        docPropuestaExistente = docsRows.find((d) => d.requisito_nombre === "Propuesta de investigación") || {
+          documento_nombre_original: inscripcionExistente.documento_nombre_original,
+          documento_ruta: inscripcionExistente.documento_ruta,
+          documento_mime: inscripcionExistente.documento_mime,
+          documento_peso_bytes: inscripcionExistente.documento_peso_bytes,
+        };
+      }
+
       // Validar Comprobante de pago obligatorio
-      if (!archivoPago) {
+      if (!archivoPago && !docPagoExistente) {
         limpiarArchivos();
         return res.status(400).json({
           error: "El comprobante de pago de inscripción es obligatorio para convocatorias externas.",
@@ -960,63 +1077,81 @@ const pasosSemilleroController = {
         });
       }
 
-      const permitidosPago = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"];
-      if (!permitidosPago.includes(archivoPago.mimetype)) {
-        limpiarArchivos();
-        return res.status(400).json({
-          error: "El comprobante de pago debe ser PDF o una imagen (JPG, PNG, WEBP).",
-          campo: "comprobante_pago",
-        });
+      let pagoInfo = null;
+      if (archivoPago) {
+        const permitidosPago = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"];
+        if (!permitidosPago.includes(archivoPago.mimetype)) {
+          limpiarArchivos();
+          return res.status(400).json({
+            error: "El comprobante de pago debe ser PDF o una imagen (JPG, PNG, WEBP).",
+            campo: "comprobante_pago",
+          });
+        }
+        pagoInfo = {
+          nombre: archivoPago.originalname,
+          ruta: `/uploads/inscripciones/${archivoPago.filename}`,
+          mime: archivoPago.mimetype,
+          peso: archivoPago.size,
+        };
+      } else if (docPagoExistente) {
+        pagoInfo = {
+          nombre: docPagoExistente.documento_nombre_original,
+          ruta: docPagoExistente.documento_ruta,
+          mime: docPagoExistente.documento_mime,
+          peso: docPagoExistente.documento_peso_bytes,
+        };
       }
-      const pagoInfo = {
-        nombre: archivoPago.originalname,
-        ruta: `/uploads/inscripciones/${archivoPago.filename}`,
-        mime: archivoPago.mimetype,
-        peso: archivoPago.size,
-      };
 
       // Validar PDF de propuesta obligatorio
-      if (!archivoDoc) {
+      if (!archivoDoc && (!docPropuestaExistente || !docPropuestaExistente.documento_ruta)) {
         limpiarArchivos();
         return res.status(400).json({
           error: "Debes adjuntar el documento de la propuesta de investigación o aval en formato PDF.",
           campo: "documento",
         });
       }
-      if (archivoDoc.mimetype !== "application/pdf") {
-        limpiarArchivos();
-        return res.status(400).json({ error: "La propuesta de investigación debe ser un archivo PDF.", campo: "documento" });
-      }
-      const docInfo = {
-        nombre: archivoDoc.originalname,
-        ruta: `/uploads/inscripciones/${archivoDoc.filename}`,
-        mime: archivoDoc.mimetype,
-        peso: archivoDoc.size,
-      };
 
-      // ── Validar límite de hasta 50 inscripciones por convocatoria
-      const [conteoRows] = await pool.query(
-        "SELECT COUNT(*) as total FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND estado != 'en_proceso'",
-        [convId]
-      );
-      if (conteoRows[0].total >= 50) {
-        limpiarArchivos();
-        return res.status(400).json({
-          error: "Esta convocatoria ya ha alcanzado el límite máximo permitido de 50 inscripciones.",
-        });
+      let docInfo = null;
+      if (archivoDoc) {
+        if (archivoDoc.mimetype !== "application/pdf") {
+          limpiarArchivos();
+          return res.status(400).json({ error: "La propuesta de investigación debe ser un archivo PDF.", campo: "documento" });
+        }
+        docInfo = {
+          nombre: archivoDoc.originalname,
+          ruta: `/uploads/inscripciones/${archivoDoc.filename}`,
+          mime: archivoDoc.mimetype,
+          peso: archivoDoc.size,
+        };
+      } else if (docPropuestaExistente && docPropuestaExistente.documento_ruta) {
+        docInfo = {
+          nombre: docPropuestaExistente.documento_nombre_original,
+          ruta: docPropuestaExistente.documento_ruta,
+          mime: docPropuestaExistente.documento_mime,
+          peso: docPropuestaExistente.documento_peso_bytes,
+        };
+      }
+
+      // ── Validar límite de hasta 50 inscripciones por convocatoria (solo si no existe previa)
+      if (!inscripcionExistente) {
+        const [conteoRows] = await pool.query(
+          "SELECT COUNT(*) as total FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND estado != 'en_proceso'",
+          [convId]
+        );
+        if (conteoRows[0].total >= 50) {
+          limpiarArchivos();
+          return res.status(400).json({
+            error: "Esta convocatoria ya ha alcanzado el límite máximo permitido de 50 inscripciones.",
+          });
+        }
       }
 
       const archivoPrincipalInfo = docInfo || pagoInfo || { nombre: null, ruta: null, mime: null, peso: 0 };
 
-      // ── 1. Reutilizar borrador existente si había uno en proceso, o insertar nueva inscripción
-      const [draftRows] = await pool.query(
-        "SELECT id FROM convocatoria_inscripciones WHERE convocatoria_id = ? AND usuario_id = ? AND estado = 'en_proceso' LIMIT 1",
-        [convId, usuarioId]
-      );
-
+      // ── 1. Reutilizar inscripción o insertar nueva inscripción
       let inscId;
-      if (draftRows.length > 0) {
-        inscId = draftRows[0].id;
+      if (inscripcionExistente) {
+        inscId = inscripcionExistente.id;
         await pool.query(
           `UPDATE convocatoria_inscripciones
            SET estado = 'registrada', tipo_investigacion = ?, resumen_proyecto = ?, justificacion = ?,

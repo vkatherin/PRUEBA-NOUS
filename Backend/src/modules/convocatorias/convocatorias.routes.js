@@ -61,6 +61,16 @@ router.post(
   pasosSemilleroController.uploadPlantillaMiddleware,
   pasosSemilleroController.subirPlantillaAsentimiento
 );
+router.delete(
+  "/plantilla-asentimiento",
+  verificarPermiso('convocatorias.editar'),
+  pasosSemilleroController.eliminarPlantillaAsentimiento
+);
+router.delete(
+  "/:id/plantilla-asentimiento",
+  verificarPermiso('convocatorias.editar'),
+  pasosSemilleroController.eliminarPlantillaAsentimiento
+);
 
 // ─── Inscripción Externa: Paso 2 — Integrantes y Asentimiento ──────────────
 router.post(
