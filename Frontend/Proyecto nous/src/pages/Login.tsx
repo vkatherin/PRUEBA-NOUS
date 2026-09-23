@@ -252,7 +252,7 @@ export function Login({
       </div>
 
       <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-        © 2025 Fundación Universitaria Católica del Sur · Todos los derechos reservados
+        © 2026 Fundación Universitaria Católica del Sur · Todos los derechos reservados
       </p>
     </div>
   );
@@ -417,7 +417,7 @@ export function Login({
 
             <p className="text-center text-xs text-theme-text-muted mt-6">
               Sistema de uso exclusivo para personal autorizado de la VRI.{" "}
-              <span className="text-theme-primary cursor-pointer hover:underline">Soporte técnico</span>
+              <a href="mailto:soporte@unicatolicadelsur.edu.co" className="text-theme-primary cursor-pointer hover:underline">Soporte técnico</a>
             </p>
           </div>
         </div>

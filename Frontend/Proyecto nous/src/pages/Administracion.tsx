@@ -3,7 +3,7 @@ import { Badge, Button, Card, PageHeader, SearchBar, Avatar, Tabs, Modal, Field,
 import { usuariosApi, soporteApi, type UsuarioRol, type RolDisponible, type ReporteSoporte } from "@/services/api";
 
 const ROLES = [
-  { nombre: "Super Administrador", usuarios: 1, permisos: 45, desc: "Acceso total al sistema" },
+  { nombre: "Administrador", usuarios: 1, permisos: 45, desc: "Acceso total al sistema" },
   { nombre: "Coordinador VRI", usuarios: 2, permisos: 38, desc: "Gestión de módulos institucionales" },
   { nombre: "Investigador", usuarios: 52, permisos: 22, desc: "Gestión de proyectos y productos propios" },
   { nombre: "Evaluador", usuarios: 12, permisos: 8, desc: "Evaluación de convocatorias asignadas" },
@@ -21,7 +21,7 @@ const PARAMETROS = [
 ];
 
 const rolColors: Record<string, string> = {
-  "Super Administrador": "#DC2626",
+  "Administrador": "#DC2626",
   "Coordinador VRI": "#7C3AED",
   "Investigador": "var(--theme-primary)",
   "Evaluador": "#2563EB",

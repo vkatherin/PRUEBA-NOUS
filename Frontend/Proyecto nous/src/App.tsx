@@ -413,7 +413,7 @@ export default function App() {
 
   const getFirstAllowedPage = (u: UsuarioMe): Page => {
     const permisos = u.permisos || [];
-    const isAdmin = u.roles?.some(r => r === "administrador" || r === "Super Administrador");
+    const isAdmin = u.roles?.some(r => r === "administrador");
     const isExterno = u.roles?.some(r => r.toLowerCase().includes("externo"));
     const isEstudiante = u.roles?.some(r => r.toLowerCase().includes("estudiante"));
 
@@ -648,7 +648,7 @@ export default function App() {
       case "administracion":  return <Administracion />;
       case "perfil":          return <MiPerfil user={user} onUserUpdated={handleLogin} />;
       case "preferencias":    return <Preferencias onNavigate={(p) => setActivePage(p as Page)} />;
-      case "ayuda-soporte":   return <AyudaSoporte />;
+      case "ayuda-soporte":   return <AyudaSoporte user={user} />;
       default:                return <Dashboard onNavigate={setActivePage} />;
     }
   }

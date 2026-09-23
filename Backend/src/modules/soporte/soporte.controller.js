@@ -1,4 +1,5 @@
 const pool = require('../../db/connection');
+const { enviarCorreo } = require('../../shared/mailer');
 
 exports.crearReporte = async (req, res) => {
   try {
@@ -17,6 +18,28 @@ exports.crearReporte = async (req, res) => {
        VALUES (?, ?, ?, ?, 'pendiente')`,
       [req.usuario.id, categoria, asunto, descripcion]
     );
+
+    try {
+      const [[user]] = await pool.query('SELECT nombre_completo, correo_institucional FROM usuarios WHERE id = ?', [req.usuario.id]);
+      
+      const cuerpo = `
+        <h3>Nuevo Reporte de Soporte (#${result.insertId})</h3>
+        <p><strong>Usuario:</strong> ${user.nombre_completo} (${user.correo_institucional})</p>
+        <p><strong>Categoría:</strong> ${categoria}</p>
+        <p><strong>Asunto:</strong> ${asunto}</p>
+        <p><strong>Descripción:</strong></p>
+        <p>${descripcion}</p>
+      `;
+
+      enviarCorreo({
+        destinatarios: ['practicante.inv1@unicatolicadelsur.edu.co'],
+        asunto: `[Soporte NOUS] ${asunto}`,
+        cuerpo,
+        tipo: 'alerta_soporte'
+      }).catch(err => console.error('Error enviando correo de soporte:', err));
+    } catch (mailErr) {
+      console.error('Error preparando correo de soporte:', mailErr);
+    }
 
     res.status(201).json({ ok: true, id: result.insertId });
   } catch (err) {
@@ -44,6 +67,7 @@ exports.getAllReportes = async (req, res) => {
       `SELECT rs.*, u.nombre_completo as usuario_nombre, u.correo_institucional as usuario_correo
        FROM reportes_soporte rs
        JOIN usuarios u ON rs.usuario_id = u.id
+       WHERE rs.estado != 'resuelto'
        ORDER BY rs.fecha_creacion DESC`
     );
     res.json(rows);

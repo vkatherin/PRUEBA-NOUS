@@ -130,7 +130,7 @@ export function Sidebar({
   const permisos = user?.permisos || [];
   const isAdmin = user?.roles?.some(r => {
     const lower = r.toLowerCase();
-    return lower === "administrador" || lower === "super administrador";
+    return lower === "administrador";
   });
   const isEstudiante = user?.roles?.some(r => r.toLowerCase().includes("estudiante"));
   const isExterno = user?.roles?.some(r => r.toLowerCase().includes("externo"));

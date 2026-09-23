@@ -87,7 +87,7 @@ async function determinarSiguientePaso(usuarioId, correo) {
     [usuarioId]
   );
   const nombresRoles = rolesExistentes.map(r => r.nombre.toLowerCase());
-  const ROLES_FIJOS  = ['administrador', 'super administrador', 'coordinador vri', 'consulta', 'externo'];
+  const ROLES_FIJOS  = ['administrador', 'coordinador vri', 'consulta', 'externo'];
   const tieneRolFijo = nombresRoles.some(r => ROLES_FIJOS.includes(r));
   const esEstudiante = nombresRoles.includes('estudiante');
 
@@ -505,12 +505,22 @@ exports.solicitarReset = async (req, res) => {
 
     await registrarAuditoria(usuario.id, 'solicitud_reset_password', 'usuarios', usuario.id);
 
-    // TODO: conectar nodemailer para enviar el link por email
-    console.log('\n🔑 [RESET PASSWORD TOKEN]');
-    console.log(`   Usuario: ${usuario.nombre_completo} (${correo})`);
-    console.log(`   Token:   ${tokenPlano}`);
-    console.log(`   Link:    ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${tokenPlano}`);
-    console.log(`   Expira:  ${expiresAt.toISOString()}\n`);
+    const { enviarCorreo } = require('../../shared/mailer');
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${tokenPlano}`;
+    const cuerpo = `
+      <p>Hola <strong>${usuario.nombre_completo}</strong>,</p>
+      <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva:</p>
+      <p><a href="${resetLink}">${resetLink}</a></p>
+      <p>Este enlace expirará en 30 minutos.</p>
+      <p>Si no solicitaste esto, puedes ignorar este correo.</p>
+    `;
+
+    await enviarCorreo({
+      destinatarios: [correo],
+      asunto: 'Restablecer contraseña - NOUS',
+      cuerpo,
+      tipo: 'reset_password'
+    });
 
     res.json({ mensaje: 'Si el correo existe, recibirás instrucciones de recuperación.' });
   } catch (err) {

@@ -1240,7 +1240,7 @@ function DetailModal({
     const lower = r.toLowerCase();
     return lower.includes("estudiante") || lower.includes("docente") || lower.includes("investigador");
   });
-  const isAdmin = user?.roles?.some(r => r === "administrador" || r === "Super Administrador" || r?.toLowerCase()?.includes("admin"));
+  const isAdmin = user?.roles?.some(r => r === "administrador" || r?.toLowerCase()?.includes("admin"));
   const canDelete = isAdmin || (!isRestrictedRole && user?.permisos?.includes('convocatorias.eliminar'));
   const canViewFiles = isAdmin || !isRestrictedRole;
 
@@ -3499,7 +3499,7 @@ function SemilleroExternoModal({
             </div>
 
             {/* Zona Admin para subir / cambiar la plantilla oficial (SOLO ADMINISTRADORES) */}
-            {(user?.roles?.some((r: string) => r.toLowerCase() === "administrador" || r.toLowerCase() === "super administrador") || (userActual as any)?.rol?.toLowerCase() === "administrador") && (
+            {(user?.roles?.some((r: string) => r.toLowerCase() === "administrador") || (userActual as any)?.rol?.toLowerCase() === "administrador") && (
               <div className="pt-2 border-t border-emerald-200/70 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] text-theme-text-muted font-medium flex items-center gap-1">
                   ⚙️ <strong>Zona Admin:</strong> Carga o actualiza el archivo oficial de plantilla (.docx, .pdf, .doc) para esta convocatoria.

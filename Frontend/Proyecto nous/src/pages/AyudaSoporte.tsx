@@ -25,7 +25,7 @@ const PREGUNTAS_FRECUENTES = [
   }
 ];
 
-export function AyudaSoporte() {
+export function AyudaSoporte({ user }: { user?: any }) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   
   // Formulario de reporte
@@ -35,13 +35,18 @@ export function AyudaSoporte() {
   const [loading, setLoading] = useState(false);
   const [reportes, setReportes] = useState<ReporteSoporte[]>([]);
 
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const isAdmin = user?.roles?.includes('administrador');
+
   useEffect(() => {
     cargarReportes();
-  }, []);
+  }, [isAdmin]);
 
   const cargarReportes = async () => {
     try {
-      const data = await soporteApi.misReportes();
+      const data = isAdmin ? await soporteApi.listarTodos() : await soporteApi.misReportes();
       setReportes(data);
     } catch (err) {
       console.error(err);
@@ -52,15 +57,18 @@ export function AyudaSoporte() {
     e.preventDefault();
     if (!categoria || !asunto || !descripcion) return;
     setLoading(true);
+    setErrorMsg("");
+    setShowSuccess(false);
     try {
       await soporteApi.crear({ categoria, asunto, descripcion });
-      alert("Reporte enviado con éxito");
+      setShowSuccess(true);
       setCategoria("");
       setAsunto("");
       setDescripcion("");
       cargarReportes();
+      setTimeout(() => setShowSuccess(false), 5000);
     } catch (err: any) {
-      alert(err.message || "Error al enviar el reporte");
+      setErrorMsg(err.message || "Error al enviar el reporte");
     } finally {
       setLoading(false);
     }
@@ -72,6 +80,15 @@ export function AyudaSoporte() {
       case 'en_revision': return 'info';
       case 'resuelto': return 'success';
       default: return 'gray';
+    }
+  };
+
+  const handleCambiarEstado = async (id: number, nuevoEstado: string) => {
+    try {
+      await soporteApi.actualizarEstado(id, nuevoEstado);
+      cargarReportes(); // recargar la lista
+    } catch (err: any) {
+      alert("Error al actualizar el estado: " + err.message);
     }
   };
 
@@ -138,11 +155,25 @@ export function AyudaSoporte() {
         <div className="space-y-6">
           <Card>
             <h2 className="text-base font-bold text-theme-text-main mb-4">Reportar un problema</h2>
+            
+            {showSuccess && (
+              <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-2">
+                <span className="text-emerald-500">✓</span>
+                <p className="text-sm text-emerald-800 font-medium">¡Reporte enviado exitosamente! Nuestro equipo lo revisará pronto.</p>
+              </div>
+            )}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+                <span className="text-red-500">⚠</span>
+                <p className="text-sm text-red-800 font-medium">{errorMsg}</p>
+              </div>
+            )}
+
             <form onSubmit={handleEnviarReporte} className="space-y-4">
               <Field label="Categoría" required>
                 <Select
                   value={categoria}
-                  onChange={(e) => setCategoria(e.target.value)}
+                  onChange={setCategoria}
                   options={[
                     { value: '', label: 'Selecciona una categoría' },
                     { value: 'error_tecnico', label: 'Error técnico' },
@@ -156,14 +187,14 @@ export function AyudaSoporte() {
               <Field label="Asunto" required>
                 <Input
                   value={asunto}
-                  onChange={(e) => setAsunto(e.target.value)}
+                  onChange={setAsunto}
                   placeholder="Breve descripción del problema"
                 />
               </Field>
               <Field label="Descripción detallada" required>
                 <Textarea
                   value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
+                  onChange={setDescripcion}
                   placeholder="Explica qué ocurrió, pasos para reproducirlo, etc."
                   rows={4}
                 />
@@ -178,7 +209,9 @@ export function AyudaSoporte() {
 
           {reportes.length > 0 && (
             <Card>
-              <h2 className="text-base font-bold text-theme-text-main mb-4">Mis reportes anteriores</h2>
+              <h2 className="text-base font-bold text-theme-text-main mb-4">
+                {isAdmin ? "Todos los reportes del sistema" : "Mis reportes anteriores"}
+              </h2>
               <div className="space-y-3">
                 {reportes.map(r => (
                   <div key={r.id} className="p-4 rounded-xl border border-theme-border bg-theme-bg-main">
@@ -186,12 +219,35 @@ export function AyudaSoporte() {
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700 uppercase tracking-wider">
                         {r.categoria.replace('_', ' ')}
                       </span>
-                      <Badge variant={getEstadoColor(r.estado) as any}>
-                        {r.estado.replace('_', ' ')}
-                      </Badge>
+                      {isAdmin ? (
+                        <select
+                          value={r.estado}
+                          onChange={(e) => handleCambiarEstado(r.id, e.target.value)}
+                          className="text-xs font-medium px-2 py-1 rounded border-theme-border bg-theme-bg-main focus:outline-none focus:ring-1 focus:ring-theme-primary cursor-pointer"
+                        >
+                          <option value="pendiente">Pendiente</option>
+                          <option value="en_revision">En Revisión</option>
+                          <option value="resuelto">Resuelto</option>
+                        </select>
+                      ) : (
+                        <Badge variant={getEstadoColor(r.estado) as any}>
+                          {r.estado.replace('_', ' ')}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm font-bold text-theme-text-main">{r.asunto}</p>
-                    <p className="text-xs text-theme-text-muted mt-1">{new Date(r.fecha_creacion).toLocaleDateString()}</p>
+                    
+                    {isAdmin && r.usuario_nombre && (
+                      <div className="mt-2 p-2 bg-theme-bg-card rounded border border-theme-border flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-theme-primary/10 flex items-center justify-center text-xs">👤</div>
+                        <div>
+                          <p className="text-xs font-semibold text-theme-text-main leading-none">{r.usuario_nombre}</p>
+                          <p className="text-[10px] text-theme-text-muted mt-0.5">{r.usuario_correo}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-theme-text-muted mt-2">{new Date(r.fecha_creacion).toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>

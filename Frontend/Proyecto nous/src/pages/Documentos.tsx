@@ -108,7 +108,7 @@ export function Documentos({ user }: { user?: UsuarioMe | null }) {
     }
   };
 
-  const isAdmin = user?.roles?.includes("administrador") || user?.roles?.includes("Super Administrador");
+  const isAdmin = user?.roles?.includes("administrador");
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-5">
