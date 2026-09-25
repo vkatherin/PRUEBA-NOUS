@@ -2,6 +2,7 @@
   "name": "nous-backend",
   "version": "1.0.0",
   "scripts": {
+    "postinstall": "npm install --prefix Backend --omit=dev",
     "install:backend": "npm install --prefix Backend",
     "dev": "npm --prefix Backend run dev",
     "start": "npm --prefix Backend start"
