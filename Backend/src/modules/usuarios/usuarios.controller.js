@@ -65,7 +65,7 @@ exports.asignarRol = async (req, res) => {
     }
 
     await pool.query(
-      'INSERT IGNORE INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
+      'INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?) ON CONFLICT (usuario_id, rol_id) DO NOTHING',
       [id, rolData.id]
     );
 
@@ -108,7 +108,8 @@ exports.crearUsuario = async (req, res) => {
     const genCedula = cedula || Date.now().toString().slice(-8);
     const [result] = await pool.query(
       `INSERT INTO usuarios (nombre_completo, correo_institucional, cedula, mfa_habilitado, activo, fecha_creacion)
-       VALUES (?, ?, ?, 0, 1, NOW())`,
+      VALUES (?, ?, ?, 0, 1, NOW())
+      RETURNING id`,
       [nombre_completo, correo_institucional, genCedula]
     );
     const newId = result.insertId;
@@ -154,8 +155,6 @@ exports.eliminarUsuario = async (req, res) => {
     await conn.beginTransaction();
 
     // Desactivar verificación de FK temporalmente para eliminar todas las referencias
-    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-
     // Eliminar tablas con FK directa a usuario_id (las más comunes)
     await conn.query('DELETE FROM usuario_rol WHERE usuario_id = ?', [id]);
     await conn.query('DELETE FROM log_auditoria WHERE usuario_id = ?', [id]);
@@ -165,15 +164,11 @@ exports.eliminarUsuario = async (req, res) => {
     // Eliminar el usuario
     await conn.query('DELETE FROM usuarios WHERE id = ?', [id]);
 
-    // Reactivar verificación de FK
-    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
-
     await conn.commit();
     conn.release();
 
     res.json({ ok: true, mensaje: `Usuario "${existe.nombre_completo}" eliminado correctamente` });
   } catch (err) {
-    await conn.query('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
     await conn.rollback().catch(() => {});
     conn.release();
     console.error('Error al eliminar usuario:', err);

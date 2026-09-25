@@ -1,4 +1,5 @@
 const pool = require('../../db/connection');
+const isPostgres = (process.env.DB_CLIENT || 'mysql').toLowerCase() === 'postgres';
 
 // GET /api/dashboard/kpis
 exports.getKpis = async (req, res) => {
@@ -58,14 +59,14 @@ exports.getEvolucionProyectos = async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT
-        DATE_FORMAT(fecha_inicio, '%b') AS mes,
-        MONTH(fecha_inicio) AS mes_num,
-        YEAR(fecha_inicio)  AS anio,
+        ${isPostgres ? "TO_CHAR(fecha_inicio, 'Mon')" : "DATE_FORMAT(fecha_inicio, '%b')"} AS mes,
+        ${isPostgres ? 'EXTRACT(MONTH FROM fecha_inicio)' : 'MONTH(fecha_inicio)'} AS mes_num,
+        ${isPostgres ? 'EXTRACT(YEAR FROM fecha_inicio)' : 'YEAR(fecha_inicio)'} AS anio,
         SUM(CASE WHEN estado IN ('activo','cerrado') THEN 1 ELSE 0 END) AS activos,
         SUM(CASE WHEN estado = 'cerrado'             THEN 1 ELSE 0 END) AS cerrados,
         COUNT(*) AS nuevos
       FROM proyectos
-      WHERE fecha_inicio >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+      WHERE fecha_inicio >= ${isPostgres ? "CURRENT_DATE - INTERVAL '6 months'" : 'DATE_SUB(CURDATE(), INTERVAL 6 MONTH)'}
       GROUP BY anio, mes_num, mes
       ORDER BY anio, mes_num
     `);
@@ -167,7 +168,7 @@ exports.getConvocatoriasActivas = async (req, res) => {
         c.id,
         c.titulo AS nombre,
         c.estado,
-        DATE_FORMAT(c.fecha_cierre, '%d %b %Y') AS cierre,
+        ${isPostgres ? "TO_CHAR(c.fecha_cierre, 'DD Mon YYYY')" : "DATE_FORMAT(c.fecha_cierre, '%d %b %Y')"} AS cierre,
         (SELECT COUNT(*) FROM proyectos p WHERE p.convocatoria_id = c.id) AS inscritos
       FROM convocatorias c
       WHERE c.estado IN ('activa','evaluacion')

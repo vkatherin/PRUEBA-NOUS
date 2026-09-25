@@ -1,4 +1,11 @@
 const pool = require('../../db/connection');
+const isPostgres = (process.env.DB_CLIENT || 'mysql').toLowerCase() === 'postgres';
+const mesSemillero = isPostgres
+  ? "TO_CHAR(s.fecha_creacion, 'YYYY-MM')"
+  : "DATE_FORMAT(s.fecha_creacion, '%Y-%m')";
+const mesIntegrante = isPostgres
+  ? "TO_CHAR(si.fecha_ingreso, 'YYYY-MM')"
+  : "DATE_FORMAT(si.fecha_ingreso, '%Y-%m')";
 
 // GET /api/semilleros
 exports.getSemilleros = async (req, res) => {
@@ -53,7 +60,7 @@ exports.getSemilleroById = async (req, res) => {
         s.cvlac_url,
         s.vobo_programa,
         s.vobo_vicerrectoria,
-        DATE_FORMAT(s.fecha_creacion, '%Y-%m') AS ingreso,
+        ${mesSemillero} AS ingreso,
         CASE
           WHEN s.vobo_programa = 1 AND s.vobo_vicerrectoria = 1 THEN 'activo'
           WHEN s.vobo_programa = 1                              THEN 'evaluacion'
@@ -71,7 +78,7 @@ exports.getSemilleroById = async (req, res) => {
       SELECT
         u.nombre_completo AS nombre,
         CONCAT('Semestre ', si.semestre) AS programa,
-        DATE_FORMAT(si.fecha_ingreso, '%Y-%m') AS ingreso
+        ${mesIntegrante} AS ingreso
       FROM semillero_integrantes si
       JOIN usuarios u ON u.id = si.usuario_id
       WHERE si.semillero_id = ? AND si.estado = 'activo'

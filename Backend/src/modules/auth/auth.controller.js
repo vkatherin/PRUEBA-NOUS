@@ -151,7 +151,7 @@ exports.googleCallback = async (req, res) => {
       // Usuario nuevo — crear registro
       const [result] = await pool.query(
         `INSERT INTO usuarios (nombre_completo, correo_institucional, activo)
-         VALUES (?, ?, TRUE)`,
+         VALUES (?, ?, 1)`,
         [perfil.nombre, perfil.correo]
       );
       usuarioId = result.insertId;
@@ -214,11 +214,11 @@ exports.getMe = async (req, res) => {
       await pool.query(`
         INSERT INTO roles (nombre, descripcion)
         VALUES ('externo', 'Investigador o participante externo en convocatorias')
-        ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion)
+        ON CONFLICT (nombre) DO UPDATE SET descripcion = EXCLUDED.descripcion
       `);
       const [[rolExt]] = await pool.query("SELECT id FROM roles WHERE nombre = 'externo' LIMIT 1");
       if (rolExt) {
-        await pool.query("INSERT IGNORE INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)", [req.usuario.id, rolExt.id]);
+        await pool.query("INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?) ON CONFLICT (usuario_id, rol_id) DO NOTHING", [req.usuario.id, rolExt.id]);
         roles = ['externo'];
       }
     }
@@ -345,8 +345,8 @@ exports.setupMfa = async (req, res) => {
     // Guardar / actualizar secret (aún no verificado)
     await pool.query(
       `INSERT INTO usuario_mfa (usuario_id, secret, verified)
-       VALUES (?, ?, FALSE)
-       ON DUPLICATE KEY UPDATE secret = VALUES(secret), verified = FALSE`,
+      VALUES (?, ?, 0)
+      ON CONFLICT (usuario_id) DO UPDATE SET secret = EXCLUDED.secret, verified = 0`,
       [req.usuario.id, secret.base32]
     );
 
@@ -399,11 +399,11 @@ exports.verifyMfa = async (req, res) => {
 
     // Marcar secret como verificado y activar MFA en el perfil
     await pool.query(
-      `UPDATE usuario_mfa SET verified = TRUE WHERE usuario_id = ?`,
+      `UPDATE usuario_mfa SET verified = 1 WHERE usuario_id = ?`,
       [usuarioId]
     );
     await pool.query(
-      `UPDATE usuarios SET mfa_habilitado = TRUE WHERE id = ?`,
+      `UPDATE usuarios SET mfa_habilitado = 1 WHERE id = ?`,
       [usuarioId]
     );
 
@@ -453,7 +453,7 @@ exports.disableMfa = async (req, res) => {
     }
 
     await pool.query(`DELETE FROM usuario_mfa WHERE usuario_id = ?`, [usuarioId]);
-    await pool.query(`UPDATE usuarios SET mfa_habilitado = FALSE WHERE id = ?`, [usuarioId]);
+    await pool.query(`UPDATE usuarios SET mfa_habilitado = 0 WHERE id = ?`, [usuarioId]);
     await registrarAuditoria(usuarioId, 'mfa_desactivado', 'usuarios', usuarioId);
 
     res.json({ mensaje: 'MFA desactivado correctamente' });
@@ -477,7 +477,7 @@ exports.solicitarReset = async (req, res) => {
 
   try {
     const [[usuario]] = await pool.query(
-      `SELECT id, nombre_completo FROM usuarios WHERE correo_institucional = ? AND activo = TRUE`,
+      `SELECT id, nombre_completo FROM usuarios WHERE correo_institucional = ? AND activo = 1`,
       [correo]
     );
 
@@ -488,7 +488,7 @@ exports.solicitarReset = async (req, res) => {
 
     // Invalidar tokens previos
     await pool.query(
-      `UPDATE password_reset_tokens SET usado = TRUE WHERE usuario_id = ? AND usado = FALSE`,
+      `UPDATE password_reset_tokens SET usado = 1 WHERE usuario_id = ? AND usado = 0`,
       [usuario.id]
     );
 
@@ -576,7 +576,7 @@ exports.resetPassword = async (req, res) => {
     );
 
     await pool.query(
-      `UPDATE password_reset_tokens SET usado = TRUE WHERE id = ?`,
+      `UPDATE password_reset_tokens SET usado = 1 WHERE id = ?`,
       [resetRow.id]
     );
 
@@ -602,7 +602,7 @@ exports.aceptarDatos = async (req, res) => {
     // Marcar aceptación en la BD
     await pool.query(
       `UPDATE usuarios
-       SET acepto_tratamiento_datos   = TRUE,
+      SET acepto_tratamiento_datos   = 1,
            fecha_aceptacion_datos     = NOW(),
            version_politica_aceptada  = ?
        WHERE id = ?`,
@@ -725,31 +725,29 @@ exports.registro = async (req, res) => {
       `INSERT INTO usuarios
          (nombre_completo, correo_institucional, cedula, password_hash, activo,
           acepto_tratamiento_datos, fecha_aceptacion_datos, version_politica_aceptada)
-       VALUES (?, ?, ?, ?, TRUE, TRUE, NOW(), ?)`,
+       VALUES (?, ?, ?, ?, 1, 1, NOW(), ?)`,
       [nombre_completo.trim(), correo.trim().toLowerCase(), cedula || null, passwordHash, VERSION_POLITICA_ACTUAL]
     );
 
     const nuevoUsuarioId = result.insertId;
 
-    // Garantizar que exista el rol 'externo' en BD y asignarlo
     await pool.query(`
       INSERT INTO roles (nombre, descripcion)
       VALUES ('externo', 'Investigador o participante externo en convocatorias')
-      ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion)
+      ON CONFLICT (nombre) DO UPDATE SET descripcion = EXCLUDED.descripcion
     `);
     const [[rolExterno]] = await pool.query('SELECT id FROM roles WHERE nombre = ?', ['externo']);
     if (rolExterno) {
       await pool.query(
-        'INSERT IGNORE INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?)',
+        'INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (?, ?) ON CONFLICT (usuario_id, rol_id) DO NOTHING',
         [nuevoUsuarioId, rolExterno.id]
       );
     }
 
     await registrarAuditoria(nuevoUsuarioId, 'registro_local_externo', 'usuarios', nuevoUsuarioId);
 
-    // Emitir JWT para iniciar sesión automáticamente tras el registro
     const token = jwt.sign(
-      { id: result.insertId, correo: correo.trim().toLowerCase() },
+      { id: nuevoUsuarioId, correo: correo.trim().toLowerCase() },
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
@@ -757,7 +755,7 @@ exports.registro = async (req, res) => {
     res.status(201).json({
       token,
       usuario: {
-        id: result.insertId,
+        id: nuevoUsuarioId,
         nombre: nombre_completo.trim(),
         correo: correo.trim().toLowerCase(),
         roles: ['externo'],

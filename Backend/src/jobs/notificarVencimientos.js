@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const pool = require('../db/connection');
 const { enviarCorreo } = require('../shared/mailer');
+const isPostgres = (process.env.DB_CLIENT || 'mysql').toLowerCase() === 'postgres';
 
 // Ejecutar todos los días a las 8:00 AM
 cron.schedule('0 8 * * *', async () => {
@@ -11,7 +12,7 @@ cron.schedule('0 8 * * *', async () => {
       SELECT id, titulo, fecha_cierre 
       FROM convocatorias 
       WHERE estado IN ('publicada', 'activa') 
-        AND DATEDIFF(fecha_cierre, CURDATE()) IN (0, 1, 3)
+        AND ${isPostgres ? '(fecha_cierre - CURRENT_DATE) IN (0, 1, 3)' : 'DATEDIFF(fecha_cierre, CURDATE()) IN (0, 1, 3)'}
     `);
 
     for (const conv of convocatorias) {

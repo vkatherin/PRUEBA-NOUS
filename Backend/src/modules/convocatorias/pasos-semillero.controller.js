@@ -80,11 +80,11 @@ const pasosSemilleroController = {
       await pool.query(
         `INSERT INTO configuracion_plantillas (clave, nombre_original, ruta_archivo, mime_type, peso_bytes)
          VALUES ('plantilla_asentimiento', ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE 
-           nombre_original = VALUES(nombre_original),
-           ruta_archivo = VALUES(ruta_archivo),
-           mime_type = VALUES(mime_type),
-           peso_bytes = VALUES(peso_bytes)`,
+         ON CONFLICT (clave) DO UPDATE SET
+           nombre_original = EXCLUDED.nombre_original,
+           ruta_archivo = EXCLUDED.ruta_archivo,
+           mime_type = EXCLUDED.mime_type,
+           peso_bytes = EXCLUDED.peso_bytes`,
         [req.file.originalname, rutaRelativa, req.file.mimetype, req.file.size]
       );
 
@@ -1194,7 +1194,7 @@ const pasosSemilleroController = {
         `INSERT INTO inscripcion_semillero_externo
          (inscripcion_id, tipo_institucion, procedencia, institucion_procedencia, semillero_nombre)
          VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE tipo_institucion = VALUES(tipo_institucion), institucion_procedencia = VALUES(institucion_procedencia), semillero_nombre = VALUES(semillero_nombre)`,
+         ON CONFLICT (inscripcion_id) DO UPDATE SET tipo_institucion = EXCLUDED.tipo_institucion, institucion_procedencia = EXCLUDED.institucion_procedencia, semillero_nombre = EXCLUDED.semillero_nombre`,
         [inscId, tipoInst.trim(), procFija, instProc.trim(), semNombre.trim()]
       );
 
@@ -1229,7 +1229,7 @@ const pasosSemilleroController = {
         `INSERT INTO inscripcion_semillero_info_general
          (inscripcion_id, titulo_trabajo, linea_investigacion, palabras_clave, resumen)
          VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE titulo_trabajo = VALUES(titulo_trabajo), linea_investigacion = VALUES(linea_investigacion), palabras_clave = VALUES(palabras_clave), resumen = VALUES(resumen)`,
+         ON CONFLICT (inscripcion_id) DO UPDATE SET titulo_trabajo = EXCLUDED.titulo_trabajo, linea_investigacion = EXCLUDED.linea_investigacion, palabras_clave = EXCLUDED.palabras_clave, resumen = EXCLUDED.resumen`,
         [inscId, titTrabajo.trim(), linInvest || null, palClave.trim(), resumenTexto.trim()]
       );
 
@@ -1238,7 +1238,7 @@ const pasosSemilleroController = {
         `INSERT INTO inscripcion_semillero_contenido
          (inscripcion_id, planteamiento_problema, objetivo_general, objetivos_especificos, metodologia, resultados_esperados)
          VALUES (?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE planteamiento_problema = VALUES(planteamiento_problema), objetivo_general = VALUES(objetivo_general), objetivos_especificos = VALUES(objetivos_especificos), metodologia = VALUES(metodologia), resultados_esperados = VALUES(resultados_esperados)`,
+         ON CONFLICT (inscripcion_id) DO UPDATE SET planteamiento_problema = EXCLUDED.planteamiento_problema, objetivo_general = EXCLUDED.objetivo_general, objetivos_especificos = EXCLUDED.objetivos_especificos, metodologia = EXCLUDED.metodologia, resultados_esperados = EXCLUDED.resultados_esperados`,
         [inscId, plantProb.trim(), objGral.trim(), objEsp.trim(), metodo.trim(), resEsp.trim()]
       );
 

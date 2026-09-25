@@ -1,4 +1,11 @@
 const pool = require("../../db/connection");
+const isPostgres = (process.env.DB_CLIENT || "mysql").toLowerCase() === "postgres";
+const fechaFinProyecto = isPostgres
+  ? "(p.fecha_inicio + (p.duracion_meses * INTERVAL '1 month'))"
+  : "DATE_ADD(p.fecha_inicio, INTERVAL p.duracion_meses MONTH)";
+const presupuestoProyecto = isPostgres
+  ? "CONCAT('$', TO_CHAR(p.valor_total / 1000000, 'FM999999990.00'), 'M')"
+  : "CONCAT('$', FORMAT(p.valor_total / 1000000, 2), 'M')";
 
 // ─── Lista de proyectos con filtros ──────────────────────────────────────────
 async function listarProyectos({ estado, tipo, q, convocatoria_id, usuario } = {}) {
@@ -31,8 +38,8 @@ async function listarProyectos({ estado, tipo, q, convocatoria_id, usuario } = {
       p.tipo_proyecto       AS tipo,
       p.estado,
       p.fecha_inicio        AS inicio,
-      DATE_ADD(p.fecha_inicio, INTERVAL p.duracion_meses MONTH) AS fin,
-      CONCAT('$', FORMAT(p.valor_total / 1000000, 2), 'M') AS presupuesto,
+      ${fechaFinProyecto} AS fin,
+      ${presupuestoProyecto} AS presupuesto,
       u.nombre_completo      AS lider,
       u.id                   AS investigador_principal_id,
       COALESCE(g.nombre, 'Sin grupo asignado') AS grupo,
@@ -61,8 +68,8 @@ async function obtenerProyecto(id) {
       p.titulo               AS nombre,
       p.tipo_proyecto        AS tipo,
       p.fecha_inicio         AS inicio,
-      DATE_ADD(p.fecha_inicio, INTERVAL p.duracion_meses MONTH) AS fin,
-      CONCAT('$', FORMAT(p.valor_total / 1000000, 2), 'M') AS presupuesto,
+      ${fechaFinProyecto} AS fin,
+      ${presupuestoProyecto} AS presupuesto,
       u.nombre_completo      AS lider,
       u.nombre_completo      AS investigador_principal,
       u.correo_institucional AS investigador_correo,

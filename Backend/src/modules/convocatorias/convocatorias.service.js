@@ -1,5 +1,9 @@
 const pool = require("../../db/connection");
 const { obtenerSiglaTipoInvestigacion } = require("./convocatorias.constants");
+const isPostgres = (process.env.DB_CLIENT || "mysql").toLowerCase() === "postgres";
+const diasEntreCierreYHoy = isPostgres
+  ? "(c.fecha_cierre - CURRENT_DATE)"
+  : "DATEDIFF(c.fecha_cierre, CURDATE())";
 
 /**
  * Servicio de Convocatorias (Internas y Externas)
@@ -16,16 +20,27 @@ const convocatoriasService = {
     const sigla = tipoInvestigacion ? (obtenerSiglaTipoInvestigacion(tipoInvestigacion) || "EXT") : "EXT";
     const anio = parseInt(anioConvocatoria, 10) || new Date().getFullYear();
 
-    // Incremento atómico en MySQL
-    await pool.query(
-      `INSERT INTO consecutivos_convocatorias (tipo_codigo, anio, ultimo_consecutivo)
-       VALUES (?, ?, 1)
-       ON DUPLICATE KEY UPDATE ultimo_consecutivo = LAST_INSERT_ID(ultimo_consecutivo + 1)`,
-      [sigla, anio]
-    );
-
-    const [rows] = await pool.query("SELECT LAST_INSERT_ID() as siguiente");
-    const siguiente = rows[0]?.siguiente || 1;
+    let siguiente;
+    if (isPostgres) {
+      const [rows] = await pool.query(
+        `INSERT INTO consecutivos_convocatorias (tipo_codigo, anio, ultimo_consecutivo)
+         VALUES (?, ?, 1)
+         ON CONFLICT (tipo_codigo, anio)
+         DO UPDATE SET ultimo_consecutivo = consecutivos_convocatorias.ultimo_consecutivo + 1
+         RETURNING ultimo_consecutivo`,
+        [sigla, anio]
+      );
+      siguiente = rows[0]?.ultimo_consecutivo || 1;
+    } else {
+      await pool.query(
+        `INSERT INTO consecutivos_convocatorias (tipo_codigo, anio, ultimo_consecutivo)
+         VALUES (?, ?, 1)
+         ON DUPLICATE KEY UPDATE ultimo_consecutivo = LAST_INSERT_ID(ultimo_consecutivo + 1)`,
+        [sigla, anio]
+      );
+      const [rows] = await pool.query("SELECT LAST_INSERT_ID() as siguiente");
+      siguiente = rows[0]?.siguiente || 1;
+    }
     const consecutivoStr = String(siguiente).padStart(3, "0");
 
     return `${sigla}E${anio}${consecutivoStr}`;
@@ -45,7 +60,7 @@ const convocatoriasService = {
              c.observaciones_comite, c.requisitos, c.plantilla_base_url,
              c.plantilla_asentimiento_nombre, c.plantilla_asentimiento_ruta, c.plantilla_asentimiento_peso_bytes,
              u.nombre_completo as creado_por_nombre,
-             DATEDIFF(c.fecha_cierre, CURDATE()) as dias_restantes
+             ${diasEntreCierreYHoy} as dias_restantes
       FROM convocatorias c
       LEFT JOIN usuarios u ON u.id = c.creado_por
       WHERE 1=1
@@ -82,12 +97,12 @@ const convocatoriasService = {
              c.fecha_apertura, c.fecha_cierre, c.estado, c.aprobada_comite, c.requisitos,
              c.plantilla_asentimiento_nombre, c.plantilla_asentimiento_ruta, c.plantilla_asentimiento_peso_bytes,
              u.nombre_completo as creado_por_nombre,
-             DATEDIFF(c.fecha_cierre, CURDATE()) as dias_restantes
+             ${diasEntreCierreYHoy} as dias_restantes
       FROM convocatorias c
       LEFT JOIN usuarios u ON u.id = c.creado_por
       WHERE (c.estado = 'publicada' OR c.estado = 'activa')
-        AND (c.fecha_cierre IS NULL OR c.fecha_cierre >= CURDATE())
-        AND (c.fecha_apertura IS NULL OR c.fecha_apertura <= CURDATE())
+        AND (c.fecha_cierre IS NULL OR c.fecha_cierre >= ${isPostgres ? "CURRENT_DATE" : "CURDATE()"})
+        AND (c.fecha_apertura IS NULL OR c.fecha_apertura <= ${isPostgres ? "CURRENT_DATE" : "CURDATE()"})
       ORDER BY c.fecha_cierre ASC
     `;
     const [rows] = await pool.query(sql);
@@ -101,7 +116,7 @@ const convocatoriasService = {
     const sql = `
       SELECT c.*, COALESCE(c.codigo, CONCAT('CON', c.id)) as codigo_con,
              u.nombre_completo as creado_por_nombre,
-             DATEDIFF(c.fecha_cierre, CURDATE()) as dias_restantes
+             ${diasEntreCierreYHoy} as dias_restantes
       FROM convocatorias c
       LEFT JOIN usuarios u ON u.id = c.creado_por
       WHERE c.id = ?
@@ -130,6 +145,7 @@ const convocatoriasService = {
         codigo, tipo_investigacion, titulo, tipo, dirigida_a, descripcion, fecha_apertura, fecha_cierre, rubro_disponible,
         estado, requisitos, plantilla_base_url, creado_por, aprobada_comite
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      ${isPostgres ? "RETURNING id" : ""}
     `;
     const [result] = await pool.query(sql, [
       codigo,
@@ -237,30 +253,30 @@ const convocatoriasService = {
     const [proximasACerrar] = await pool.query(`
       SELECT id, titulo, tipo, fecha_apertura, fecha_cierre,
              rubro_disponible, estado,
-             DATEDIFF(fecha_cierre, CURDATE()) as dias_restantes
+             ${isPostgres ? "(fecha_cierre - CURRENT_DATE)" : "DATEDIFF(fecha_cierre, CURDATE())"} as dias_restantes
       FROM convocatorias
       WHERE (estado = 'publicada' OR estado = 'activa')
-        AND fecha_cierre >= CURDATE()
-        AND DATEDIFF(fecha_cierre, CURDATE()) <= 7
+        AND fecha_cierre >= ${isPostgres ? "CURRENT_DATE" : "CURDATE()"}
+        AND ${isPostgres ? "(fecha_cierre - CURRENT_DATE)" : "DATEDIFF(fecha_cierre, CURDATE())"} <= 7
       ORDER BY dias_restantes ASC
     `);
 
     // 2. Convocatorias programadas para abrir próximamente (fecha_apertura futura)
     const [proximasAAbrir] = await pool.query(`
       SELECT id, titulo, tipo, fecha_apertura, fecha_cierre, estado,
-             DATEDIFF(fecha_apertura, CURDATE()) as dias_para_apertura
+             ${isPostgres ? "(fecha_apertura - CURRENT_DATE)" : "DATEDIFF(fecha_apertura, CURDATE())"} as dias_para_apertura
       FROM convocatorias
-      WHERE fecha_apertura > CURDATE()
+      WHERE fecha_apertura > ${isPostgres ? "CURRENT_DATE" : "CURDATE()"}
       ORDER BY fecha_apertura ASC
     `);
 
     // 3. Convocatorias que ya pasaron su fecha de cierre pero siguen marcadas activas/publicadas
     const [vencidasSinCerrar] = await pool.query(`
       SELECT id, titulo, fecha_cierre, estado,
-             ABS(DATEDIFF(CURDATE(), fecha_cierre)) as dias_vencida
+             ${isPostgres ? "ABS(CURRENT_DATE - fecha_cierre)" : "ABS(DATEDIFF(CURDATE(), fecha_cierre))"} as dias_vencida
       FROM convocatorias
       WHERE (estado = 'publicada' OR estado = 'activa')
-        AND fecha_cierre < CURDATE()
+        AND fecha_cierre < ${isPostgres ? "CURRENT_DATE" : "CURDATE()"}
       ORDER BY fecha_cierre DESC
     `);
 
@@ -294,10 +310,10 @@ const convocatoriasService = {
     let sql = `
       SELECT id, codigo, tipo_investigacion, COALESCE(codigo, CONCAT('EXT', id)) as codigo_ext,
              titulo, entidad_externa, fecha_apertura, fecha_cierre, descripcion,
-             DATEDIFF(fecha_cierre, CURDATE()) as dias_restantes,
+             ${isPostgres ? "(fecha_cierre - CURRENT_DATE)" : "DATEDIFF(fecha_cierre, CURDATE())"} as dias_restantes,
              CASE
                WHEN fecha_cierre IS NULL THEN 'indefinida'
-               WHEN fecha_cierre < CURDATE() THEN 'cerrada'
+               WHEN fecha_cierre < ${isPostgres ? "CURRENT_DATE" : "CURDATE()"} THEN 'cerrada'
                ELSE 'vigente'
              END as estado_vigencia
       FROM convocatoria_externa

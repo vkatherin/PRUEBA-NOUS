@@ -80,5 +80,9 @@ const autoMigrate = require('./db/auto_migrate');
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, async () => {
   console.log(`🚀 Servidor NOUS corriendo en puerto ${PORT}`);
-  await autoMigrate();
+  if ((process.env.DB_CLIENT || 'mysql').toLowerCase() === 'mysql' && process.env.AUTO_MIGRATE !== 'false') {
+    await autoMigrate();
+  } else {
+    console.log('ℹ️  Migraciones automáticas omitidas para PostgreSQL/Supabase.');
+  }
 });

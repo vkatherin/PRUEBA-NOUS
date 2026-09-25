@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const pool = require('../db/connection');
 const { enviarCorreo } = require('../shared/mailer');
+const isPostgres = (process.env.DB_CLIENT || 'mysql').toLowerCase() === 'postgres';
 
 // Ejecutar los lunes a las 7:00 AM
 cron.schedule('0 7 * * 1', async () => {
@@ -17,7 +18,7 @@ cron.schedule('0 7 * * 1', async () => {
     if (users.length === 0) return;
 
     // Obtener métricas generales
-    const [[{ abiertas }]] = await pool.query(`SELECT COUNT(*) as abiertas FROM convocatorias WHERE estado IN ('publicada', 'activa') AND fecha_cierre >= CURDATE()`);
+    const [[{ abiertas }]] = await pool.query(`SELECT COUNT(*) as abiertas FROM convocatorias WHERE estado IN ('publicada', 'activa') AND fecha_cierre >= ${isPostgres ? 'CURRENT_DATE' : 'CURDATE()'}`);
 
     for (const u of users) {
       const [[{ proyectos }]] = await pool.query(`SELECT COUNT(*) as proyectos FROM proyectos WHERE investigador_principal_id = ? AND estado IN ('activo', 'en_ejecucion')`, [u.id]);
