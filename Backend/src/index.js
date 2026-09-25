@@ -62,6 +62,15 @@ app.use('/api/preferencias', preferenciasRoutes);
 app.use('/api/documentos', documentosRoutes);
 app.use('/api/soporte', soporteRoutes);
 
+// Ruta raíz para identificar el servicio cuando se abre directamente en el navegador.
+app.get('/', (req, res) => {
+  res.json({
+    servicio: 'NOUS Backend',
+    estado: 'activo',
+    api: '/api/health',
+  });
+});
+
 // Endpoint de salud
 app.get('/api/health', async (req, res) => {
   try {
