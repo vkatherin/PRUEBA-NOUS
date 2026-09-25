@@ -81,6 +81,10 @@
 *.woff2              filter=lfs diff=lfs merge=lfs -text
 *.eot                filter=lfs diff=lfs merge=lfs -text
 
+# Render must be able to clone frontend assets without Git LFS.
+public/*             -filter -diff -merge
+src/imports/*        -filter -diff -merge
+
 # ---------------------------------------------------------------------------
 # Data & Machine Learning
 # ---------------------------------------------------------------------------
