@@ -9,16 +9,22 @@ function createPostgresPool() {
     'inscripcion_semillero_contenido', 'proyectos', 'evaluaciones', 'evaluacion_criterios',
     'semilleros', 'reportes_soporte', 'formatos_institucionales', 'documentos', 'usuario_mfa',
   ]);
-  const config = process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
-    : {
+  // Supabase muestra [PASSWORD] como marcador; quitar esos corchetes evita
+  // que pg rechace la URL antes de intentar autenticar.
+  const connectionString = process.env.DATABASE_URL?.replace(
+    /:\[([^\]]+)\]@/,
+    ':$1@'
+  );
+  const config = process.env.PGHOST
+    ? {
         host: process.env.PGHOST || process.env.DB_HOST,
         port: process.env.PGPORT || process.env.DB_PORT || 5432,
         user: process.env.PGUSER || process.env.DB_USER,
         password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
         database: process.env.PGDATABASE || process.env.DB_NAME || 'postgres',
         ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : undefined,
-      };
+      }
+    : { connectionString, ssl: { rejectUnauthorized: false } };
 
   const pool = new Pool(config);
   const rawPoolQuery = pool.query.bind(pool);
