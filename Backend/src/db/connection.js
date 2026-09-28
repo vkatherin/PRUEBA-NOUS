@@ -26,7 +26,16 @@ function createPostgresPool() {
       }
     : { connectionString, ssl: { rejectUnauthorized: false } };
 
-  const pool = new Pool(config);
+  const pool = new Pool({
+    ...config,
+    max: Number(process.env.PGPOOL_MAX || 5),
+    idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT || 30000),
+    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT || 10000),
+    maxUses: Number(process.env.PG_MAX_USES || 500),
+  });
+  pool.on('error', (error) => {
+    console.error('⚠️ Conexión PostgreSQL reciclada:', error.message);
+  });
   const rawPoolQuery = pool.query.bind(pool);
 
   function translateSql(sql) {
