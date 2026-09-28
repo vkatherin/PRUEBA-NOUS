@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Badge, Button, Card, PageHeader, Modal, Field, Input, Textarea, Select, SectionTitle } from "@/components/ui";
 import {
+  API_ORIGIN,
   authApi,
   getConvocatorias,
   crearConvocatoria,
@@ -1338,7 +1339,7 @@ function DetailModal({
             </div>
           </div>
           <a
-            href={`http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv.id}`}
+            href={`${API_ORIGIN}/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv.id}`}
             download="Formato_Asentimiento_Informado_NOUS.pdf"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 font-bold hover:bg-emerald-50 transition-colors shadow-2xs shrink-0"
           >
@@ -2431,8 +2432,8 @@ function GestionarPlantillaModal({
                 <a
                   href={
                     convId
-                      ? `http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${convId}`
-                      : `http://localhost:4200/api/convocatorias/plantilla-asentimiento`
+                      ? `${API_ORIGIN}/api/convocatorias/plantilla-asentimiento?convocatoria_id=${convId}`
+                      : `${API_ORIGIN}/api/convocatorias/plantilla-asentimiento`
                   }
                   download="Formato_Asentimiento_Informado_NOUS.pdf"
                   className="px-3 py-1.5 rounded-lg bg-theme-bg-main border border-theme-border text-xs font-semibold text-theme-primary hover:bg-theme-primary/10 flex items-center gap-1"
@@ -3697,7 +3698,7 @@ function SemilleroExternoModal({
                 </div>
               </div>
               <a
-                href={`http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv?.id || ""}`}
+                href={`${API_ORIGIN}/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv?.id || ""}`}
                 download="Formato_Asentimiento_Informado_NOUS.pdf"
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-theme-primary text-white font-bold text-xs hover:bg-[#17563A] transition-all shrink-0 shadow-sm active:scale-95"
                 title="Descargar formato oficial"
@@ -3952,7 +3953,7 @@ function SemilleroExternoModal({
                         <span>⚠️</span> Asentimiento Informado requerido * (Menor de edad)
                       </span>
                       <a
-                        href={`http://localhost:4200/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv?.id || ""}`}
+                        href={`${API_ORIGIN}/api/convocatorias/plantilla-asentimiento?convocatoria_id=${conv?.id || ""}`}
                         download="Formato_Asentimiento_Informado_NOUS.pdf"
                         className="text-[11px] text-theme-primary font-bold hover:underline inline-flex items-center gap-1 shrink-0"
                       >

@@ -1,5 +1,6 @@
-// Central API service — all fetch calls go through here
-const BASE = '/api';
+// Vite proxies /api locally; Render uses a separate backend service.
+export const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+export const BASE = `${API_ORIGIN}/api`;
 
 // ── Token storage helpers ────────────────────────────────────────────────────
 export const TOKEN_KEY = 'nous_token';
@@ -86,7 +87,7 @@ export interface MfaSetupResponse {
 export const authApi = {
   /** Redirige al backend para iniciar el flujo OAuth con Google Workspace */
   loginWithGoogle(): void {
-    window.location.href = 'http://localhost:4200/api/auth/google';
+    window.location.href = `${BASE}/auth/google`;
   },
 
   /** Login local con email y contraseña */
