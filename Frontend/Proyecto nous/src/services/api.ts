@@ -1,5 +1,7 @@
 // Vite proxies /api locally; Render uses a separate backend service.
-export const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+export const API_ORIGIN = (
+  import.meta.env.VITE_API_URL || 'https://prueba-nous.onrender.com'
+).replace(/\/$/, '');
 export const BASE = `${API_ORIGIN}/api`;
 
 // ── Token storage helpers ────────────────────────────────────────────────────

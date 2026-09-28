@@ -45,7 +45,13 @@ try {
 }
 
 // Middlewares
-app.use(cors({ origin: ['http://localhost:8443', 'http://localhost:3000'] }));
+const allowedOrigins = [
+  'http://localhost:8443',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+  'https://prueba-nous-1.onrender.com',
+].filter(Boolean);
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(passport.initialize());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
